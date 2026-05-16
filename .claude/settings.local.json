@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(not exist *)",
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\rahmatiqbal13\\\\Documents\\\\moneyfam\" -Recurse -Directory)",
+      "Bash(Select-Object -ExpandProperty FullName)",
+      "Bash(Sort-Object)",
+      "Bash(dir \"c:\\\\Users\\\\rahmatiqbal13\\\\Documents\\\\moneyfam\" /b /a:-d)"
+    ]
+  }
+}
