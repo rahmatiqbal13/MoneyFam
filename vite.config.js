@@ -20,7 +20,7 @@ export default defineConfig({
         theme_color: '#10b981',
         background_color: '#f9fafb',
         display: 'standalone',
-        orientation: 'portrait',
+        orientation: 'any',
         scope: '/',
         start_url: '/',
         lang: 'id',
