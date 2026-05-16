@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Edit2, Trash2, ArrowUpRight, ArrowDownRight, ArrowLeftRight } from 'lucide-react'
+import { Edit2, Trash2, ArrowUpRight, ArrowDownRight, ArrowLeftRight, FilterX } from 'lucide-react'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { TransactionTypeBadge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
@@ -7,7 +7,23 @@ import { ConfirmModal } from '@/components/ui/Modal'
 import { useToast } from '@/components/ui/Toast'
 import { useDeleteTransaction } from '@/hooks/useTransactions'
 
-function EmptyState() {
+function EmptyState({ hasFilters, onResetFilters }) {
+  if (hasFilters) {
+    return (
+      <div className="py-16 text-center">
+        <FilterX className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+        <p className="text-gray-500 text-sm">Tidak ada transaksi yang cocok dengan filter</p>
+        <p className="text-gray-400 text-xs mt-1 mb-3">Coba ubah filter atau reset filter</p>
+        <button
+          onClick={onResetFilters}
+          className="text-sm text-primary-600 hover:text-primary-700 font-medium"
+        >
+          Reset Filter
+        </button>
+      </div>
+    )
+  }
+  
   return (
     <div className="py-16 text-center">
       <ArrowLeftRight className="w-10 h-10 text-gray-200 mx-auto mb-3" />
@@ -17,7 +33,7 @@ function EmptyState() {
   )
 }
 
-export function TransactionList({ transactions = [], onEdit }) {
+export function TransactionList({ transactions = [], onEdit, filters = {}, onResetFilters }) {
   const toast = useToast()
   const deleteMutation = useDeleteTransaction()
   const [deleteId, setDeleteId] = useState(null)
@@ -32,7 +48,9 @@ export function TransactionList({ transactions = [], onEdit }) {
     }
   }
 
-  if (!transactions.length) return <EmptyState />
+  const hasFilters = filters.search || filters.type || filters.category_id || filters.wallet_id || filters.dateFrom || filters.dateTo
+
+  if (!transactions.length) return <EmptyState hasFilters={hasFilters} onResetFilters={onResetFilters} />
 
   return (
     <>

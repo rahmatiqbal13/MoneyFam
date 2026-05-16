@@ -34,7 +34,7 @@ function StatsBar({ stats, isLoading }) {
 }
 
 export default function Transactions() {
-  const { filters } = useTransactionStore()
+  const { filters, resetFilters } = useTransactionStore()
   const { data: transactions, isLoading } = useTransactions(filters)
   const now = new Date()
   const { data: stats, isLoading: statsLoading } = useMonthlyStats(now.getFullYear(), now.getMonth() + 1)
@@ -89,7 +89,7 @@ export default function Transactions() {
           ))}
         </div>
       ) : (
-        <TransactionList transactions={transactions || []} onEdit={handleEdit} />
+        <TransactionList transactions={transactions || []} onEdit={handleEdit} filters={filters} onResetFilters={resetFilters} />
       )}
 
       <TransactionModal

@@ -81,12 +81,23 @@ export function TransactionFilters() {
         </Select>
 
         {/* Date From */}
-        <input
-          type="date"
-          value={filters.dateFrom}
-          onChange={(e) => setFilters({ dateFrom: e.target.value })}
-          className="px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-300 focus:border-primary text-gray-600"
-        />
+        <div className="relative">
+          <input
+            type="date"
+            value={filters.dateFrom}
+            onChange={(e) => setFilters({ dateFrom: e.target.value })}
+            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-300 focus:border-primary text-gray-600"
+          />
+          {filters.dateFrom && (
+            <button
+              onClick={() => setFilters({ dateFrom: '' })}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              title="Clear date filter"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
       </div>
     </div>
   )
