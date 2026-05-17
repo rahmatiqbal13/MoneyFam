@@ -35,15 +35,11 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
         runtimeCaching: [
           {
-            // Cache Supabase API calls (network first — always fresh data)
+            // Jangan cache Supabase API — biarkan langsung ke network.
+            // NetworkFirst + timeout menyebabkan cached auth response kadaluarsa
+            // yang membuat Supabase client hang pada mutasi ke-2+ di PWA tablet.
             urlPattern: /^https:\/\/.*\.supabase\.co\/.*/i,
-            handler: 'NetworkFirst',
-            options: {
-              cacheName: 'supabase-api',
-              networkTimeoutSeconds: 10,
-              expiration: { maxEntries: 50, maxAgeSeconds: 60 * 5 },
-              cacheableResponse: { statuses: [0, 200] },
-            },
+            handler: 'NetworkOnly',
           },
           {
             // Cache Google Fonts
