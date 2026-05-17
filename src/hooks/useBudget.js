@@ -124,28 +124,6 @@ export function useCopyBudgetFromLastMonth() {
       const prevYear = prevDate.getFullYear()
       const prevMonth = prevDate.getMonth() + 1
 
-      // Check if current month already has budgets
-      const { data: existingBudgets, error: existingError } = await supabase
-        .from('budgets')
-        .select('category_id')
-        .eq('year', year)
-        .eq('month', month)
-      
-      if (family?.id) {
-        existingBudgets?.forEach((_, i) => {
-          if (existingBudgets[i]) existingBudgets[i].family_id = family.id
-        })
-      } else if (user?.id) {
-        existingBudgets?.forEach((_, i) => {
-          if (existingBudgets[i]) existingBudgets[i].user_id = user.id
-        })
-      }
-      
-      if (existingError) throw existingError
-      if (existingBudgets && existingBudgets.length > 0) {
-        throw new Error(`Bulan ini sudah memiliki ${existingBudgets.length} anggaran. Penyalinan dibatalkan untuk mencegah penimpaan data.`)
-      }
-
       let prevQuery = supabase
         .from('budgets')
         .select('category_id, amount')

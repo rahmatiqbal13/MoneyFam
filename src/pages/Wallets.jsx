@@ -143,7 +143,7 @@ export default function Wallets() {
         onClose={() => setDeleteId(null)}
         onConfirm={handleDelete}
         title="Hapus Kantong"
-        message="Yakin ingin menghapus kantong ini? Data transaksi terkait tetap tersimpan."
+        message="Yakin ingin menghapus kantong ini? Kantong hanya bisa dihapus jika tidak memiliki transaksi."
         loading={deleteMutation.isPending}
       />
     </div>

@@ -3,8 +3,8 @@ import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/stores/authStore'
 
 const TX_KEY = 'transactions'
-
 const QUERY_KEY = 'debts'
+const PAYMENTS_KEY = 'debt_payments'
 
 export function useDebts() {
   const family = useAuthStore((s) => s.family)
@@ -33,6 +33,30 @@ export function useDebts() {
     },
     enabled: !!user?.id,
     staleTime: 1000 * 30,
+  })
+}
+
+export function useDebtPayments(debtId) {
+  return useQuery({
+    queryKey: [PAYMENTS_KEY, debtId],
+    queryFn: async () => {
+      if (!debtId) return []
+      
+      const { data, error } = await supabase
+        .from('debt_payments')
+        .select(`
+          *,
+          wallets:wallet_id(id, name, icon),
+          categories:category_id(id, name, icon)
+        `)
+        .eq('debt_id', debtId)
+        .order('payment_date', { ascending: false })
+        .order('payment_time', { ascending: false })
+      
+      if (error) throw error
+      return data || []
+    },
+    enabled: !!debtId,
   })
 }
 
@@ -88,23 +112,123 @@ export function useDeleteDebt() {
   })
 }
 
-// Mark debt as paid atomically (BUG-005 fix)
+// Add payment to debt with optional wallet
+export function useAddDebtPayment() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({ 
+      debtId, 
+      amount, 
+      paymentDate, 
+      paymentTime,
+      walletId, 
+      categoryId, 
+      note 
+    }) => {
+      const { data, error } = await supabase.rpc('add_debt_payment', {
+        p_debt_id: debtId,
+        p_amount: amount,
+        p_payment_date: paymentDate,
+        p_payment_time: paymentTime,
+        p_wallet_id: walletId || null,
+        p_category_id: categoryId || null,
+        p_note: note || null
+      })
+      
+      if (error) throw error
+      return data
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEY] })
+      queryClient.invalidateQueries({ queryKey: [PAYMENTS_KEY, variables.debtId] })
+      queryClient.invalidateQueries({ queryKey: [TX_KEY] })
+      queryClient.invalidateQueries({ queryKey: ['wallets'] })
+    },
+  })
+}
+
+// Update debt payment
+export function useUpdateDebtPayment() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({ 
+      paymentId, 
+      debtId,
+      amount, 
+      paymentDate, 
+      paymentTime,
+      note 
+    }) => {
+      const { error } = await supabase.rpc('update_debt_payment', {
+        p_payment_id: paymentId,
+        p_amount: amount,
+        p_payment_date: paymentDate,
+        p_payment_time: paymentTime,
+        p_note: note || null
+      })
+      
+      if (error) throw error
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEY] })
+      queryClient.invalidateQueries({ queryKey: [PAYMENTS_KEY, variables.debtId] })
+      queryClient.invalidateQueries({ queryKey: [TX_KEY] })
+      queryClient.invalidateQueries({ queryKey: ['wallets'] })
+    },
+  })
+}
+
+// Delete debt payment
+export function useDeleteDebtPayment() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({ paymentId, debtId }) => {
+      const { error } = await supabase.rpc('delete_debt_payment', {
+        p_payment_id: paymentId
+      })
+      
+      if (error) throw error
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEY] })
+      queryClient.invalidateQueries({ queryKey: [PAYMENTS_KEY, variables.debtId] })
+      queryClient.invalidateQueries({ queryKey: [TX_KEY] })
+      queryClient.invalidateQueries({ queryKey: ['wallets'] })
+    },
+  })
+}
+
+// Mark debt as paid with payment history
 export function useMarkDebtPaid() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async ({ id, remainingAmount, walletId, debtName, categoryId }) => {
+    mutationFn: async ({ 
+      id, 
+      remainingAmount, 
+      paymentDate,
+      paymentTime,
+      walletId, 
+      categoryId, 
+      note 
+    }) => {
       if (remainingAmount > 0) {
-        // Use atomic RPC function
-        const { error } = await supabase.rpc('mark_debt_paid_atomic', {
+        // Use new function that creates payment history
+        const { data, error } = await supabase.rpc('mark_debt_paid_with_payment', {
           p_debt_id: id,
+          p_payment_date: paymentDate,
+          p_payment_time: paymentTime,
           p_wallet_id: walletId || null,
           p_category_id: categoryId || null,
-          p_amount: remainingAmount
+          p_note: note || 'Pelunasan'
         })
         if (error) throw error
+        return data
       } else {
-        // No payment needed, just mark as paid
+        // Already paid, just mark
         const { error } = await supabase
           .from('debts')
           .update({ is_paid: true, remaining_amount: 0, updated_at: new Date().toISOString() })
@@ -112,33 +236,16 @@ export function useMarkDebtPaid() {
         if (error) throw error
       }
     },
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: [QUERY_KEY] })
+      queryClient.invalidateQueries({ queryKey: [PAYMENTS_KEY, variables.id] })
       queryClient.invalidateQueries({ queryKey: [TX_KEY] })
       queryClient.invalidateQueries({ queryKey: ['wallets'] })
     },
   })
 }
 
-// Catat pembayaran sebagian atomically (BUG-005 fix)
+// Legacy function for partial payments - now uses add_debt_payment
 export function usePayDebt() {
-  const queryClient = useQueryClient()
-
-  return useMutation({
-    mutationFn: async ({ id, payAmount, walletId, debtName, categoryId }) => {
-      // Use atomic RPC function
-      const { error } = await supabase.rpc('pay_debt_atomic', {
-        p_debt_id: id,
-        p_payment_amount: payAmount,
-        p_wallet_id: walletId || null,
-        p_category_id: categoryId || null
-      })
-      if (error) throw error
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [QUERY_KEY] })
-      queryClient.invalidateQueries({ queryKey: [TX_KEY] })
-      queryClient.invalidateQueries({ queryKey: ['wallets'] })
-    },
-  })
+  return useAddDebtPayment()
 }

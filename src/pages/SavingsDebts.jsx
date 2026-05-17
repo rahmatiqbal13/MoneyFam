@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import {
   Plus, Pencil, Trash2, Target, CheckCircle2,
   Calendar, TrendingDown, TrendingUp, Minus, CreditCard,
+  History, Clock, Wallet
 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -16,7 +17,10 @@ import {
   useCreateSavingsGoal,
   useUpdateSavingsGoal,
   useDeleteSavingsGoal,
-  useAddToSavingsGoal,
+  useAddSavingsPayment,
+  useSavingsPayments,
+  useUpdateSavingsPayment,
+  useDeleteSavingsPayment,
 } from '@/hooks/useSavingsGoals'
 import {
   useDebts,
@@ -24,7 +28,10 @@ import {
   useUpdateDebt,
   useDeleteDebt,
   useMarkDebtPaid,
-  usePayDebt,
+  useAddDebtPayment,
+  useDebtPayments,
+  useUpdateDebtPayment,
+  useDeleteDebtPayment,
 } from '@/hooks/useDebts'
 import { useWallets } from '@/hooks/useWallets'
 import { useCategories } from '@/hooks/useCategories'
@@ -214,7 +221,7 @@ function SavingsGoalModal({ isOpen, onClose, goal }) {
 
 function AddFundModal({ isOpen, onClose, goal }) {
   const toast = useToast()
-  const addMutation = useAddToSavingsGoal()
+  const addMutation = useAddSavingsPayment()
   const { data: wallets } = useWallets()
   const { data: expenseCategories } = useCategories('expense')
   const { data: incomeCategories } = useCategories('income')
@@ -222,6 +229,9 @@ function AddFundModal({ isOpen, onClose, goal }) {
   const [mode, setMode] = useState('add')
   const [walletId, setWalletId] = useState('')
   const [categoryId, setCategoryId] = useState('')
+  const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0])
+  const [paymentTime, setPaymentTime] = useState(new Date().toTimeString().slice(0, 5))
+  const [note, setNote] = useState('')
 
   const categories = mode === 'add' ? expenseCategories : incomeCategories
 
@@ -238,7 +248,15 @@ function AddFundModal({ isOpen, onClose, goal }) {
   }, [mode, walletId, expenseCategories, incomeCategories])
 
   useEffect(() => {
-    if (isOpen) { setAmount(''); setMode('add'); setWalletId(''); setCategoryId('') }
+    if (isOpen) { 
+      setAmount(''); 
+      setMode('add'); 
+      setWalletId(''); 
+      setCategoryId('');
+      setPaymentDate(new Date().toISOString().split('T')[0]);
+      setPaymentTime(new Date().toTimeString().slice(0, 5));
+      setNote('');
+    }
   }, [isOpen])
 
   const handleSubmit = async (e) => {
@@ -248,13 +266,14 @@ function AddFundModal({ isOpen, onClose, goal }) {
 
     try {
       await addMutation.mutateAsync({
-        id: goal.id,
-        amount: mode === 'add' ? val : -val,
-        currentAmount: Number(goal.current_amount),
-        targetAmount: Number(goal.target_amount),
+        goalId: goal.id,
+        amount: val,
+        type: mode === 'add' ? 'deposit' : 'withdrawal',
+        paymentDate,
+        paymentTime,
         walletId: walletId || null,
-        goalName: goal.name,
         categoryId: walletId ? (categoryId || null) : null,
+        note: note || null,
       })
       toast.success(mode === 'add' ? 'Dana berhasil ditambahkan' : 'Dana berhasil dikurangi')
       onClose()
@@ -302,11 +321,40 @@ function AddFundModal({ isOpen, onClose, goal }) {
           required
         />
 
+        {/* Date and Time */}
+        <div className="flex flex-col gap-1">
+          <label className="text-sm font-medium text-gray-700">
+            Tanggal & Waktu Pembayaran
+          </label>
+          <div className="flex gap-2">
+            <input
+              type="date"
+              value={paymentDate}
+              onChange={(e) => setPaymentDate(e.target.value)}
+              className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300 focus:border-primary"
+            />
+            <input
+              type="time"
+              value={paymentTime}
+              onChange={(e) => setPaymentTime(e.target.value)}
+              className="w-28 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300 focus:border-primary"
+            />
+          </div>
+        </div>
+
+        <Input
+          label="Catatan (Opsional)"
+          type="text"
+          placeholder="Contoh: Tabungan dari gaji bulan Mei"
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+        />
+
         <Select
           label="Potong dari Wallet (opsional)"
           value={walletId}
           onChange={(e) => setWalletId(e.target.value)}
-          helpText={walletId ? 'Saldo wallet akan terpotong otomatis' : 'Kosongkan jika tidak ingin memotong saldo wallet'}
+          helpText={walletId ? 'Saldo wallet akan terpotong otomatis dan tercatat di transaksi' : 'Kosongkan jika tidak ingin memotong saldo wallet (hanya catat di tabungan saja)'}
         >
           <option value="">— Tidak dari wallet —</option>
           {(wallets || []).map((w) => (
@@ -346,12 +394,175 @@ function AddFundModal({ isOpen, onClose, goal }) {
   )
 }
 
+// ── Savings Payment History Component ─────────────────────────────────────────
+
+function SavingsPaymentHistory({ goalId }) {
+  const { data: payments, isLoading } = useSavingsPayments(goalId)
+  const [editPayment, setEditPayment] = useState(null)
+  const [deletePayment, setDeletePayment] = useState(null)
+  const updateMutation = useUpdateSavingsPayment()
+  const deleteMutation = useDeleteSavingsPayment()
+  const toast = useToast()
+
+  if (isLoading) {
+    return <div className="text-center py-4 text-gray-400 text-sm">Memuat riwayat...</div>
+  }
+
+  if (!payments?.length) {
+    return <div className="text-center py-4 text-gray-400 text-sm">Belum ada riwayat pembayaran</div>
+  }
+
+  const handleUpdate = async (e) => {
+    e.preventDefault()
+    const formData = new FormData(e.target)
+    
+    try {
+      await updateMutation.mutateAsync({
+        paymentId: editPayment.id,
+        goalId: editPayment.goal_id,
+        amount: Number(formData.get('amount')),
+        paymentDate: formData.get('paymentDate'),
+        paymentTime: formData.get('paymentTime'),
+        note: formData.get('note'),
+      })
+      toast.success('Pembayaran diperbarui')
+      setEditPayment(null)
+    } catch (err) {
+      toast.error(err.message || 'Gagal memperbarui')
+    }
+  }
+
+  const handleDelete = async () => {
+    try {
+      await deleteMutation.mutateAsync({
+        paymentId: deletePayment.id,
+        goalId: deletePayment.goal_id,
+      })
+      toast.success('Pembayaran dihapus')
+      setDeletePayment(null)
+    } catch (err) {
+      toast.error(err.message || 'Gagal menghapus')
+    }
+  }
+
+  return (
+    <>
+      <div className="mt-4 pt-4 border-t border-gray-100">
+        <h4 className="text-xs font-semibold text-gray-500 mb-3 flex items-center gap-1">
+          <History className="w-3 h-3" />
+          Riwayat Pembayaran ({payments.length})
+        </h4>
+        <div className="space-y-2 max-h-48 overflow-y-auto">
+          {payments.map((payment) => (
+            <div key={payment.id} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg text-sm">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className={`font-medium ${payment.type === 'deposit' ? 'text-emerald-600' : 'text-red-500'}`}>
+                    {payment.type === 'deposit' ? '+' : '-'}{formatCurrency(payment.amount)}
+                  </span>
+                  <span className="text-xs text-gray-400">
+                    {formatDate(payment.payment_date)} {payment.payment_time?.slice(0, 5)}
+                  </span>
+                </div>
+                {payment.note && (
+                  <p className="text-xs text-gray-500 truncate">{payment.note}</p>
+                )}
+                {payment.wallets && (
+                  <p className="text-xs text-gray-400 flex items-center gap-1">
+                    <Wallet className="w-3 h-3" />
+                    {payment.wallets.icon} {payment.wallets.name}
+                  </p>
+                )}
+              </div>
+              <div className="flex gap-1 ml-2">
+                <button
+                  onClick={() => setEditPayment(payment)}
+                  className="p-1 rounded text-gray-400 hover:text-blue-500 hover:bg-blue-50"
+                >
+                  <Pencil className="w-3 h-3" />
+                </button>
+                <button
+                  onClick={() => setDeletePayment(payment)}
+                  className="p-1 rounded text-gray-400 hover:text-red-500 hover:bg-red-50"
+                >
+                  <Trash2 className="w-3 h-3" />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Edit Modal */}
+      {editPayment && (
+        <Modal isOpen={!!editPayment} onClose={() => setEditPayment(null)} title="Edit Pembayaran" size="sm">
+          <ModalBody>
+            <form onSubmit={handleUpdate} className="space-y-4">
+              <Input
+                label="Jumlah (Rp)"
+                name="amount"
+                type="number"
+                defaultValue={editPayment.amount}
+                required
+              />
+              <div className="flex flex-col gap-1">
+                <label className="text-sm font-medium text-gray-700">Tanggal & Waktu</label>
+                <div className="flex gap-2">
+                  <input
+                    type="date"
+                    name="paymentDate"
+                    defaultValue={editPayment.payment_date}
+                    className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                    required
+                  />
+                  <input
+                    type="time"
+                    name="paymentTime"
+                    defaultValue={editPayment.payment_time?.slice(0, 5) || '12:00'}
+                    className="w-28 rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                    required
+                  />
+                </div>
+              </div>
+              <Input
+                label="Catatan"
+                name="note"
+                type="text"
+                defaultValue={editPayment.note || ''}
+              />
+              <div className="flex gap-2">
+                <Button type="button" variant="secondary" className="flex-1" onClick={() => setEditPayment(null)}>
+                  Batal
+                </Button>
+                <Button type="submit" className="flex-1" loading={updateMutation.isPending}>
+                  Simpan
+                </Button>
+              </div>
+            </form>
+          </ModalBody>
+        </Modal>
+      )}
+
+      {/* Delete Confirmation */}
+      <ConfirmModal
+        isOpen={!!deletePayment}
+        onClose={() => setDeletePayment(null)}
+        onConfirm={handleDelete}
+        title="Hapus Pembayaran"
+        message={`Yakin ingin menghapus pembayaran ${formatCurrency(deletePayment?.amount)}?`}
+        loading={deleteMutation.isPending}
+      />
+    </>
+  )
+}
+
 // ── Savings Goal Card ─────────────────────────────────────────────────────────
 
 function SavingsGoalCard({ goal, onEdit, onDelete, onAddFund }) {
   const pct = progressPct(goal.current_amount, goal.target_amount)
   const days = daysUntil(goal.target_date)
   const isOverdue = days !== null && days < 0 && !goal.is_completed
+  const [showHistory, setShowHistory] = useState(false)
 
   return (
     <Card className="hover:shadow-md transition-shadow">
@@ -417,18 +628,32 @@ function SavingsGoalCard({ goal, onEdit, onDelete, onAddFund }) {
           </div>
         </div>
 
-        {/* Action */}
-        {!goal.is_completed && (
+        {/* Actions */}
+        <div className="flex gap-2">
+          {!goal.is_completed && (
+            <Button
+              size="sm"
+              variant="secondary"
+              className="flex-1"
+              onClick={() => onAddFund(goal)}
+            >
+              <Plus className="w-4 h-4" />
+              Update Dana
+            </Button>
+          )}
           <Button
             size="sm"
-            variant="secondary"
-            className="w-full"
-            onClick={() => onAddFund(goal)}
+            variant="outline"
+            className="flex-1"
+            onClick={() => setShowHistory(!showHistory)}
           >
-            <Plus className="w-4 h-4" />
-            Update Dana
+            <History className="w-4 h-4" />
+            {showHistory ? 'Sembunyikan' : 'Riwayat'}
           </Button>
-        )}
+        </div>
+
+        {/* Payment History */}
+        {showHistory && <SavingsPaymentHistory goalId={goal.id} />}
       </CardContent>
     </Card>
   )
@@ -566,13 +791,16 @@ function DebtModal({ isOpen, onClose, debt }) {
 
 function PayDebtModal({ isOpen, onClose, debt }) {
   const toast = useToast()
-  const payMutation = usePayDebt()
+  const payMutation = useAddDebtPayment()
   const { data: wallets } = useWallets()
   const { data: expenseCategories } = useCategories('expense')
   const { data: incomeCategories } = useCategories('income')
   const [amount, setAmount] = useState('')
   const [walletId, setWalletId] = useState('')
   const [categoryId, setCategoryId] = useState('')
+  const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0])
+  const [paymentTime, setPaymentTime] = useState(new Date().toTimeString().slice(0, 5))
+  const [note, setNote] = useState('')
 
   const isDebt = debt?.type === 'debt'
   const categories = isDebt ? expenseCategories : incomeCategories
@@ -580,8 +808,8 @@ function PayDebtModal({ isOpen, onClose, debt }) {
   const typeLabel = isDebt ? 'Hutang' : 'Piutang'
   const walletLabel = isDebt ? 'Bayar dari Wallet (opsional)' : 'Terima ke Wallet (opsional)'
   const walletHint = isDebt
-    ? 'Saldo wallet akan berkurang sebesar jumlah pembayaran'
-    : 'Saldo wallet akan bertambah sebesar jumlah yang diterima'
+    ? 'Saldo wallet akan berkurang sebesar jumlah pembayaran dan tercatat di transaksi'
+    : 'Saldo wallet akan bertambah sebesar jumlah yang diterima dan tercatat di transaksi'
 
   useEffect(() => {
     if (!walletId) { setCategoryId(''); return }
@@ -590,7 +818,14 @@ function PayDebtModal({ isOpen, onClose, debt }) {
   }, [walletId, categories, defaultCatName])
 
   useEffect(() => {
-    if (isOpen) { setAmount(''); setWalletId(''); setCategoryId('') }
+    if (isOpen) { 
+      setAmount(''); 
+      setWalletId(''); 
+      setCategoryId('');
+      setPaymentDate(new Date().toISOString().split('T')[0]);
+      setPaymentTime(new Date().toTimeString().slice(0, 5));
+      setNote('');
+    }
   }, [isOpen])
 
   const handleSubmit = async (e) => {
@@ -600,13 +835,13 @@ function PayDebtModal({ isOpen, onClose, debt }) {
 
     try {
       await payMutation.mutateAsync({
-        id: debt.id,
-        payAmount: val,
-        remainingAmount: Number(debt.remaining_amount),
+        debtId: debt.id,
+        amount: val,
+        paymentDate,
+        paymentTime,
         walletId: walletId || null,
-        debtName: debt.name,
-        debtType: debt.type,
         categoryId: walletId ? (categoryId || null) : null,
+        note: note || null,
       })
       toast.success('Pembayaran tercatat')
       onClose()
@@ -640,11 +875,40 @@ function PayDebtModal({ isOpen, onClose, debt }) {
           required
         />
 
+        {/* Date and Time */}
+        <div className="flex flex-col gap-1">
+          <label className="text-sm font-medium text-gray-700">
+            Tanggal & Waktu Pembayaran
+          </label>
+          <div className="flex gap-2">
+            <input
+              type="date"
+              value={paymentDate}
+              onChange={(e) => setPaymentDate(e.target.value)}
+              className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300 focus:border-primary"
+            />
+            <input
+              type="time"
+              value={paymentTime}
+              onChange={(e) => setPaymentTime(e.target.value)}
+              className="w-28 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300 focus:border-primary"
+            />
+          </div>
+        </div>
+
+        <Input
+          label="Catatan (Opsional)"
+          type="text"
+          placeholder="Contoh: Cicilan ke-3"
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+        />
+
         <Select
           label={walletLabel}
           value={walletId}
           onChange={(e) => setWalletId(e.target.value)}
-          helpText={walletId ? walletHint : 'Kosongkan jika tidak ingin mempengaruhi saldo wallet'}
+          helpText={walletId ? walletHint : 'Kosongkan jika tidak ingin mempengaruhi saldo wallet (hanya catat di hutang/piutang saja)'}
         >
           <option value="">— Tidak terhubung ke wallet —</option>
           {(wallets || []).map((w) => (
@@ -684,6 +948,168 @@ function PayDebtModal({ isOpen, onClose, debt }) {
   )
 }
 
+// ── Debt Payment History Component ────────────────────────────────────────────
+
+function DebtPaymentHistory({ debtId }) {
+  const { data: payments, isLoading } = useDebtPayments(debtId)
+  const [editPayment, setEditPayment] = useState(null)
+  const [deletePayment, setDeletePayment] = useState(null)
+  const updateMutation = useUpdateDebtPayment()
+  const deleteMutation = useDeleteDebtPayment()
+  const toast = useToast()
+
+  if (isLoading) {
+    return <div className="text-center py-4 text-gray-400 text-sm">Memuat riwayat...</div>
+  }
+
+  if (!payments?.length) {
+    return <div className="text-center py-4 text-gray-400 text-sm">Belum ada riwayat pembayaran</div>
+  }
+
+  const handleUpdate = async (e) => {
+    e.preventDefault()
+    const formData = new FormData(e.target)
+    
+    try {
+      await updateMutation.mutateAsync({
+        paymentId: editPayment.id,
+        debtId: editPayment.debt_id,
+        amount: Number(formData.get('amount')),
+        paymentDate: formData.get('paymentDate'),
+        paymentTime: formData.get('paymentTime'),
+        note: formData.get('note'),
+      })
+      toast.success('Pembayaran diperbarui')
+      setEditPayment(null)
+    } catch (err) {
+      toast.error(err.message || 'Gagal memperbarui')
+    }
+  }
+
+  const handleDelete = async () => {
+    try {
+      await deleteMutation.mutateAsync({
+        paymentId: deletePayment.id,
+        debtId: deletePayment.debt_id,
+      })
+      toast.success('Pembayaran dihapus')
+      setDeletePayment(null)
+    } catch (err) {
+      toast.error(err.message || 'Gagal menghapus')
+    }
+  }
+
+  return (
+    <>
+      <div className="mt-4 pt-4 border-t border-gray-100">
+        <h4 className="text-xs font-semibold text-gray-500 mb-3 flex items-center gap-1">
+          <History className="w-3 h-3" />
+          Riwayat Pembayaran ({payments.length})
+        </h4>
+        <div className="space-y-2 max-h-48 overflow-y-auto">
+          {payments.map((payment) => (
+            <div key={payment.id} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg text-sm">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="font-medium text-gray-900">
+                    {formatCurrency(payment.amount)}
+                  </span>
+                  <span className="text-xs text-gray-400">
+                    {formatDate(payment.payment_date)} {payment.payment_time?.slice(0, 5)}
+                  </span>
+                </div>
+                {payment.note && (
+                  <p className="text-xs text-gray-500 truncate">{payment.note}</p>
+                )}
+                {payment.wallets && (
+                  <p className="text-xs text-gray-400 flex items-center gap-1">
+                    <Wallet className="w-3 h-3" />
+                    {payment.wallets.icon} {payment.wallets.name}
+                  </p>
+                )}
+              </div>
+              <div className="flex gap-1 ml-2">
+                <button
+                  onClick={() => setEditPayment(payment)}
+                  className="p-1 rounded text-gray-400 hover:text-blue-500 hover:bg-blue-50"
+                >
+                  <Pencil className="w-3 h-3" />
+                </button>
+                <button
+                  onClick={() => setDeletePayment(payment)}
+                  className="p-1 rounded text-gray-400 hover:text-red-500 hover:bg-red-50"
+                >
+                  <Trash2 className="w-3 h-3" />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Edit Modal */}
+      {editPayment && (
+        <Modal isOpen={!!editPayment} onClose={() => setEditPayment(null)} title="Edit Pembayaran" size="sm">
+          <ModalBody>
+            <form onSubmit={handleUpdate} className="space-y-4">
+              <Input
+                label="Jumlah (Rp)"
+                name="amount"
+                type="number"
+                defaultValue={editPayment.amount}
+                required
+              />
+              <div className="flex flex-col gap-1">
+                <label className="text-sm font-medium text-gray-700">Tanggal & Waktu</label>
+                <div className="flex gap-2">
+                  <input
+                    type="date"
+                    name="paymentDate"
+                    defaultValue={editPayment.payment_date}
+                    className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                    required
+                  />
+                  <input
+                    type="time"
+                    name="paymentTime"
+                    defaultValue={editPayment.payment_time?.slice(0, 5) || '12:00'}
+                    className="w-28 rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                    required
+                  />
+                </div>
+              </div>
+              <Input
+                label="Catatan"
+                name="note"
+                type="text"
+                defaultValue={editPayment.note || ''}
+              />
+              <div className="flex gap-2">
+                <Button type="button" variant="secondary" className="flex-1" onClick={() => setEditPayment(null)}>
+                  Batal
+                </Button>
+                <Button type="submit" className="flex-1" loading={updateMutation.isPending}>
+                  Simpan
+                </Button>
+              </div>
+            </form>
+          </ModalBody>
+        </Modal>
+      )}
+
+      {/* Delete Confirmation */}
+      <ConfirmModal
+        isOpen={!!deletePayment}
+        onClose={() => setDeletePayment(null)}
+        onConfirm={handleDelete}
+        title="Hapus Pembayaran"
+        message={`Yakin ingin menghapus pembayaran ${formatCurrency(deletePayment?.amount)}?`}
+        loading={deleteMutation.isPending}
+      />
+    </>
+  )
+}
+
 // ── Debt Card ─────────────────────────────────────────────────────────────────
 
 function DebtCard({ debt, onEdit, onDelete, onPay, onMarkPaid }) {
@@ -694,6 +1120,7 @@ function DebtCard({ debt, onEdit, onDelete, onPay, onMarkPaid }) {
     : 0
   const days = daysUntil(debt.due_date)
   const isOverdue = days !== null && days < 0 && !paid
+  const [showHistory, setShowHistory] = useState(false)
 
   return (
     <Card className={`hover:shadow-md transition-shadow ${paid ? 'opacity-70' : ''}`}>
@@ -776,12 +1203,14 @@ function DebtCard({ debt, onEdit, onDelete, onPay, onMarkPaid }) {
         )}
 
         {/* Actions */}
-        {!paid && (
-          <div className="flex gap-2">
+        <div className="flex gap-2">
+          {!paid && (
             <Button size="sm" variant="secondary" className="flex-1" onClick={() => onPay(debt)}>
               <CreditCard className="w-4 h-4" />
               Catat Bayar
             </Button>
+          )}
+          {!paid && (
             <Button
               size="sm"
               className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white"
@@ -790,8 +1219,20 @@ function DebtCard({ debt, onEdit, onDelete, onPay, onMarkPaid }) {
               <CheckCircle2 className="w-4 h-4" />
               Lunas
             </Button>
-          </div>
-        )}
+          )}
+          <Button
+            size="sm"
+            variant="outline"
+            className="flex-1"
+            onClick={() => setShowHistory(!showHistory)}
+          >
+            <History className="w-4 h-4" />
+            {showHistory ? 'Sembunyikan' : 'Riwayat'}
+          </Button>
+        </div>
+
+        {/* Payment History */}
+        {showHistory && <DebtPaymentHistory debtId={debt.id} />}
       </CardContent>
     </Card>
   )
@@ -931,6 +1372,9 @@ function MarkPaidModal({ isOpen, onClose, debt, onConfirm, loading }) {
   const { data: incomeCategories } = useCategories('income')
   const [walletId, setWalletId] = useState('')
   const [categoryId, setCategoryId] = useState('')
+  const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0])
+  const [paymentTime, setPaymentTime] = useState(new Date().toTimeString().slice(0, 5))
+  const [note, setNote] = useState('')
 
   const isDebt = debt?.type === 'debt'
   const categories = isDebt ? expenseCategories : incomeCategories
@@ -943,7 +1387,13 @@ function MarkPaidModal({ isOpen, onClose, debt, onConfirm, loading }) {
   }, [walletId, categories, defaultCatName])
 
   useEffect(() => {
-    if (isOpen) { setWalletId(''); setCategoryId('') }
+    if (isOpen) { 
+      setWalletId(''); 
+      setCategoryId('');
+      setPaymentDate(new Date().toISOString().split('T')[0]);
+      setPaymentTime(new Date().toTimeString().slice(0, 5));
+      setNote('');
+    }
   }, [isOpen])
 
   return (
@@ -956,13 +1406,42 @@ function MarkPaidModal({ isOpen, onClose, debt, onConfirm, loading }) {
             <span className="font-semibold">{formatCurrency(debt?.remaining_amount)}</span> akan menjadi 0.
           </p>
 
+          {/* Date and Time */}
+          <div className="flex flex-col gap-1">
+            <label className="text-sm font-medium text-gray-700">
+              Tanggal & Waktu Pelunasan
+            </label>
+            <div className="flex gap-2">
+              <input
+                type="date"
+                value={paymentDate}
+                onChange={(e) => setPaymentDate(e.target.value)}
+                className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300 focus:border-primary"
+              />
+              <input
+                type="time"
+                value={paymentTime}
+                onChange={(e) => setPaymentTime(e.target.value)}
+                className="w-28 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300 focus:border-primary"
+              />
+            </div>
+          </div>
+
+          <Input
+            label="Catatan (Opsional)"
+            type="text"
+            placeholder="Contoh: Pelunasan total"
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+          />
+
           <Select
             label={isDebt ? 'Bayar dari Wallet (opsional)' : 'Terima ke Wallet (opsional)'}
             value={walletId}
             onChange={(e) => setWalletId(e.target.value)}
             helpText={walletId
-              ? isDebt ? 'Saldo wallet akan berkurang' : 'Saldo wallet akan bertambah'
-              : 'Kosongkan jika tidak ingin mempengaruhi saldo wallet'}
+              ? isDebt ? 'Saldo wallet akan berkurang dan tercatat di transaksi' : 'Saldo wallet akan bertambah dan tercatat di transaksi'
+              : 'Kosongkan jika tidak ingin mempengaruhi saldo wallet (hanya catat di hutang/piutang saja)'}
           >
             <option value="">— Tidak terhubung ke wallet —</option>
             {(wallets || []).map((w) => (
@@ -994,7 +1473,7 @@ function MarkPaidModal({ isOpen, onClose, debt, onConfirm, loading }) {
             </Button>
             <Button
               className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white"
-              onClick={() => onConfirm(walletId, categoryId)}
+              onClick={() => onConfirm(walletId, categoryId, paymentDate, paymentTime, note)}
               loading={loading}
             >
               <CheckCircle2 className="w-4 h-4" />
@@ -1045,16 +1524,19 @@ function DebtsTab() {
     }
   }
 
-  const handleMarkPaid = async (walletId, categoryId) => {
+  const handleMarkPaid = async (walletId, categoryId, paymentDate, paymentTime, note) => {
     const debt = markPaidModal.debt
     try {
       await markPaidMutation.mutateAsync({
         id: debt.id,
         remainingAmount: Number(debt.remaining_amount),
+        paymentDate,
+        paymentTime,
         walletId: walletId || null,
         debtName: debt.name,
         debtType: debt.type,
         categoryId: walletId ? (categoryId || null) : null,
+        note: note || 'Pelunasan',
       })
       toast.success('Ditandai sebagai lunas')
       setMarkPaidModal({ open: false, debt: null })

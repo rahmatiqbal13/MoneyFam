@@ -1,8 +1,10 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import {
   ChevronLeft, ChevronRight, TrendingUp, TrendingDown, PiggyBank,
-  Percent, ArrowUpRight, ArrowDownRight, Users, Flame,
+  Percent, ArrowUpRight, ArrowDownRight, Users, Flame, X, Receipt, Edit2, Trash2
 } from 'lucide-react'
+import { supabase } from '@/lib/supabase'
+import { useAuthStore } from '@/stores/authStore'
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip, Legend,
@@ -20,6 +22,7 @@ import {
   usePeriodCategoryDetail,
   useYearlyStats,
 } from '@/hooks/useTransactions'
+import { useQueryClient } from '@tanstack/react-query'
 import { useBudgets } from '@/hooks/useBudget'
 
 // ── Date helpers ─────────────────────────────────────────────────────────────
@@ -112,10 +115,321 @@ function SummaryCards({ stats, isLoading }) {
   )
 }
 
+// ── Day Transactions Modal ───────────────────────────────────────────────────
+
+function DayTransactionsModal({ date, onClose, onTransactionDeleted }) {
+  const [transactions, setTransactions] = useState([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [editingTx, setEditingTx] = useState(null)
+  const [deletingTx, setDeletingTx] = useState(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const family = useAuthStore((s) => s.family)
+  const user = useAuthStore((s) => s.user)
+
+  useEffect(() => {
+    if (!date) return
+    
+    async function fetchTransactions() {
+      setIsLoading(true)
+      let query = supabase
+        .from('transactions')
+        .select(`
+          *,
+          categories(id, name, icon, color),
+          wallets!wallet_id(id, name, icon)
+        `)
+        .eq('date', date)
+        .order('created_at', { ascending: false })
+      
+      if (family?.id) {
+        query = query.eq('family_id', family.id)
+      } else {
+        query = query.eq('user_id', user.id)
+      }
+      
+      const { data, error } = await query
+      if (!error) {
+        setTransactions(data || [])
+      }
+      setIsLoading(false)
+    }
+    
+    fetchTransactions()
+  }, [date, family, user])
+
+  const handleEdit = async (e) => {
+    e.preventDefault()
+    if (!editingTx) return
+    
+    setIsSubmitting(true)
+    const formData = new FormData(e.target)
+    
+    try {
+      const { error } = await supabase
+        .from('transactions')
+        .update({
+          description: formData.get('description'),
+          amount: Number(formData.get('amount')),
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', editingTx.id)
+      
+      if (error) throw error
+      
+      // Refresh transactions
+      setTransactions(prev => prev.map(tx => 
+        tx.id === editingTx.id 
+          ? { ...tx, description: formData.get('description'), amount: Number(formData.get('amount')) }
+          : tx
+      ))
+      setEditingTx(null)
+    } catch (err) {
+      alert('Gagal mengupdate: ' + err.message)
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!deletingTx) return
+    
+    setIsSubmitting(true)
+    try {
+      const { error } = await supabase
+        .from('transactions')
+        .delete()
+        .eq('id', deletingTx.id)
+      
+      if (error) throw error
+      
+      setTransactions(prev => prev.filter(tx => tx.id !== deletingTx.id))
+      setDeletingTx(null)
+      
+      // Notify parent to refresh heatmap
+      if (onTransactionDeleted) {
+        onTransactionDeleted()
+      }
+    } catch (err) {
+      alert('Gagal menghapus: ' + err.message)
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  if (!date) return null
+
+  const totalExpense = transactions
+    .filter(t => t.type === 'expense')
+    .reduce((sum, t) => sum + Number(t.amount), 0)
+  const totalIncome = transactions
+    .filter(t => t.type === 'income')
+    .reduce((sum, t) => sum + Number(t.amount), 0)
+
+  return (
+    <>
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+        <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[80vh] overflow-hidden">
+          {/* Header */}
+          <div className="flex items-center justify-between p-4 border-b border-gray-100">
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900">
+                {new Date(date).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+              </h3>
+              <p className="text-sm text-gray-500">
+                {transactions.length} transaksi
+              </p>
+            </div>
+            <button 
+              onClick={onClose}
+              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              <X className="w-5 h-5 text-gray-500" />
+            </button>
+          </div>
+
+          {/* Summary */}
+          <div className="grid grid-cols-2 gap-4 p-4 bg-gray-50">
+            <div className="text-center">
+              <p className="text-xs text-gray-500 mb-1">Pemasukan</p>
+              <p className="text-lg font-bold text-emerald-600">{formatCurrency(totalIncome)}</p>
+            </div>
+            <div className="text-center">
+              <p className="text-xs text-gray-500 mb-1">Pengeluaran</p>
+              <p className="text-lg font-bold text-red-500">{formatCurrency(totalExpense)}</p>
+            </div>
+          </div>
+
+          {/* Transactions List */}
+          <div className="overflow-y-auto max-h-[50vh] p-4">
+            {isLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+              </div>
+            ) : transactions.length === 0 ? (
+              <div className="text-center py-8">
+                <Receipt className="w-12 h-12 text-gray-200 mx-auto mb-3" />
+                <p className="text-gray-400 text-sm">Tidak ada transaksi</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {transactions.map((tx) => (
+                  <div 
+                    key={tx.id} 
+                    className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl group"
+                  >
+                    <div 
+                      className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                      style={{ backgroundColor: (tx.categories?.color || '#6b7280') + '20' }}
+                    >
+                      <span className="text-lg">{tx.categories?.icon || (tx.type === 'income' ? '💰' : tx.type === 'expense' ? '💸' : '🔄')}</span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 truncate">
+                        {tx.description || tx.categories?.name || 'Transaksi'}
+                      </p>
+                      <p className="text-xs text-gray-400">
+                        {tx.wallets?.name || 'Tanpa wallet'} • {tx.categories?.name || 'Tanpa kategori'}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className={`text-sm font-semibold flex-shrink-0 ${
+                        tx.type === 'income' ? 'text-emerald-600' : tx.type === 'expense' ? 'text-red-500' : 'text-blue-600'
+                      }`}>
+                        {tx.type === 'income' ? '+' : tx.type === 'expense' ? '-' : ''}
+                        {formatCurrency(tx.amount)}
+                      </span>
+                      {/* Edit & Delete Buttons */}
+                      <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button
+                          onClick={() => setEditingTx(tx)}
+                          className="p-1.5 rounded-lg text-gray-400 hover:text-blue-500 hover:bg-blue-50 transition-colors"
+                          title="Edit"
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => setDeletingTx(tx)}
+                          className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                          title="Hapus"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Edit Modal */}
+      {editingTx && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
+            <div className="flex items-center justify-between p-4 border-b border-gray-100">
+              <h3 className="text-lg font-semibold text-gray-900">Edit Transaksi</h3>
+              <button 
+                onClick={() => setEditingTx(null)}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+            <form onSubmit={handleEdit} className="p-4 space-y-4">
+              <div>
+                <label className="text-sm font-medium text-gray-700 block mb-1">Deskripsi</label>
+                <input
+                  type="text"
+                  name="description"
+                  defaultValue={editingTx.description || ''}
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300"
+                  placeholder="Deskripsi transaksi"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-700 block mb-1">Jumlah (Rp)</label>
+                <input
+                  type="number"
+                  name="amount"
+                  defaultValue={editingTx.amount}
+                  required
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300"
+                />
+              </div>
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setEditingTx(null)}
+                  className="flex-1 px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="flex-1 px-4 py-2 rounded-lg bg-primary text-white hover:bg-primary/90 transition-colors disabled:opacity-50"
+                >
+                  {isSubmitting ? 'Menyimpan...' : 'Simpan'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deletingTx && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6">
+            <div className="text-center mb-4">
+              <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                <Trash2 className="w-6 h-6 text-red-500" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900">Hapus Transaksi?</h3>
+              <p className="text-sm text-gray-500 mt-1">
+                Transaksi "{deletingTx.description || deletingTx.categories?.name || 'Tanpa deskripsi'}" sebesar {formatCurrency(deletingTx.amount)} akan dihapus permanen.
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setDeletingTx(null)}
+                disabled={isSubmitting}
+                className="flex-1 px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
+              >
+                Batal
+              </button>
+              <button
+                onClick={handleDelete}
+                disabled={isSubmitting}
+                className="flex-1 px-4 py-2 rounded-lg bg-red-500 text-white hover:bg-red-600 transition-colors disabled:opacity-50"
+              >
+                {isSubmitting ? 'Menghapus...' : 'Hapus'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  )
+}
+
 // ── Spending Heatmap ──────────────────────────────────────────────────────────
 
 function SpendingHeatmap({ year, month }) {
   const { data: dailySpending, isLoading } = useDailySpending(year, month)
+  const [selectedDate, setSelectedDate] = useState(null)
+  const queryClient = useQueryClient()
+
+  const handleTransactionChanged = () => {
+    // Invalidate queries to refresh data
+    queryClient.invalidateQueries({ queryKey: ['transactions', 'daily-spending'] })
+    queryClient.invalidateQueries({ queryKey: ['transactions', 'monthly-stats'] })
+    queryClient.invalidateQueries({ queryKey: ['transactions', 'trend'] })
+    queryClient.invalidateQueries({ queryKey: ['transactions', 'category-detail'] })
+    queryClient.invalidateQueries({ queryKey: ['wallets'] })
+  }
 
   const days = useMemo(() => {
     const daysInMonth = new Date(year, month, 0).getDate()
@@ -154,66 +468,83 @@ function SpendingHeatmap({ year, month }) {
   if (isLoading) return <Spinner />
 
   return (
-    <div>
-      {/* Day labels */}
-      <div className="grid grid-cols-7 gap-1 mb-1">
-        {dayNames.map((d) => (
-          <div key={d} className="text-center text-xs text-gray-400 font-medium py-0.5">
-            {d}
-          </div>
-        ))}
-      </div>
-
-      {/* Calendar grid */}
-      <div className="grid grid-cols-7 gap-1">
-        {/* Empty cells for offset */}
-        {Array.from({ length: days.startOffset }).map((_, i) => (
-          <div key={`empty-${i}`} />
-        ))}
-
-        {/* Day cells */}
-        {Array.from({ length: days.daysInMonth }).map((_, i) => {
-          const dayNum = i + 1
-          const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`
-          const amount = dailySpending?.[dateStr] || 0
-          const isToday = isCurrentMonth && dayNum === todayDay
-
-          return (
-            <div
-              key={dayNum}
-              title={`${dayNum} — ${getTooltipText(dayNum)}`}
-              className={`aspect-square rounded-md flex items-center justify-center cursor-default transition-transform hover:scale-110 ${getColor(amount)} ${
-                isToday ? 'ring-2 ring-primary ring-offset-1' : ''
-              }`}
-            >
-              <span className={`text-xs font-medium ${amount > 0 ? 'text-gray-700' : 'text-gray-400'}`}>
-                {dayNum}
-              </span>
-            </div>
-          )
-        })}
-      </div>
-
-      {/* Legend */}
-      <div className="flex items-center gap-1.5 mt-3 flex-wrap">
-        <span className="text-xs text-gray-400">Pengeluaran:</span>
-        <div className="flex items-center gap-1">
-          {[
-            { color: 'bg-gray-100', label: 'Nol' },
-            { color: 'bg-emerald-200', label: 'Rendah' },
-            { color: 'bg-yellow-200', label: '' },
-            { color: 'bg-orange-200', label: '' },
-            { color: 'bg-orange-400', label: '' },
-            { color: 'bg-red-500', label: 'Tinggi' },
-          ].map(({ color, label }, i) => (
-            <div key={i} className="flex items-center gap-0.5">
-              <div className={`w-4 h-4 rounded ${color}`} />
-              {label && <span className="text-xs text-gray-400">{label}</span>}
+    <>
+      <div>
+        {/* Day labels */}
+        <div className="grid grid-cols-7 gap-1 mb-1">
+          {dayNames.map((d) => (
+            <div key={d} className="text-center text-xs text-gray-400 font-medium py-0.5">
+              {d}
             </div>
           ))}
         </div>
+
+        {/* Calendar grid */}
+        <div className="grid grid-cols-7 gap-1">
+          {/* Empty cells for offset */}
+          {Array.from({ length: days.startOffset }).map((_, i) => (
+            <div key={`empty-${i}`} />
+          ))}
+
+          {/* Day cells */}
+          {Array.from({ length: days.daysInMonth }).map((_, i) => {
+            const dayNum = i + 1
+            const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`
+            const amount = dailySpending?.[dateStr] || 0
+            const isToday = isCurrentMonth && dayNum === todayDay
+
+            return (
+              <button
+                key={dayNum}
+                title={`${dayNum} — ${getTooltipText(dayNum)}`}
+                onClick={() => setSelectedDate(dateStr)}
+                className={`aspect-square rounded-md flex items-center justify-center transition-all hover:scale-110 hover:shadow-md ${getColor(amount)} ${
+                  isToday ? 'ring-2 ring-primary ring-offset-1' : ''
+                } ${amount > 0 ? 'cursor-pointer' : 'cursor-default'}`}
+              >
+                <span className={`text-xs font-medium ${amount > 0 ? 'text-gray-700' : 'text-gray-400'}`}>
+                  {dayNum}
+                </span>
+              </button>
+            )
+          })}
+        </div>
+
+        {/* Legend */}
+        <div className="flex items-center gap-1.5 mt-3 flex-wrap">
+          <span className="text-xs text-gray-400">Pengeluaran:</span>
+          <div className="flex items-center gap-1">
+            {[
+              { color: 'bg-gray-100', label: 'Nol' },
+              { color: 'bg-emerald-200', label: 'Rendah' },
+              { color: 'bg-yellow-200', label: '' },
+              { color: 'bg-orange-200', label: '' },
+              { color: 'bg-orange-400', label: '' },
+              { color: 'bg-red-500', label: 'Tinggi' },
+            ].map(({ color, label }, i) => (
+              <div key={i} className="flex items-center gap-0.5">
+                <div className={`w-4 h-4 rounded ${color}`} />
+                {label && <span className="text-xs text-gray-400">{label}</span>}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Helper text */}
+        <p className="text-xs text-gray-400 mt-2 text-center">
+          Klik tanggal untuk melihat detail transaksi
+        </p>
       </div>
-    </div>
+
+      {/* Modal */}
+      {selectedDate && (
+        <DayTransactionsModal 
+          date={selectedDate} 
+          onClose={() => setSelectedDate(null)} 
+          onTransactionDeleted={handleTransactionChanged}
+        />
+      )}
+    </>
   )
 }
 

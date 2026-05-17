@@ -3,8 +3,8 @@ import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/stores/authStore'
 
 const TX_KEY = 'transactions'
-
 const QUERY_KEY = 'savings_goals'
+const PAYMENTS_KEY = 'savings_payments'
 
 export function useSavingsGoals() {
   const family = useAuthStore((s) => s.family)
@@ -33,6 +33,30 @@ export function useSavingsGoals() {
     },
     enabled: !!user?.id,
     staleTime: 1000 * 30,
+  })
+}
+
+export function useSavingsPayments(goalId) {
+  return useQuery({
+    queryKey: [PAYMENTS_KEY, goalId],
+    queryFn: async () => {
+      if (!goalId) return []
+      
+      const { data, error } = await supabase
+        .from('savings_goal_payments')
+        .select(`
+          *,
+          wallets:wallet_id(id, name, icon),
+          categories:category_id(id, name, icon)
+        `)
+        .eq('goal_id', goalId)
+        .order('payment_date', { ascending: false })
+        .order('payment_time', { ascending: false })
+      
+      if (error) throw error
+      return data || []
+    },
+    enabled: !!goalId,
   })
 }
 
@@ -87,27 +111,98 @@ export function useDeleteSavingsGoal() {
   })
 }
 
-// Tambah/kurangi dana ke tabungan (atomic - BUG-004 fix)
-export function useAddToSavingsGoal() {
+// Add payment to savings goal with optional wallet
+export function useAddSavingsPayment() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async ({ id, amount, walletId, goalName, categoryId }) => {
-      // Use atomic RPC function to ensure data consistency
-      const { error } = await supabase.rpc('add_to_savings_goal_atomic', {
-        p_goal_id: id,
+    mutationFn: async ({ 
+      goalId, 
+      amount, 
+      type,
+      paymentDate, 
+      paymentTime,
+      walletId, 
+      categoryId, 
+      note 
+    }) => {
+      const { data, error } = await supabase.rpc('add_savings_payment', {
+        p_goal_id: goalId,
         p_amount: amount,
+        p_type: type,
+        p_payment_date: paymentDate,
+        p_payment_time: paymentTime,
         p_wallet_id: walletId || null,
         p_category_id: categoryId || null,
-        p_goal_name: goalName
+        p_note: note || null
       })
       
       if (error) throw error
+      return data
     },
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: [QUERY_KEY] })
+      queryClient.invalidateQueries({ queryKey: [PAYMENTS_KEY, variables.goalId] })
       queryClient.invalidateQueries({ queryKey: [TX_KEY] })
       queryClient.invalidateQueries({ queryKey: ['wallets'] })
     },
   })
+}
+
+// Update savings payment
+export function useUpdateSavingsPayment() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({ 
+      paymentId, 
+      goalId,
+      amount, 
+      paymentDate, 
+      paymentTime,
+      note 
+    }) => {
+      const { error } = await supabase.rpc('update_savings_payment', {
+        p_payment_id: paymentId,
+        p_amount: amount,
+        p_payment_date: paymentDate,
+        p_payment_time: paymentTime,
+        p_note: note || null
+      })
+      
+      if (error) throw error
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEY] })
+      queryClient.invalidateQueries({ queryKey: [PAYMENTS_KEY, variables.goalId] })
+      queryClient.invalidateQueries({ queryKey: [TX_KEY] })
+      queryClient.invalidateQueries({ queryKey: ['wallets'] })
+    },
+  })
+}
+
+// Delete savings payment
+export function useDeleteSavingsPayment() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({ paymentId, goalId }) => {
+      const { error } = await supabase.rpc('delete_savings_payment', {
+        p_payment_id: paymentId
+      })
+      
+      if (error) throw error
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEY] })
+      queryClient.invalidateQueries({ queryKey: [PAYMENTS_KEY, variables.goalId] })
+      queryClient.invalidateQueries({ queryKey: [TX_KEY] })
+      queryClient.invalidateQueries({ queryKey: ['wallets'] })
+    },
+  })
+}
+
+// Legacy function - now uses add_savings_payment
+export function useAddToSavingsGoal() {
+  return useAddSavingsPayment()
 }
