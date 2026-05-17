@@ -26,6 +26,8 @@ const queryClient = new QueryClient({
     queries: {
       retry: 1,
       refetchOnWindowFocus: false,
+      staleTime: 1000 * 60 * 5, // 5 minutes
+      gcTime: 1000 * 60 * 10, // 10 minutes
     },
   },
 })
@@ -71,10 +73,35 @@ function PublicRoute({ children }) {
 
 function AppInitializer({ children }) {
   const initialize = useAuthStore((s) => s.initialize)
+  const initialized = useAuthStore((s) => s.initialized)
 
   useEffect(() => {
-    initialize()
+    let cleanup
+    
+    const init = async () => {
+      cleanup = await initialize()
+    }
+    
+    init()
+    
+    return () => {
+      if (cleanup && typeof cleanup === 'function') {
+        cleanup()
+      }
+    }
   }, [initialize])
+
+  // Show loading while initializing auth
+  if (!initialized) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-10 h-10 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+          <p className="text-sm text-gray-400">Memuat aplikasi...</p>
+        </div>
+      </div>
+    )
+  }
 
   return children
 }

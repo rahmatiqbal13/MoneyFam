@@ -8,6 +8,7 @@ export const supabase = createClient(supabaseUrl, supabaseKey, {
     persistSession: true,
     autoRefreshToken: true,
     detectSessionInUrl: false,
-    storageKey: 'moneyfam-auth',
+    storageKey: 'moneyfam-supabase-session',
+    storage: localStorage,
   },
 })

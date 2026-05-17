@@ -18,7 +18,7 @@ export const useAuthStore = create(
       initialize: async () => {
         // Guard: set initialized synchronously so double-calls (React StrictMode)
         // see it immediately and return early without registering a second listener.
-        if (get().initialized) return
+        if (get().initialized) return () => {}
         set({ loading: true, initialized: true })
 
         try {
@@ -26,14 +26,21 @@ export const useAuthStore = create(
           if (session?.user) {
             set({ user: session.user })
             await get().fetchProfile(session.user.id)
+          } else {
+            // No session, ensure clean state
+            set({ user: null, profile: null, family: null })
           }
         } catch (err) {
           console.error('Auth init error:', err)
+          set({ user: null, profile: null, family: null })
         } finally {
           set({ loading: false })
         }
 
-        supabase.auth.onAuthStateChange(async (event, session) => {
+        // Setup auth state change listener
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+          console.log('Auth state changed:', event)
+          
           if (event === 'SIGNED_IN' && session?.user) {
             set({ user: session.user })
             await get().fetchProfile(session.user.id)
@@ -41,8 +48,16 @@ export const useAuthStore = create(
             set({ user: null, profile: null, family: null })
           } else if (event === 'TOKEN_REFRESHED' && session?.user) {
             set({ user: session.user })
+          } else if (event === 'INITIAL_SESSION' && session?.user) {
+            set({ user: session.user })
+            await get().fetchProfile(session.user.id)
           }
         })
+
+        // Cleanup subscription on re-initialization
+        return () => {
+          subscription.unsubscribe()
+        }
       },
 
       fetchProfile: async (userId) => {
@@ -166,8 +181,11 @@ export const useAuthStore = create(
       },
     }),
     {
-      name: 'moneyfam-auth',
-      partialize: (state) => ({ user: state.user, profile: state.profile, family: state.family }),
+      name: 'moneyfam-store',
+      partialize: (state) => ({ 
+        profile: state.profile, 
+        family: state.family 
+      }),
     }
   )
 )
