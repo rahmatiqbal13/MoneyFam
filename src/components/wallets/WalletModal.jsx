@@ -23,21 +23,23 @@ const WALLET_COLORS = [
   '#ec4899', '#06b6d4', '#84cc16', '#f97316', '#6366f1',
 ]
 
-const defaultForm = {
-  name: '',
-  type: 'cash',
-  icon: '💳',
-  color: '#10b981',
-  initial_balance: '0',
-  balance: '',
-  description: '',
+function getDefaultForm() {
+  return {
+    name: '',
+    type: 'cash',
+    icon: '💳',
+    color: '#10b981',
+    initial_balance: '0',
+    balance: '',
+    description: '',
+  }
 }
 
 export function WalletModal({ isOpen, onClose, wallet = null }) {
   const isEdit = !!wallet
   const toast = useToast()
 
-  const [form, setForm] = useState(defaultForm)
+  const [form, setForm] = useState(() => getDefaultForm())
   const [errors, setErrors] = useState({})
 
   const createMutation = useCreateWallet()
@@ -57,7 +59,7 @@ export function WalletModal({ isOpen, onClose, wallet = null }) {
           description: wallet.description || '',
         })
       } else {
-        setForm(defaultForm)
+        setForm(getDefaultForm())
       }
       setErrors({})
     }

@@ -16,17 +16,19 @@ const TYPES = [
   { value: 'transfer', label: 'Transfer' },
 ]
 
-const defaultForm = {
-  type: 'expense',
-  amount: '',
-  date: new Date().toISOString().split('T')[0],
-  time: new Date().toTimeString().slice(0, 5),
-  description: '',
-  category_id: '',
-  wallet_id: '',
-  to_wallet_id: '',
-  note: '',
-  receipt_url: '',
+function getDefaultForm() {
+  return {
+    type: 'expense',
+    amount: '',
+    date: new Date().toISOString().split('T')[0],
+    time: new Date().toTimeString().slice(0, 5),
+    description: '',
+    category_id: '',
+    wallet_id: '',
+    to_wallet_id: '',
+    note: '',
+    receipt_url: '',
+  }
 }
 
 export function TransactionModal({ isOpen, onClose, transaction = null }) {
@@ -34,7 +36,7 @@ export function TransactionModal({ isOpen, onClose, transaction = null }) {
   const toast = useToast()
   const user = useAuthStore((state) => state.user)
 
-  const [form, setForm] = useState(defaultForm)
+  const [form, setForm] = useState(() => getDefaultForm())
   const [errors, setErrors] = useState({})
   const [receiptFile, setReceiptFile] = useState(null)
   const [receiptPreview, setReceiptPreview] = useState(null)
@@ -57,7 +59,7 @@ export function TransactionModal({ isOpen, onClose, transaction = null }) {
 
   useEffect(() => {
     if (!isOpen) {
-      setForm(defaultForm)
+      setForm(getDefaultForm())
       setReceiptFile(null)
       setReceiptPreview(null)
       setErrors({})
@@ -82,7 +84,7 @@ export function TransactionModal({ isOpen, onClose, transaction = null }) {
         })
         setReceiptPreview(transaction.receipt_url || null)
       } else {
-        setForm(defaultForm)
+        setForm(getDefaultForm())
         setReceiptFile(null)
         setReceiptPreview(null)
       }
@@ -123,6 +125,15 @@ export function TransactionModal({ isOpen, onClose, transaction = null }) {
     setForm({ ...form, receipt_url: '' })
   }
 
+  const cancelUpload = () => {
+    setUploading(false)
+    setReceiptFile(null)
+    if (receiptPreview && receiptPreview.startsWith('blob:')) {
+      URL.revokeObjectURL(receiptPreview)
+    }
+    setReceiptPreview(null)
+  }
+
   const uploadReceipt = async () => {
     if (!receiptFile || !user) return null
 
@@ -131,12 +142,18 @@ export function TransactionModal({ isOpen, onClose, transaction = null }) {
       const fileExt = receiptFile.name.split('.').pop()
       const fileName = `${user.id}/${Date.now()}.${fileExt}`
 
-      const { data, error } = await supabase.storage
+      const uploadPromise = supabase.storage
         .from('receipts')
         .upload(fileName, receiptFile, {
           cacheControl: '3600',
           upsert: false
         })
+
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Waktu upload habis. Periksa koneksi internet dan coba lagi.')), 30000)
+      )
+
+      const { data, error } = await Promise.race([uploadPromise, timeoutPromise])
 
       if (error) throw error
 
@@ -146,7 +163,7 @@ export function TransactionModal({ isOpen, onClose, transaction = null }) {
 
       return publicUrl
     } catch (error) {
-      toast.error('Gagal upload nota: ' + error.message)
+      toast.error('Gagal upload nota: ' + (error.message || 'Terjadi kesalahan saat upload'))
       return null
     } finally {
       setUploading(false)
@@ -186,10 +203,8 @@ export function TransactionModal({ isOpen, onClose, transaction = null }) {
     if (receiptFile) {
       receiptUrl = await uploadReceipt()
       if (!receiptUrl && receiptFile) {
-        // Upload failed, but user selected a file - ask if they want to continue
-        if (!confirm('Upload nota gagal. Lanjutkan tanpa nota?')) {
-          return
-        }
+        // Upload failed - user can see the error toast and retry by submitting again
+        return
       }
     }
 
@@ -401,13 +416,22 @@ export function TransactionModal({ isOpen, onClose, transaction = null }) {
             )}
             
             {uploading && (
-              <p className="text-xs text-primary-600 flex items-center gap-1">
-                <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                Mengupload nota...
-              </p>
+              <div className="flex items-center gap-2">
+                <p className="text-xs text-primary-600 flex items-center gap-1">
+                  <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Mengupload nota... (maks. 30 detik)
+                </p>
+                <button
+                  type="button"
+                  onClick={cancelUpload}
+                  className="text-xs text-red-500 hover:text-red-600 font-medium underline"
+                >
+                  Batalkan
+                </button>
+              </div>
             )}
           </div>
         </ModalBody>

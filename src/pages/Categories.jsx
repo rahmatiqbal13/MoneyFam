@@ -17,12 +17,14 @@ const CATEGORY_COLORS = [
   '#14b8a6', '#f43f5e', '#a855f7', '#22c55e', '#eab308',
 ]
 
-const defaultForm = { name: '', icon: '📦', color: '#10b981', type: 'expense' }
+function getDefaultForm() {
+  return { name: '', icon: '📦', color: '#10b981', type: 'expense' }
+}
 
 function CategoryModal({ isOpen, onClose, category, activeTab }) {
   const isEdit = !!category
   const toast = useToast()
-  const [form, setForm] = useState(defaultForm)
+  const [form, setForm] = useState(() => getDefaultForm())
   const [errors, setErrors] = useState({})
 
   const createMutation = useCreateCategory()
@@ -34,7 +36,7 @@ function CategoryModal({ isOpen, onClose, category, activeTab }) {
       if (category) {
         setForm({ name: category.name, icon: category.icon || '📦', color: category.color || '#10b981', type: category.type })
       } else {
-        setForm({ ...defaultForm, type: activeTab })
+        setForm({ ...getDefaultForm(), type: activeTab })
       }
       setErrors({})
     }

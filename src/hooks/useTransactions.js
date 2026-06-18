@@ -697,10 +697,11 @@ export function useCreateTransaction() {
       const { error } = await supabase.from('transactions').insert(insertData)
       if (error) throw error
     },
-    onSuccess: (_data, variables) => {
-      queryClient.invalidateQueries({ queryKey: [QUERY_KEY] })
-      queryClient.invalidateQueries({ queryKey: ['wallets'] })
-      queryClient.invalidateQueries({ queryKey: ['notifications'] })
+    onSuccess: async (_data, variables) => {
+      await queryClient.invalidateQueries({ queryKey: [QUERY_KEY] })
+      await queryClient.invalidateQueries({ queryKey: ['wallets'] })
+      await queryClient.invalidateQueries({ queryKey: ['notifications'] })
+      await queryClient.invalidateQueries({ queryKey: ['budgets'] })
 
       // Check budget warning after successful transaction creation
       // Run asynchronously so it doesn't block the mutation
@@ -728,9 +729,10 @@ export function useUpdateTransaction() {
       const { error } = await query
       if (error) throw error
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [QUERY_KEY] })
-      queryClient.invalidateQueries({ queryKey: ['wallets'] })
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: [QUERY_KEY] })
+      await queryClient.invalidateQueries({ queryKey: ['wallets'] })
+      await queryClient.invalidateQueries({ queryKey: ['budgets'] })
     },
   })
 }
@@ -751,9 +753,10 @@ export function useDeleteTransaction() {
       const { error } = await query
       if (error) throw error
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [QUERY_KEY] })
-      queryClient.invalidateQueries({ queryKey: ['wallets'] })
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: [QUERY_KEY] })
+      await queryClient.invalidateQueries({ queryKey: ['wallets'] })
+      await queryClient.invalidateQueries({ queryKey: ['budgets'] })
     },
   })
 }
