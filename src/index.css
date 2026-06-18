@@ -2,6 +2,33 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── Design Tokens ──────────────────────────────────────────────── */
+:root {
+  --bg:          #FAF6EF;
+  --bg-sub:      #F2ECDF;
+  --surface:     #FFFFFF;
+  --surface-2:   #F7F1E4;
+  --ink:         #2A2418;
+  --ink-2:       #5A5142;
+  --ink-3:       #918878;
+  --line:        #ECE2CB;
+  --line-2:      #E4D8BB;
+  --accent:      #0EA5A4;
+  --accent-ink:  #0A6B6A;
+  --accent-soft: #D8F0EF;
+  --good:        #16A34A;
+  --bad:         #DC2626;
+  --warn:        #D97706;
+  --shadow-sm:   0 1px 2px rgba(75,53,18,.05);
+  --shadow-md:   0 6px 24px -8px rgba(75,53,18,.12), 0 2px 4px rgba(75,53,18,.04);
+  --shadow-lg:   0 20px 48px -16px rgba(75,53,18,.22);
+  --r-sm:        12px;
+  --r-md:        18px;
+  --r-lg:        22px;
+  --r-xl:        28px;
+}
+
+/* ── Base ────────────────────────────────────────────────────────── */
 @layer base {
   * {
     box-sizing: border-box;
@@ -13,11 +40,38 @@
   }
 
   body {
-    @apply bg-gray-50 text-gray-900;
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background-color: var(--bg);
+    color: var(--ink);
+    font-family: 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, sans-serif;
+  }
+
+  /* Display / heading font */
+  .font-display {
+    font-family: 'Fraunces', 'Plus Jakarta Sans', serif;
+    letter-spacing: -0.02em;
+  }
+
+  /* Monospace / numbers */
+  .font-mono,
+  .tabular-nums {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Focus ring */
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  /* No tap highlight */
+  button, a {
+    -webkit-tap-highlight-color: transparent;
   }
 }
 
+/* ── Utilities ───────────────────────────────────────────────────── */
 @layer utilities {
   .scrollbar-hide {
     -ms-overflow-style: none;
@@ -25,5 +79,58 @@
   }
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
+  }
+
+  .scroll-x {
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .scroll-x::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Warm subtle texture overlay */
+  .bg-main {
+    background-color: var(--bg);
+  }
+
+  .bg-surface {
+    background-color: var(--surface);
+  }
+
+  .bg-surface-2 {
+    background-color: var(--surface-2);
+  }
+
+  .text-ink {
+    color: var(--ink);
+  }
+
+  .text-ink-2 {
+    color: var(--ink-2);
+  }
+
+  .text-ink-3 {
+    color: var(--ink-3);
+  }
+
+  .border-line {
+    border-color: var(--line);
+  }
+
+  .border-line-2 {
+    border-color: var(--line-2);
+  }
+
+  .shadow-warm-sm {
+    box-shadow: var(--shadow-sm);
+  }
+
+  .shadow-warm-md {
+    box-shadow: var(--shadow-md);
+  }
+
+  .shadow-warm-lg {
+    box-shadow: var(--shadow-lg);
   }
 }

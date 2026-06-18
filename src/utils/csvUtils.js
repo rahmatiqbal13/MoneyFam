@@ -26,14 +26,34 @@ export function parseCSV(csvContent) {
  * @param {Array<string>} headers - Optional custom headers
  * @returns {string} CSV string
  */
+/**
+ * Escape formula injection by prefixing dangerous characters with a single quote.
+ * Prevents CSV formula injection attacks (e.g., =CMD|' /C calc'!A0).
+ */
+function escapeCSVFormula(value) {
+  if (typeof value !== 'string') return value
+  // Prefix cells starting with formula characters
+  if (/^[=+\-@\t\r]/.test(value)) return `\'${value}`
+  return value
+}
+
 export function generateCSV(data, headers = null) {
   if (!data || data.length === 0) return ''
-  
+
+  // Sanitize data to prevent formula injection
+  const safeData = data.map((row) => {
+    const safeRow = {}
+    for (const key of Object.keys(row)) {
+      safeRow[key] = escapeCSVFormula(row[key])
+    }
+    return safeRow
+  })
+
   const csv = Papa.unparse({
     fields: headers || Object.keys(data[0]),
-    data: data
+    data: safeData
   })
-  
+
   return csv
 }
 
@@ -107,8 +127,7 @@ export function mapOlloType(olloType) {
  * @returns {string} Date string in YYYY-MM-DD format
  */
 export function parseOlloDate(olloDate) {
-  if (!olloDate) {
-    console.warn('Empty date in CSV, using today')
+  if (!olloDate) {
     return new Date().toISOString().split('T')[0]
   }
   
@@ -117,8 +136,7 @@ export function parseOlloDate(olloDate) {
   const datePart = olloDate.split(' ')[0]
   
   // Validate format YYYY-MM-DD
-  if (!datePart || !/^\d{4}-\d{2}-\d{2}$/.test(datePart)) {
-    console.warn('Invalid date format in CSV:', olloDate, '- using today')
+  if (!datePart || !/^\d{4}-\d{2}-\d{2}$/.test(datePart)) {
     return new Date().toISOString().split('T')[0]
   }
   

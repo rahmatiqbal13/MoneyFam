@@ -30,7 +30,7 @@ const COINGECKO_IDS = {
 
 async function fetchCryptoPricesIDR(symbols) {
   if (!symbols.length) return {}
-  const unique = [...new Set(symbols.map((s) => s.toUpperCase()))]
+  const unique = [...new Set(symbols.map((s) => s?.toUpperCase()).filter(Boolean))]
   const ids = unique.map((s) => COINGECKO_IDS[s]).filter(Boolean)
   if (!ids.length) return {}
 
@@ -39,7 +39,7 @@ async function fetchCryptoPricesIDR(symbols) {
       `https://api.coingecko.com/api/v3/simple/price?ids=${ids.join(',')}&vs_currencies=idr`,
       { signal: AbortSignal.timeout(8000) }
     )
-    if (!res.ok) return {}
+    if (!res.ok) throw new Error(`CoinGecko API returned ${res.status}`)
     const data = await res.json()
 
     const prices = {}
@@ -48,8 +48,9 @@ async function fetchCryptoPricesIDR(symbols) {
       if (id && data[id]?.idr) prices[sym] = data[id].idr
     })
     return prices
-  } catch {
-    return {}
+  } catch (err) {
+    console.error('Failed to fetch crypto prices:', err)
+    throw err
   }
 }
 
@@ -95,9 +96,9 @@ export function useRefreshCryptoPrices() {
       if (!Object.keys(prices).length) return prices
 
       const now = new Date().toISOString()
-      await Promise.all(
+      const results = await Promise.allSettled(
         cryptos
-          .filter((i) => prices[i.code.toUpperCase()] !== undefined)
+          .filter((i) => prices[i.code?.toUpperCase()] !== undefined)
           .map((i) =>
             supabase
               .from('investments')
@@ -108,6 +109,13 @@ export function useRefreshCryptoPrices() {
               .eq('id', i.id)
           )
       )
+
+      const failures = results.filter((r) => r.status === 'rejected')
+      if (failures.length) {
+        console.error('Some crypto price updates failed:', failures)
+        throw new Error(`${failures.length} dari ${results.length} update harga gagal`)
+      }
+
       return prices
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: [QUERY_KEY] }),
@@ -121,17 +129,22 @@ export function useCreateInvestment() {
 
   return useMutation({
     mutationFn: async (data) => {
+      // Client-side validation
+      if (!data.name?.trim()) throw new Error('Nama aset wajib diisi')
+      if (!data.quantity || Number(data.quantity) <= 0) throw new Error('Jumlah harus lebih dari 0')
+      if (!data.buy_price || Number(data.buy_price) <= 0) throw new Error('Harga beli harus lebih dari 0')
+
       const insertData = {
         ...data,
         user_id: user.id,
-        current_price: data.current_price || data.buy_price,
+        current_price: data.current_price != null ? data.current_price : data.buy_price,
       }
-      
+
       // Add family_id only if user has family
       if (family?.id) {
         insertData.family_id = family.id
       }
-      
+
       const { error } = await supabase.from('investments').insert(insertData)
       if (error) throw error
     },
@@ -141,13 +154,26 @@ export function useCreateInvestment() {
 
 export function useUpdateInvestment() {
   const queryClient = useQueryClient()
+  const family = useAuthStore((s) => s.family)
+  const user = useAuthStore((s) => s.user)
 
   return useMutation({
     mutationFn: async ({ id, ...data }) => {
-      const { error } = await supabase
-        .from('investments')
-        .update({ ...data, updated_at: new Date().toISOString() })
-        .eq('id', id)
+      // Whitelist allowed fields to prevent tampering
+      const allowedFields = ['type', 'code', 'name', 'quantity', 'buy_price', 'current_price', 'buy_date', 'wallet_id', 'notes', 'interest_rate', 'maturity_date']
+      const updateData = {}
+      for (const key of allowedFields) {
+        if (key in data) updateData[key] = data[key]
+      }
+      updateData.updated_at = new Date().toISOString()
+
+      let query = supabase.from('investments').update(updateData).eq('id', id)
+      if (family?.id) {
+        query = query.eq('family_id', family.id)
+      } else {
+        query = query.eq('user_id', user.id)
+      }
+      const { error } = await query
       if (error) throw error
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: [QUERY_KEY] }),
@@ -156,10 +182,18 @@ export function useUpdateInvestment() {
 
 export function useDeleteInvestment() {
   const queryClient = useQueryClient()
+  const family = useAuthStore((s) => s.family)
+  const user = useAuthStore((s) => s.user)
 
   return useMutation({
     mutationFn: async (id) => {
-      const { error } = await supabase.from('investments').delete().eq('id', id)
+      let query = supabase.from('investments').delete().eq('id', id)
+      if (family?.id) {
+        query = query.eq('family_id', family.id)
+      } else {
+        query = query.eq('user_id', user.id)
+      }
+      const { error } = await query
       if (error) throw error
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: [QUERY_KEY] }),

@@ -1,10 +1,10 @@
 import { useState } from 'react'
-import { Plus, ArrowLeftRight } from 'lucide-react'
+import { Plus, ChevronLeft, ChevronRight } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { TransactionList } from '@/components/transactions/TransactionList'
 import { TransactionModal } from '@/components/transactions/TransactionModal'
 import { TransactionFilters } from '@/components/transactions/TransactionFilters'
-import { useTransactions, useMonthlyStats } from '@/hooks/useTransactions'
+import { useTransactions, useMonthlyStats, TRANSACTIONS_PAGE_SIZE } from '@/hooks/useTransactions'
 import { useTransactionStore } from '@/stores/transactionStore'
 import { formatCurrency } from '@/lib/utils'
 
@@ -34,8 +34,12 @@ function StatsBar({ stats, isLoading }) {
 }
 
 export default function Transactions() {
-  const { filters, resetFilters } = useTransactionStore()
-  const { data: transactions, isLoading } = useTransactions(filters)
+  const { filters, page, resetFilters, setPage } = useTransactionStore()
+  const { data: txData, isLoading } = useTransactions(filters, page)
+  const transactions = txData?.data || []
+  const totalCount = txData?.count || 0
+  const totalPages = Math.ceil(totalCount / TRANSACTIONS_PAGE_SIZE)
+
   const now = new Date()
   const { data: stats, isLoading: statsLoading } = useMonthlyStats(now.getFullYear(), now.getMonth() + 1)
 
@@ -59,7 +63,7 @@ export default function Transactions() {
         <div>
           <h2 className="text-base font-semibold text-gray-900">Daftar Transaksi</h2>
           <p className="text-xs text-gray-400 mt-0.5">
-            {isLoading ? '...' : `${transactions?.length || 0} transaksi`}
+            {isLoading ? '...' : `${totalCount} transaksi`}
           </p>
         </div>
         <Button onClick={() => setModalOpen(true)} size="sm">
@@ -89,7 +93,48 @@ export default function Transactions() {
           ))}
         </div>
       ) : (
-        <TransactionList transactions={transactions || []} onEdit={handleEdit} filters={filters} onResetFilters={resetFilters} />
+        <TransactionList transactions={transactions} onEdit={handleEdit} filters={filters} onResetFilters={resetFilters} />
+      )}
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between pt-2">
+          <p className="text-xs text-gray-400">
+            Halaman {page + 1} dari {totalPages}
+          </p>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setPage(page - 1)}
+              disabled={page === 0}
+              className="p-1.5 rounded-lg text-gray-500 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              aria-label="Halaman sebelumnya"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+              const pageNum = totalPages <= 5 ? i : Math.max(0, Math.min(page - 2, totalPages - 5)) + i
+              return (
+                <button
+                  key={pageNum}
+                  onClick={() => setPage(pageNum)}
+                  className={`w-7 h-7 rounded-lg text-xs font-medium transition-colors ${
+                    pageNum === page ? 'bg-primary text-white' : 'text-gray-500 hover:bg-gray-100'
+                  }`}
+                >
+                  {pageNum + 1}
+                </button>
+              )
+            })}
+            <button
+              onClick={() => setPage(page + 1)}
+              disabled={page >= totalPages - 1}
+              className="p-1.5 rounded-lg text-gray-500 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              aria-label="Halaman berikutnya"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
       )}
 
       <TransactionModal

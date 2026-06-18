@@ -64,18 +64,14 @@ export function useCreateFamily() {
       if (rpcError) {
         console.error('Error creating family via RPC:', rpcError)
         throw new Error(`Gagal membuat keluarga: ${rpcError.message}`)
-      }
-
-      console.log('Family created with ID:', familyId)
+      }
 
       // Seed kategori default untuk keluarga baru (optional, don't fail if error)
       try {
         const { error: seedError } = await supabase.rpc('seed_default_categories', { p_family_id: familyId })
-        if (seedError) {
-          console.warn('Warning: Failed to seed default categories:', seedError)
+        if (seedError) {
         }
-      } catch (seedErr) {
-        console.warn('Warning: Error seeding categories:', seedErr)
+      } catch (seedErr) {
       }
 
       return { familyId, name: familyName.trim() }
@@ -129,7 +125,9 @@ export function useGenerateInviteCode() {
 
   return useMutation({
     mutationFn: async () => {
-      const code = Math.random().toString(36).substring(2, 8).toUpperCase()
+      const arr = new Uint8Array(6)
+      crypto.getRandomValues(arr)
+      const code = Array.from(arr, (b) => (b % 36).toString(36)).join('').toUpperCase()
       const { data, error } = await supabase
         .from('families')
         .update({ invite_code: code })

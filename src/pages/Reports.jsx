@@ -128,33 +128,43 @@ function DayTransactionsModal({ date, onClose, onTransactionDeleted }) {
 
   useEffect(() => {
     if (!date) return
-    
+    let ignore = false
+
     async function fetchTransactions() {
       setIsLoading(true)
-      let query = supabase
-        .from('transactions')
-        .select(`
-          *,
-          categories(id, name, icon, color),
-          wallets!wallet_id(id, name, icon)
-        `)
-        .eq('date', date)
-        .order('created_at', { ascending: false })
-      
-      if (family?.id) {
-        query = query.eq('family_id', family.id)
-      } else {
-        query = query.eq('user_id', user.id)
+      try {
+        let query = supabase
+          .from('transactions')
+          .select(`
+            *,
+            categories(id, name, icon, color),
+            wallets!wallet_id(id, name, icon)
+          `)
+          .eq('date', date)
+          .order('created_at', { ascending: false })
+
+        if (family?.id) {
+          query = query.eq('family_id', family.id)
+        } else {
+          query = query.eq('user_id', user.id)
+        }
+
+        const { data, error } = await query
+        if (error) throw error
+        if (!ignore) {
+          setTransactions(data || [])
+        }
+      } catch (err) {
+        console.error('Failed to fetch day transactions:', err)
+      } finally {
+        if (!ignore) {
+          setIsLoading(false)
+        }
       }
-      
-      const { data, error } = await query
-      if (!error) {
-        setTransactions(data || [])
-      }
-      setIsLoading(false)
     }
-    
+
     fetchTransactions()
+    return () => { ignore = true }
   }, [date, family, user])
 
   const handleEdit = async (e) => {
@@ -220,10 +230,10 @@ function DayTransactionsModal({ date, onClose, onTransactionDeleted }) {
 
   const totalExpense = transactions
     .filter(t => t.type === 'expense')
-    .reduce((sum, t) => sum + Number(t.amount), 0)
+    .reduce((sum, t) => sum + (Number(t.amount) || 0), 0)
   const totalIncome = transactions
     .filter(t => t.type === 'income')
-    .reduce((sum, t) => sum + Number(t.amount), 0)
+    .reduce((sum, t) => sum + (Number(t.amount) || 0), 0)
 
   return (
     <>
@@ -829,8 +839,8 @@ function PeriodView({ period, dateFrom, dateTo, periodLabel, year }) {
   const { data: yearlyData, isLoading: yearlyLoading } = useYearlyStats(year)
 
   if (period === 'tahunan') {
-    const totalIncome = (yearlyData || []).reduce((s, m) => s + m.income, 0)
-    const totalExpense = (yearlyData || []).reduce((s, m) => s + m.expense, 0)
+    const totalIncome = (yearlyData || []).reduce((s, m) => s + (m.income || 0), 0)
+    const totalExpense = (yearlyData || []).reduce((s, m) => s + (m.expense || 0), 0)
     const yearStats = { income: totalIncome, expense: totalExpense, savings: totalIncome - totalExpense }
 
     return (

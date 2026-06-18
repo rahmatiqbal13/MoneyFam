@@ -3,12 +3,20 @@ import {
   Plus, Pencil, Trash2, RefreshCw, TrendingUp, TrendingDown,
   BarChart3, AlertCircle,
 } from 'lucide-react'
+import {
+  PieChart,
+  Pie,
+  Cell,
+  Tooltip,
+  ResponsiveContainer,
+} from 'recharts'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
 import { Card, CardContent } from '@/components/ui/Card'
 import { Modal, ModalBody, ConfirmModal } from '@/components/ui/Modal'
 import { useToast } from '@/components/ui/Toast'
+import { useUndoableDelete } from '@/hooks/useUndoableDelete'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import {
   useInvestments,
@@ -391,18 +399,21 @@ function InvestmentCard({ inv, onEdit, onDelete, onUpdatePrice }) {
               onClick={() => onUpdatePrice(inv)}
               className="p-1.5 rounded-lg text-gray-400 hover:text-blue-500 hover:bg-blue-50 transition-colors"
               title="Update harga"
+              aria-label="Update harga investasi"
             >
               <RefreshCw className="w-3.5 h-3.5" />
             </button>
             <button
               onClick={() => onEdit(inv)}
               className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+              aria-label="Edit investasi"
             >
               <Pencil className="w-3.5 h-3.5" />
             </button>
             <button
               onClick={() => onDelete(inv.id)}
               className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+              aria-label="Hapus investasi"
             >
               <Trash2 className="w-3.5 h-3.5" />
             </button>
@@ -477,6 +488,24 @@ function PortfolioSummary({ investments }) {
     return { ...t, value: val, count: items.length }
   }).filter((t) => t.count > 0)
 
+  const chartData = byType.map((t) => ({
+    name: t.label,
+    value: t.value,
+    color: t.color,
+  }))
+
+  const ChartTooltip = ({ active, payload }) => {
+    if (!active || !payload?.length) return null
+    const d = payload[0]
+    return (
+      <div className="bg-white border border-gray-200 rounded-xl shadow-lg p-3 text-sm">
+        <p className="font-semibold text-gray-800">{d.name}</p>
+        <p className="text-gray-600 mt-0.5">{formatCurrency(d.value)}</p>
+        <p className="text-gray-400 text-xs">{(d.percent * 100).toFixed(1)}%</p>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-3">
       <div className="grid grid-cols-3 gap-3">
@@ -504,29 +533,52 @@ function PortfolioSummary({ investments }) {
       {byType.length > 1 && (
         <div className="bg-white rounded-xl border border-gray-200 p-4">
           <p className="text-xs text-gray-500 font-medium mb-3">Alokasi per Jenis</p>
-          <div className="space-y-2">
-            {byType.map((t) => {
-              const pct = totalNow > 0 ? (t.value / totalNow) * 100 : 0
-              return (
-                <div key={t.value}>
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs text-gray-600">
-                      {t.icon} {t.label}
-                    </span>
-                    <div className="text-right">
-                      <span className="text-xs font-semibold text-gray-900">{formatCurrency(t.value)}</span>
-                      <span className="text-xs text-gray-400 ml-1.5">{pct.toFixed(1)}%</span>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
+            {/* Donut chart */}
+            <ResponsiveContainer width="100%" height={180}>
+              <PieChart>
+                <Pie
+                  data={chartData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={50}
+                  outerRadius={80}
+                  paddingAngle={2}
+                  dataKey="value"
+                >
+                  {chartData.map((entry, index) => (
+                    <Cell key={index} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip content={<ChartTooltip />} />
+              </PieChart>
+            </ResponsiveContainer>
+
+            {/* Legend + bars */}
+            <div className="space-y-2">
+              {byType.map((t) => {
+                const pct = totalNow > 0 ? (t.value / totalNow) * 100 : 0
+                return (
+                  <div key={t.value}>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs text-gray-600">
+                        {t.icon} {t.label}
+                      </span>
+                      <div className="text-right">
+                        <span className="text-xs font-semibold text-gray-900">{formatCurrency(t.value)}</span>
+                        <span className="text-xs text-gray-400 ml-1.5">{pct.toFixed(1)}%</span>
+                      </div>
+                    </div>
+                    <div className="w-full bg-gray-100 rounded-full h-1.5">
+                      <div
+                        className="h-1.5 rounded-full"
+                        style={{ width: `${pct}%`, backgroundColor: t.color }}
+                      />
                     </div>
                   </div>
-                  <div className="w-full bg-gray-100 rounded-full h-1.5">
-                    <div
-                      className="h-1.5 rounded-full"
-                      style={{ width: `${pct}%`, backgroundColor: t.color }}
-                    />
-                  </div>
-                </div>
-              )
-            })}
+                )
+              })}
+            </div>
           </div>
         </div>
       )}
@@ -571,14 +623,16 @@ export default function Investments() {
     }
   }
 
-  const handleDelete = async () => {
-    try {
-      await deleteMutation.mutateAsync(deleteId)
-      toast.success('Investasi dihapus')
-      setDeleteId(null)
-    } catch {
-      toast.error('Gagal menghapus')
-    }
+  const { triggerDelete } = useUndoableDelete(
+    async (id) => {
+      await deleteMutation.mutateAsync(id)
+    },
+    { itemName: 'Investasi' }
+  )
+
+  const handleDelete = () => {
+    triggerDelete(deleteId)
+    setDeleteId(null)
   }
 
   return (

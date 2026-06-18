@@ -5,6 +5,7 @@ import { WalletCard } from '@/components/wallets/WalletCard'
 import { WalletModal } from '@/components/wallets/WalletModal'
 import { TransferModal } from '@/components/wallets/TransferModal'
 import { ConfirmModal } from '@/components/ui/Modal'
+import { useUndoableDelete } from '@/hooks/useUndoableDelete'
 import { useToast } from '@/components/ui/Toast'
 import { useWallets, useDeleteWallet } from '@/hooks/useWallets'
 import { formatCurrency } from '@/lib/utils'
@@ -32,14 +33,16 @@ export default function Wallets() {
     setTransferModalOpen(true)
   }
 
-  const handleDelete = async () => {
-    try {
-      await deleteMutation.mutateAsync(deleteId)
-      toast.success('Kantong berhasil dihapus')
-      setDeleteId(null)
-    } catch (err) {
-      toast.error(err.message || 'Gagal menghapus kantong')
-    }
+  const { triggerDelete } = useUndoableDelete(
+    async (id) => {
+      await deleteMutation.mutateAsync(id)
+    },
+    { itemName: 'Kantong' }
+  )
+
+  const handleDelete = () => {
+    triggerDelete(deleteId)
+    setDeleteId(null)
   }
 
   const handleCloseWalletModal = () => {

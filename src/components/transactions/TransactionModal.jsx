@@ -48,6 +48,23 @@ export function TransactionModal({ isOpen, onClose, transaction = null }) {
   const loading = createMutation.isPending || updateMutation.isPending || uploading
 
   useEffect(() => {
+    return () => {
+      if (receiptPreview && receiptPreview.startsWith('blob:')) {
+        URL.revokeObjectURL(receiptPreview)
+      }
+    }
+  }, [receiptPreview])
+
+  useEffect(() => {
+    if (!isOpen) {
+      setForm(defaultForm)
+      setReceiptFile(null)
+      setReceiptPreview(null)
+      setErrors({})
+    }
+  }, [isOpen])
+
+  useEffect(() => {
     if (isOpen) {
       if (transaction) {
         const dateObj = new Date(transaction.date)
@@ -77,8 +94,11 @@ export function TransactionModal({ isOpen, onClose, transaction = null }) {
     const file = e.target.files[0]
     if (file) {
       // Validate file type
-      if (!file.type.startsWith('image/')) {
-        toast.error('File harus berupa gambar (JPG, PNG, etc.)')
+      const validTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp']
+      const validExts = ['jpg', 'jpeg', 'png', 'webp']
+      const ext = file.name.split('.').pop().toLowerCase()
+      if (!validTypes.includes(file.type) || !validExts.includes(ext)) {
+        toast.error('File harus berupa gambar (JPG, PNG, WEBP)')
         return
       }
       // Validate file size (max 5MB)
@@ -86,12 +106,18 @@ export function TransactionModal({ isOpen, onClose, transaction = null }) {
         toast.error('Ukuran file maksimal 5MB')
         return
       }
+      if (receiptPreview && receiptPreview.startsWith('blob:')) {
+        URL.revokeObjectURL(receiptPreview)
+      }
       setReceiptFile(file)
       setReceiptPreview(URL.createObjectURL(file))
     }
   }
 
   const removeReceipt = () => {
+    if (receiptPreview && receiptPreview.startsWith('blob:')) {
+      URL.revokeObjectURL(receiptPreview)
+    }
     setReceiptFile(null)
     setReceiptPreview(null)
     setForm({ ...form, receipt_url: '' })
@@ -146,6 +172,7 @@ export function TransactionModal({ isOpen, onClose, transaction = null }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    if (loading) return
     const errs = validate()
     if (Object.keys(errs).length) {
       setErrors(errs)

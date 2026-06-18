@@ -127,6 +127,7 @@ export function ImportExportSection() {
                   <button
                     onClick={clearResult}
                     className="text-gray-400 hover:text-gray-600"
+                    aria-label="Hapus hasil import"
                   >
                     <X className="w-4 h-4" />
                   </button>

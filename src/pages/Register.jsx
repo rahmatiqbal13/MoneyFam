@@ -1,17 +1,23 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { DollarSign, Eye, EyeOff, Users, Plus } from 'lucide-react'
+import { DollarSign, Eye, EyeOff, Users, Plus, User } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { useToast } from '@/components/ui/Toast'
+
+const MODES = [
+  { id: 'create', label: 'Buat Keluarga', icon: Plus },
+  { id: 'join', label: 'Gabung Keluarga', icon: Users },
+  { id: 'personal', label: 'Personal', icon: User },
+]
 
 export default function Register() {
   const navigate = useNavigate()
   const register = useAuthStore((s) => s.register)
   const toast = useToast()
 
-  const [mode, setMode] = useState('create') // 'create' | 'join'
+  const [mode, setMode] = useState('create') // 'create' | 'join' | 'personal'
   const [form, setForm] = useState({
     fullName: '',
     email: '',
@@ -50,6 +56,7 @@ export default function Register() {
       fullName: form.fullName,
       familyName: mode === 'create' ? form.familyName : undefined,
       inviteCode: mode === 'join' ? form.inviteCode.trim().toUpperCase() : undefined,
+      isPersonal: mode === 'personal',
     })
     setLoading(false)
     if (result.success) {
@@ -66,6 +73,8 @@ export default function Register() {
     setMode(m)
     setErrors({})
   }
+
+  const submitLabel = mode === 'create' ? 'Buat Akun & Keluarga' : mode === 'join' ? 'Gabung Keluarga' : 'Buat Akun Personal'
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
@@ -84,27 +93,29 @@ export default function Register() {
 
           {/* Mode selector */}
           <div className="flex rounded-xl border border-gray-200 overflow-hidden mb-5">
-            <button
-              type="button"
-              onClick={() => switchMode('create')}
-              className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-sm font-medium transition-colors ${
-                mode === 'create' ? 'bg-primary text-white' : 'text-gray-500 hover:bg-gray-50'
-              }`}
-            >
-              <Plus className="w-4 h-4" />
-              Buat Keluarga
-            </button>
-            <button
-              type="button"
-              onClick={() => switchMode('join')}
-              className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-sm font-medium transition-colors ${
-                mode === 'join' ? 'bg-primary text-white' : 'text-gray-500 hover:bg-gray-50'
-              }`}
-            >
-              <Users className="w-4 h-4" />
-              Gabung Keluarga
-            </button>
+            {MODES.map(({ id, label, icon: Icon }) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => switchMode(id)}
+                className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-medium transition-colors ${
+                  mode === id ? 'bg-primary text-white' : 'text-gray-500 hover:bg-gray-50'
+                }`}
+              >
+                <Icon className="w-3.5 h-3.5" />
+                {label}
+              </button>
+            ))}
           </div>
+
+          {/* Mode description */}
+          {mode === 'personal' && (
+            <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 mb-4">
+              <p className="text-xs text-blue-700">
+                Mode personal cocok untuk penggunaan sendiri. Kamu bisa bergabung ke keluarga kapan saja nanti di menu Pengaturan.
+              </p>
+            </div>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <Input
@@ -117,7 +128,7 @@ export default function Register() {
               required
             />
 
-            {mode === 'create' ? (
+            {mode === 'create' && (
               <Input
                 label="Nama Keluarga"
                 type="text"
@@ -128,7 +139,9 @@ export default function Register() {
                 required
                 helpText="Nama yang akan muncul di dashboard keluarga"
               />
-            ) : (
+            )}
+
+            {mode === 'join' && (
               <Input
                 label="Kode Undangan"
                 type="text"
@@ -188,7 +201,7 @@ export default function Register() {
             />
 
             <Button type="submit" className="w-full" loading={loading}>
-              {mode === 'create' ? 'Buat Akun & Keluarga' : 'Gabung Keluarga'}
+              {submitLabel}
             </Button>
           </form>
 

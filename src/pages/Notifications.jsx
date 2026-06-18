@@ -3,6 +3,7 @@ import { Bell, Check, Trash2, AlertCircle, TrendingUp, Calendar, PiggyBank, Cred
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { ConfirmModal } from '@/components/ui/Modal'
+import { useUndoableDelete } from '@/hooks/useUndoableDelete'
 import { useToast } from '@/components/ui/Toast'
 import {
   useNotifications,
@@ -48,14 +49,16 @@ export default function Notifications() {
     }
   }
 
-  const handleDelete = async () => {
-    try {
-      await deleteNotification.mutateAsync(deleteId)
-      toast.success('Notifikasi dihapus')
-      setDeleteId(null)
-    } catch (err) {
-      toast.error('Gagal menghapus notifikasi')
-    }
+  const { triggerDelete } = useUndoableDelete(
+    async (id) => {
+      await deleteNotification.mutateAsync(id)
+    },
+    { itemName: 'Notifikasi' }
+  )
+
+  const handleDelete = () => {
+    triggerDelete(deleteId)
+    setDeleteId(null)
   }
 
   const getTypeConfig = (type) => typeConfig[type] || typeConfig.reminder_daily
@@ -132,6 +135,7 @@ export default function Notifications() {
                             onClick={() => handleMarkAsRead(notification.id)}
                             className="p-1.5 rounded-lg text-gray-400 hover:text-primary hover:bg-primary-50 transition-colors"
                             title="Tandai telah dibaca"
+                            aria-label="Tandai telah dibaca"
                           >
                             <Check className="w-4 h-4" />
                           </button>
@@ -140,6 +144,7 @@ export default function Notifications() {
                           onClick={() => setDeleteId(notification.id)}
                           className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
                           title="Hapus notifikasi"
+                          aria-label="Hapus notifikasi"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>

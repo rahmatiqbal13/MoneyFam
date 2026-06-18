@@ -4,7 +4,7 @@ import { formatCurrency, formatDate } from '@/lib/utils'
 import { TransactionTypeBadge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { ConfirmModal } from '@/components/ui/Modal'
-import { useToast } from '@/components/ui/Toast'
+import { useUndoableDelete } from '@/hooks/useUndoableDelete'
 import { useDeleteTransaction } from '@/hooks/useTransactions'
 
 function EmptyState({ hasFilters, onResetFilters }) {
@@ -23,7 +23,7 @@ function EmptyState({ hasFilters, onResetFilters }) {
       </div>
     )
   }
-  
+
   return (
     <div className="py-16 text-center">
       <ArrowLeftRight className="w-10 h-10 text-gray-200 mx-auto mb-3" />
@@ -34,18 +34,19 @@ function EmptyState({ hasFilters, onResetFilters }) {
 }
 
 export function TransactionList({ transactions = [], onEdit, filters = {}, onResetFilters }) {
-  const toast = useToast()
   const deleteMutation = useDeleteTransaction()
   const [deleteId, setDeleteId] = useState(null)
 
-  const handleDelete = async () => {
-    try {
-      await deleteMutation.mutateAsync(deleteId)
-      toast.success('Transaksi berhasil dihapus')
-      setDeleteId(null)
-    } catch (err) {
-      toast.error(err.message || 'Gagal menghapus transaksi')
-    }
+  const { triggerDelete } = useUndoableDelete(
+    async (id) => {
+      await deleteMutation.mutateAsync(id)
+    },
+    { itemName: 'Transaksi' }
+  )
+
+  const handleDelete = () => {
+    triggerDelete(deleteId)
+    setDeleteId(null)
   }
 
   const hasFilters = filters.search || filters.type || filters.category_id || filters.wallet_id || filters.dateFrom || filters.dateTo
@@ -114,6 +115,7 @@ export function TransactionList({ transactions = [], onEdit, filters = {}, onRes
                   onClick={() => onEdit(tx)}
                   className="p-1.5 rounded-lg text-gray-400 hover:text-blue-500 hover:bg-blue-50 transition-colors"
                   title="Edit"
+                  aria-label="Edit transaksi"
                 >
                   <Edit2 className="w-3.5 h-3.5" />
                 </button>
@@ -121,6 +123,7 @@ export function TransactionList({ transactions = [], onEdit, filters = {}, onRes
                   onClick={() => setDeleteId(tx.id)}
                   className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
                   title="Hapus"
+                  aria-label="Hapus transaksi"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
@@ -135,7 +138,7 @@ export function TransactionList({ transactions = [], onEdit, filters = {}, onRes
         onClose={() => setDeleteId(null)}
         onConfirm={handleDelete}
         title="Hapus Transaksi"
-        message="Yakin ingin menghapus transaksi ini? Tindakan ini tidak dapat dibatalkan."
+        message="Yakin ingin menghapus transaksi ini? Kamu bisa membatalkan dalam 5 detik."
         loading={deleteMutation.isPending}
       />
     </>

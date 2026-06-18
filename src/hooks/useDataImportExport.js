@@ -82,7 +82,10 @@ export function useDataImport() {
         walletQuery = walletQuery.eq('user_id', user.id)
       }
       const { data: existingWallets, error: walletFetchError } = await walletQuery
-      if (walletFetchError) console.error('[Import] Error fetch wallets:', walletFetchError)
+      if (walletFetchError) {
+        console.error('[Import] Error fetch wallets:', walletFetchError)
+        throw new Error('Gagal mengambil data wallet yang sudah ada')
+      }
       console.log(`[Import] Wallet existing: ${existingWallets?.length || 0}`)
 
       // Build category query based on family existence
@@ -93,23 +96,26 @@ export function useDataImport() {
         catQuery = catQuery.is('family_id', null)
       }
       const { data: existingCategories, error: catFetchError } = await catQuery
-      if (catFetchError) console.error('[Import] Error fetch categories:', catFetchError)
+      if (catFetchError) {
+        console.error('[Import] Error fetch categories:', catFetchError)
+        throw new Error('Gagal mengambil data kategori yang sudah ada')
+      }
       console.log(`[Import] Kategori existing: ${existingCategories?.length || 0}`)
-      
-      const existingWalletMap = new Map((existingWallets || []).map(w => [w.name.toLowerCase(), w]))
-      const existingCategoryMap = new Map((existingCategories || []).map(c => [c.name.toLowerCase(), c]))
+
+      const existingWalletMap = new Map((existingWallets || []).map(w => [w.name.toLowerCase().trim(), w]))
+      const existingCategoryMap = new Map((existingCategories || []).map(c => [c.name.toLowerCase().trim(), c]))
       
       // Batch create missing wallets (single round-trip)
       const walletIdMap = new Map()
       // Pre-fill existing
       for (const wallet of wallets) {
-        const normalizedName = wallet.name.toLowerCase()
+        const normalizedName = wallet.name.toLowerCase().trim()
         if (existingWalletMap.has(normalizedName)) {
           walletIdMap.set(wallet.name, existingWalletMap.get(normalizedName).id)
         }
       }
       // Insert all new wallets at once
-      const newWalletsList = wallets.filter(w => !existingWalletMap.has(w.name.toLowerCase()))
+      const newWalletsList = wallets.filter(w => !existingWalletMap.has(w.name.toLowerCase().trim()))
       console.log(`[Import] Wallet baru yang akan dibuat: ${newWalletsList.length}`)
       if (newWalletsList.length > 0) {
         const walletInserts = newWalletsList.map(wallet => {
@@ -147,12 +153,12 @@ export function useDataImport() {
       // Batch create missing categories (single round-trip)
       const categoryIdMap = new Map()
       for (const category of categories) {
-        const normalizedName = category.name.toLowerCase()
+        const normalizedName = category.name.toLowerCase().trim()
         if (existingCategoryMap.has(normalizedName)) {
           categoryIdMap.set(category.name, existingCategoryMap.get(normalizedName).id)
         }
       }
-      const newCategoriesList = categories.filter(c => !existingCategoryMap.has(c.name.toLowerCase()))
+      const newCategoriesList = categories.filter(c => !existingCategoryMap.has(c.name.toLowerCase().trim()))
       console.log(`[Import] Kategori baru yang akan dibuat: ${newCategoriesList.length}`)
       if (newCategoriesList.length > 0) {
         const categoryInserts = newCategoriesList.map(category => ({
@@ -187,11 +193,14 @@ export function useDataImport() {
       }
 
       const { data: existingTxs, error: existingTxError } = await txQuery
-      if (existingTxError) console.error('[Import] Error fetch existing transactions:', existingTxError)
+      if (existingTxError) {
+        console.error('[Import] Error fetch existing transactions:', existingTxError)
+        throw new Error('Gagal mengambil data transaksi yang sudah ada')
+      }
       console.log(`[Import] Transaksi existing ditemukan: ${existingTxs?.length || 0}`)
 
       const existingTxKeys = new Set(
-        (existingTxs || []).map((t) => `${t.date}|${t.amount}|${t.description}|${t.wallet_id}`)
+        (existingTxs || []).map((t) => `${t.date}|${t.amount}|${(t.description || '').toLowerCase().trim()}|${t.wallet_id}`)
       )
 
       // Count how many CSV rows were SYSTEM type (skipped before reaching here)
@@ -211,8 +220,14 @@ export function useDataImport() {
 
         if (!walletId || !tx.amount || tx.amount <= 0) { skippedInvalid++; continue }
 
-        const dupKey = `${dateStr}|${tx.amount}|${tx.description}|${walletId}`
+        const dupKey = `${dateStr}|${tx.amount}|${(tx.description || '').toLowerCase().trim()}|${walletId}`
         if (existingTxKeys.has(dupKey)) { skippedDuplicate++; continue }
+
+        // Sanitize text fields to prevent stored XSS
+        const sanitize = (str) => {
+          if (!str || typeof str !== 'string') return str
+          return str.replace(/<[^>]*>/g, '').trim().slice(0, 500)
+        }
 
         const txData = {
           user_id: user.id,
@@ -221,8 +236,8 @@ export function useDataImport() {
           type: tx.type,
           amount: tx.amount,
           date: dateStr,
-          description: tx.description,
-          note: tx.note || null,
+          description: sanitize(tx.description),
+          note: sanitize(tx.note),
           category_id: categoryId || null,
         }
         
@@ -281,6 +296,8 @@ export function useDataImport() {
  */
 export function useDeleteImport() {
   const queryClient = useQueryClient()
+  const family = useAuthStore((s) => s.family)
+  const user = useAuthStore((s) => s.user)
 
   return useMutation({
     mutationFn: async (ids) => {
@@ -288,7 +305,13 @@ export function useDeleteImport() {
       const CHUNK = 200
       for (let i = 0; i < ids.length; i += CHUNK) {
         const chunk = ids.slice(i, i + CHUNK)
-        const { error } = await supabase.from('transactions').delete().in('id', chunk)
+        let query = supabase.from('transactions').delete().in('id', chunk)
+        if (family?.id) {
+          query = query.eq('family_id', family.id)
+        } else {
+          query = query.eq('user_id', user.id)
+        }
+        const { error } = await query
         if (error) throw error
       }
       return ids.length

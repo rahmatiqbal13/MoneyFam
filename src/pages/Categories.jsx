@@ -5,6 +5,7 @@ import { Modal, ModalBody, ModalFooter, ConfirmModal } from '@/components/ui/Mod
 import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
 import { Badge } from '@/components/ui/Badge'
+import { useUndoableDelete } from '@/hooks/useUndoableDelete'
 import { useToast } from '@/components/ui/Toast'
 import { useCategories, useCreateCategory, useUpdateCategory, useDeleteCategory, useResetCategories } from '@/hooks/useCategories'
 import { useCategoryStore } from '@/stores/categoryStore'
@@ -40,24 +41,19 @@ function CategoryModal({ isOpen, onClose, category, activeTab }) {
   }, [isOpen, category, activeTab])
 
   const handleSubmit = async (e) => {
-    e.preventDefault()
-    console.log('[CategoryModal] Submit started', { isEdit, form })
+    e.preventDefault()
     if (!form.name.trim()) {
       setErrors({ name: 'Nama kategori wajib diisi' })
       return
     }
     setErrors({})
     try {
-      if (isEdit) {
-        console.log('[CategoryModal] Updating category...')
+      if (isEdit) {
         await updateMutation.mutateAsync({ id: category.id, originalCategory: category, ...form })
-        toast.success('Kategori berhasil diperbarui')
-        console.log('[CategoryModal] Update success')
-      } else {
-        console.log('[CategoryModal] Creating category...')
+        toast.success('Kategori berhasil diperbarui')
+      } else {
         await createMutation.mutateAsync(form)
-        toast.success('Kategori berhasil ditambahkan')
-        console.log('[CategoryModal] Create success')
+        toast.success('Kategori berhasil ditambahkan')
       }
       onClose()
     } catch (err) {
@@ -141,21 +137,16 @@ export default function Categories() {
     setModalOpen(true)
   }
 
-  const handleDelete = async () => {
-    console.log('[Categories] Delete started for:', deleteCategory)
-    try {
-      console.log('[Categories] Calling delete mutation...')
-      await deleteMutation.mutateAsync({ 
-        id: deleteCategory.id, 
-        isDefault: deleteCategory.is_default 
-      })
-      console.log('[Categories] Delete mutation completed')
-      toast.success('Kategori berhasil dihapus')
-      setDeleteCategory(null)
-    } catch (err) {
-      console.error('[Categories] Delete error:', err)
-      toast.error(err.message || 'Gagal menghapus')
-    }
+  const { triggerDelete } = useUndoableDelete(
+    async (cat) => {
+      await deleteMutation.mutateAsync({ id: cat.id, isDefault: cat.is_default })
+    },
+    { itemName: 'Kategori' }
+  )
+
+  const handleDelete = () => {
+    triggerDelete(deleteCategory)
+    setDeleteCategory(null)
   }
 
   const handleReset = async () => {
@@ -185,7 +176,7 @@ export default function Categories() {
           ))}
         </div>
         <div className="flex gap-2">
-          <Button size="sm" variant="secondary" onClick={() => setResetModalOpen(true)} title="Reset ke kategori default">
+          <Button size="sm" variant="secondary" onClick={() => setResetModalOpen(true)} title="Reset ke kategori default" aria-label="Reset ke kategori default">
             <RotateCcw className="w-4 h-4" />
           </Button>
           <Button size="sm" onClick={() => setModalOpen(true)}>
@@ -224,10 +215,10 @@ export default function Categories() {
                 {cat.is_default && <p className="text-xs text-gray-400">Default</p>}
               </div>
               <div className="flex gap-1">
-                <button onClick={() => handleEdit(cat)} className="p-1.5 rounded-lg text-gray-400 hover:text-blue-500 hover:bg-blue-50 transition-colors">
+                <button onClick={() => handleEdit(cat)} className="p-1.5 rounded-lg text-gray-400 hover:text-blue-500 hover:bg-blue-50 transition-colors" aria-label="Edit kategori">
                   <Edit2 className="w-3.5 h-3.5" />
                 </button>
-                <button onClick={() => setDeleteCategory(cat)} className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors">
+                <button onClick={() => setDeleteCategory(cat)} className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors" aria-label="Hapus kategori">
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
               </div>

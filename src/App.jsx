@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ToastProvider } from '@/components/ui/Toast'
 import { Layout } from '@/components/layout/Layout'
+import { ErrorBoundary } from '@/components/ErrorBoundary'
 import PWAInstallPrompt from '@/components/PWAInstallPrompt'
 import { useAuthStore } from '@/stores/authStore'
 
@@ -108,57 +109,59 @@ function AppInitializer({ children }) {
 
 export default function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <ToastProvider>
-        <PWAInstallPrompt />
-        <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-          <AppInitializer>
-            <Routes>
-              {/* Public routes */}
-              <Route
-                path="/login"
-                element={
-                  <PublicRoute>
-                    <Login />
-                  </PublicRoute>
-                }
-              />
-              <Route
-                path="/register"
-                element={
-                  <PublicRoute>
-                    <Register />
-                  </PublicRoute>
-                }
-              />
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <ToastProvider>
+          <PWAInstallPrompt />
+          <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+            <AppInitializer>
+              <Routes>
+                {/* Public routes */}
+                <Route
+                  path="/login"
+                  element={
+                    <PublicRoute>
+                      <Login />
+                    </PublicRoute>
+                  }
+                />
+                <Route
+                  path="/register"
+                  element={
+                    <PublicRoute>
+                      <Register />
+                    </PublicRoute>
+                  }
+                />
 
-              {/* Protected routes */}
-              <Route
-                element={
-                  <ProtectedRoute>
-                    <Layout />
-                  </ProtectedRoute>
-                }
-              >
-                <Route path="/" element={<Dashboard />} />
-                <Route path="/transactions" element={<Transactions />} />
-                <Route path="/wallets" element={<Wallets />} />
-                <Route path="/budget" element={<Budget />} />
-                <Route path="/reports" element={<Reports />} />
-                <Route path="/savings" element={<SavingsDebts />} />
-                <Route path="/investments" element={<Investments />} />
-                <Route path="/pension" element={<PensionCalculator />} />
-                <Route path="/categories" element={<Categories />} />
-                <Route path="/notifications" element={<Notifications />} />
-                <Route path="/settings" element={<Settings />} />
-              </Route>
+                {/* Protected routes */}
+                <Route
+                  element={
+                    <ProtectedRoute>
+                      <Layout />
+                    </ProtectedRoute>
+                  }
+                >
+                  <Route path="/" element={<Dashboard />} />
+                  <Route path="/transactions" element={<Transactions />} />
+                  <Route path="/wallets" element={<Wallets />} />
+                  <Route path="/budget" element={<Budget />} />
+                  <Route path="/reports" element={<Reports />} />
+                  <Route path="/savings" element={<SavingsDebts />} />
+                  <Route path="/investments" element={<Investments />} />
+                  <Route path="/pension" element={<PensionCalculator />} />
+                  <Route path="/categories" element={<Categories />} />
+                  <Route path="/notifications" element={<Notifications />} />
+                  <Route path="/settings" element={<Settings />} />
+                </Route>
 
-              {/* Fallback */}
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
-          </AppInitializer>
-        </BrowserRouter>
-      </ToastProvider>
-    </QueryClientProvider>
+                {/* Fallback */}
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
+            </AppInitializer>
+          </BrowserRouter>
+        </ToastProvider>
+      </QueryClientProvider>
+    </ErrorBoundary>
   )
 }

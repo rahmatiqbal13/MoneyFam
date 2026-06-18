@@ -9,7 +9,9 @@ export const useTransactionStore = create((set) => ({
     dateFrom: '',
     dateTo: '',
   },
-  setFilters: (filters) => set((state) => ({ filters: { ...state.filters, ...filters } })),
+  page: 0,
+  setFilters: (filters) => set((state) => ({ filters: { ...state.filters, ...filters }, page: 0 })),
+  setPage: (page) => set({ page }),
   resetFilters: () =>
     set({
       filters: {
@@ -20,5 +22,6 @@ export const useTransactionStore = create((set) => ({
         dateFrom: '',
         dateTo: '',
       },
+      page: 0,
     }),
 }))

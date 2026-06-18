@@ -142,6 +142,13 @@ export default function Settings() {
   })
   const [profileLoading, setProfileLoading] = useState(false)
 
+  useEffect(() => {
+    setProfileForm({
+      full_name: profile?.full_name || '',
+      phone: profile?.phone || '',
+    })
+  }, [profile])
+
   const { data: notificationSettings, isLoading: settingsLoading } = useNotificationSettings()
   const updateSettingsMutation = useUpdateNotificationSettings()
   const [notifications, setNotifications] = useState({
@@ -218,14 +225,12 @@ export default function Settings() {
       toast.error(err.message || 'Gagal bergabung. Periksa kembali kode undangan.')
     }
   }
-
   const handleCreateFamily = async (e) => {
     e.preventDefault()
     if (!newFamilyName.trim()) return
     try {
-      console.log('Creating family with name:', newFamilyName.trim())
       const result = await createFamilyMutation.mutateAsync(newFamilyName)
-      console.log('Family created successfully:', result)
+
       toast.success('Keluarga berhasil dibuat!')
       setNewFamilyName('')
     } catch (err) {
@@ -233,7 +238,6 @@ export default function Settings() {
       toast.error(err.message || 'Gagal membuat keluarga')
     }
   }
-
   const handleCopyCode = () => {
     if (family?.invite_code) {
       navigator.clipboard.writeText(family.invite_code).then(() => {
@@ -381,6 +385,7 @@ export default function Settings() {
                         onClick={() => setRemoveMemberId(m.id)}
                         className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
                         title="Keluarkan anggota"
+                        aria-label="Keluarkan anggota"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>

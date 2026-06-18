@@ -86,13 +86,26 @@ export function useCreateSavingsGoal() {
 
 export function useUpdateSavingsGoal() {
   const queryClient = useQueryClient()
+  const family = useAuthStore((s) => s.family)
+  const user = useAuthStore((s) => s.user)
 
   return useMutation({
     mutationFn: async ({ id, ...data }) => {
-      const { error } = await supabase
-        .from('savings_goals')
-        .update({ ...data, updated_at: new Date().toISOString() })
-        .eq('id', id)
+      const allowedFields = ['name', 'target_amount', 'current_amount', 'target_date', 'is_active', 'category_id', 'icon', 'note']
+      const updateData = {}
+      for (const key of allowedFields) {
+        if (key in data) updateData[key] = data[key]
+      }
+      updateData.updated_at = new Date().toISOString()
+
+      let query = supabase.from('savings_goals').update(updateData).eq('id', id)
+      if (family?.id) {
+        query = query.eq('family_id', family.id)
+      } else {
+        query = query.eq('user_id', user.id)
+      }
+
+      const { error } = await query
       if (error) throw error
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: [QUERY_KEY] }),
@@ -101,10 +114,19 @@ export function useUpdateSavingsGoal() {
 
 export function useDeleteSavingsGoal() {
   const queryClient = useQueryClient()
+  const family = useAuthStore((s) => s.family)
+  const user = useAuthStore((s) => s.user)
 
   return useMutation({
     mutationFn: async (id) => {
-      const { error } = await supabase.from('savings_goals').delete().eq('id', id)
+      let query = supabase.from('savings_goals').delete().eq('id', id)
+      if (family?.id) {
+        query = query.eq('family_id', family.id)
+      } else {
+        query = query.eq('user_id', user.id)
+      }
+
+      const { error } = await query
       if (error) throw error
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: [QUERY_KEY] }),

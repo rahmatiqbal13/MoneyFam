@@ -5,28 +5,79 @@ import { Button } from './Button'
 
 export function Modal({ isOpen, onClose, title, children, size = 'md', className }) {
   const overlayRef = useRef(null)
+  const modalRef = useRef(null)
+  const triggerRef = useRef(null)
+  const titleId = useRef(`modal-title-${Math.random().toString(36).slice(2, 9)}`)
 
+  // Save trigger element before opening modal
   useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (e.key === 'Escape') onClose()
-    }
     if (isOpen) {
-      document.addEventListener('keydown', handleKeyDown)
-      document.body.style.overflow = 'hidden'
+      triggerRef.current = document.activeElement
     }
+  }, [isOpen])
+
+  // Focus trap and initial focus
+  useEffect(() => {
+    if (!isOpen) return
+
+    // Move focus to modal container
+    const modal = modalRef.current
+    if (modal) {
+      // Focus first focusable element or the modal itself
+      const focusable = modal.querySelectorAll(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      )
+      if (focusable.length) {
+        focusable[0].focus()
+      } else {
+        modal.focus()
+      }
+    }
+
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        onClose()
+        return
+      }
+      if (e.key !== 'Tab') return
+
+      const focusableElements = modal?.querySelectorAll(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      )
+      if (!focusableElements || focusableElements.length === 0) return
+
+      const firstElement = focusableElements[0]
+      const lastElement = focusableElements[focusableElements.length - 1]
+
+      if (e.shiftKey && document.activeElement === firstElement) {
+        e.preventDefault()
+        lastElement.focus()
+      } else if (!e.shiftKey && document.activeElement === lastElement) {
+        e.preventDefault()
+        firstElement.focus()
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+    document.body.style.overflow = 'hidden'
+
     return () => {
       document.removeEventListener('keydown', handleKeyDown)
       document.body.style.overflow = ''
+      // Return focus to trigger element
+      if (triggerRef.current && typeof triggerRef.current.focus === 'function') {
+        triggerRef.current.focus()
+      }
     }
   }, [isOpen, onClose])
 
   if (!isOpen) return null
 
   const sizes = {
-    sm: 'max-w-sm',
-    md: 'max-w-md',
-    lg: 'max-w-lg',
-    xl: 'max-w-xl',
+    sm:  'max-w-sm',
+    md:  'max-w-md',
+    lg:  'max-w-lg',
+    xl:  'max-w-xl',
     '2xl': 'max-w-2xl',
   }
 
@@ -37,22 +88,49 @@ export function Modal({ isOpen, onClose, title, children, size = 'md', className
   return (
     <div
       ref={overlayRef}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ background: 'rgba(42,36,24,.45)', backdropFilter: 'blur(4px)' }}
       onClick={handleOverlayClick}
     >
       <div
-        className={cn(
-          'w-full bg-white rounded-2xl shadow-xl overflow-hidden',
-          sizes[size],
-          className
-        )}
+        ref={modalRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId.current}
+        tabIndex={-1}
+        className={cn('w-full overflow-hidden outline-none', sizes[size], className)}
+        style={{
+          background: 'var(--surface)',
+          borderRadius: 'var(--r-xl)',
+          boxShadow: 'var(--shadow-lg)',
+          border: '1px solid var(--line)',
+        }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-          <h2 className="text-base font-semibold text-gray-900">{title}</h2>
+        <div
+          className="flex items-center justify-between px-5 py-4"
+          style={{ borderBottom: '1px solid var(--line)' }}
+        >
+          <h2
+            id={titleId.current}
+            className="text-base font-semibold"
+            style={{ color: 'var(--ink)' }}
+          >
+            {title}
+          </h2>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+            aria-label="Tutup modal"
+            className="p-1.5 rounded-xl transition-colors"
+            style={{ color: 'var(--ink-3)' }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'var(--surface-2)'
+              e.currentTarget.style.color = 'var(--ink)'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'transparent'
+              e.currentTarget.style.color = 'var(--ink-3)'
+            }}
           >
             <X className="w-4 h-4" />
           </button>
@@ -69,7 +147,10 @@ export function ModalBody({ className, children }) {
 
 export function ModalFooter({ className, children }) {
   return (
-    <div className={cn('px-5 py-4 border-t border-gray-100 bg-gray-50 flex gap-2 justify-end', className)}>
+    <div
+      className={cn('px-5 py-4 flex gap-2 justify-end', className)}
+      style={{ borderTop: '1px solid var(--line)', background: 'var(--surface-2)' }}
+    >
       {children}
     </div>
   )
@@ -79,7 +160,7 @@ export function ConfirmModal({ isOpen, onClose, onConfirm, title, message, confi
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={title} size="sm">
       <ModalBody>
-        <p className="text-sm text-gray-600">{message}</p>
+        <p className="text-sm" style={{ color: 'var(--ink-2)' }}>{message}</p>
       </ModalBody>
       <ModalFooter>
         <Button variant="secondary" onClick={onClose} disabled={loading}>

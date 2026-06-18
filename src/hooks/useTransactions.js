@@ -4,6 +4,7 @@ import { useAuthStore } from '@/stores/authStore'
 import { shouldSendNotification } from './useNotifications'
 
 const QUERY_KEY = 'transactions'
+const PAGE_SIZE = 50
 
 // Helper to create budget warning notification
 async function checkAndCreateBudgetWarning(familyId, userId, categoryId, amount) {
@@ -81,25 +82,28 @@ async function checkAndCreateBudgetWarning(familyId, userId, categoryId, amount)
   }
 }
 
-export function useTransactions(filters = {}) {
+export function useTransactions(filters = {}, page = 0) {
   const family = useAuthStore((s) => s.family)
   const user = useAuthStore((s) => s.user)
 
   return useQuery({
-    queryKey: [QUERY_KEY, family?.id, user?.id, filters],
+    queryKey: [QUERY_KEY, family?.id, user?.id, filters, page],
     queryFn: async () => {
-      if (!user?.id) return []
+      if (!user?.id) return { data: [], count: 0 }
+      const from = page * PAGE_SIZE
+      const to = from + PAGE_SIZE - 1
+
       let query = supabase
         .from('transactions')
         .select(`
           *,
           categories(id, name, icon, color, type),
           wallets!wallet_id(id, name, icon, color)
-        `)
+        `, { count: 'exact' })
         .order('date', { ascending: false })
         .order('created_at', { ascending: false })
+        .range(from, to)
 
-      // Filter by family if exists, otherwise by user
       if (family?.id) {
         query = query.eq('family_id', family.id)
       } else {
@@ -111,16 +115,22 @@ export function useTransactions(filters = {}) {
       if (filters.wallet_id) query = query.eq('wallet_id', filters.wallet_id)
       if (filters.dateFrom) query = query.gte('date', filters.dateFrom)
       if (filters.dateTo) query = query.lte('date', filters.dateTo)
-      if (filters.search) query = query.ilike('description', `%${filters.search}%`)
+      if (filters.search) {
+        // Escape Postgres wildcard characters to prevent unintended wildcard expansion
+        const escaped = filters.search.replace(/[%_]/g, '\\$&')
+        query = query.ilike('description', `%${escaped}%`)
+      }
 
-      const { data, error } = await query
+      const { data, error, count } = await query
       if (error) throw error
-      return data || []
+      return { data: data || [], count: count || 0 }
     },
     enabled: !!user?.id,
     staleTime: 1000 * 30,
   })
 }
+
+export { PAGE_SIZE as TRANSACTIONS_PAGE_SIZE }
 
 export function useRecentTransactions(limit = 5) {
   const family = useAuthStore((s) => s.family)
@@ -678,34 +688,44 @@ export function useCreateTransaction() {
         ...data,
         user_id: user.id,
       }
-      
+
       // Only add family_id if user has a family
       if (family?.id) {
         insertData.family_id = family.id
       }
-      
+
       const { error } = await supabase.from('transactions').insert(insertData)
       if (error) throw error
-      
-      // Check budget warning after creating expense transaction
-      if (data.type === 'expense' && data.category_id) {
-        await checkAndCreateBudgetWarning(family?.id || null, user.id, data.category_id, data.amount)
-      }
     },
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: [QUERY_KEY] })
       queryClient.invalidateQueries({ queryKey: ['wallets'] })
       queryClient.invalidateQueries({ queryKey: ['notifications'] })
+
+      // Check budget warning after successful transaction creation
+      // Run asynchronously so it doesn't block the mutation
+      if (variables.type === 'expense' && variables.category_id) {
+        checkAndCreateBudgetWarning(family?.id || null, user.id, variables.category_id, variables.amount)
+          .catch((err) => console.error('Budget warning error:', err))
+      }
     },
   })
 }
 
 export function useUpdateTransaction() {
   const queryClient = useQueryClient()
+  const family = useAuthStore((s) => s.family)
+  const user = useAuthStore((s) => s.user)
 
   return useMutation({
     mutationFn: async ({ id, ...data }) => {
-      const { error } = await supabase.from('transactions').update(data).eq('id', id)
+      let query = supabase.from('transactions').update(data).eq('id', id)
+      if (family?.id) {
+        query = query.eq('family_id', family.id)
+      } else {
+        query = query.eq('user_id', user.id)
+      }
+      const { error } = await query
       if (error) throw error
     },
     onSuccess: () => {
@@ -717,10 +737,18 @@ export function useUpdateTransaction() {
 
 export function useDeleteTransaction() {
   const queryClient = useQueryClient()
+  const family = useAuthStore((s) => s.family)
+  const user = useAuthStore((s) => s.user)
 
   return useMutation({
     mutationFn: async (id) => {
-      const { error } = await supabase.from('transactions').delete().eq('id', id)
+      let query = supabase.from('transactions').delete().eq('id', id)
+      if (family?.id) {
+        query = query.eq('family_id', family.id)
+      } else {
+        query = query.eq('user_id', user.id)
+      }
+      const { error } = await query
       if (error) throw error
     },
     onSuccess: () => {

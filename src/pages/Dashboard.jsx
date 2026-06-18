@@ -38,21 +38,24 @@ export default function Dashboard() {
     <div className="space-y-6 max-w-7xl mx-auto">
       {/* Greeting */}
       <div>
-        <h2 className="text-lg font-semibold text-gray-900">
+        <h2 className="font-display font-semibold text-xl" style={{ color: 'var(--ink)' }}>
           Halo, {profile?.full_name?.split(' ')[0] || 'Pengguna'} 👋
         </h2>
-        <p className="text-sm text-gray-500">
+        <p className="text-sm mt-0.5" style={{ color: 'var(--ink-3)' }}>
           {family?.name ? `${family.name} · ${currentMonth}` : currentMonth}
         </p>
       </div>
 
       {/* Notice: no profile */}
       {!profile && (
-        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
-          <span className="text-amber-500 text-base mt-0.5">⚠️</span>
+        <div
+          className="rounded-xl p-4 flex items-start gap-3"
+          style={{ background: '#FFFBEB', border: '1px solid #FDE68A' }}
+        >
+          <span className="text-base mt-0.5">⚠️</span>
           <div className="flex-1">
-            <p className="text-sm font-medium text-amber-800">Profil belum dibuat</p>
-            <p className="text-xs text-amber-600 mt-0.5">
+            <p className="text-sm font-semibold" style={{ color: '#92400E' }}>Profil belum dibuat</p>
+            <p className="text-xs mt-0.5" style={{ color: '#B45309' }}>
               Lengkapi profil Anda di halaman Pengaturan.
             </p>
           </div>
@@ -67,12 +70,15 @@ export default function Dashboard() {
 
       {/* Info: using personal mode */}
       {!family && profile && (
-        <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 flex items-start gap-3">
-          <span className="text-blue-500 text-base mt-0.5">👤</span>
+        <div
+          className="rounded-xl p-4 flex items-start gap-3"
+          style={{ background: 'var(--accent-soft)', border: '1px solid var(--accent-soft)' }}
+        >
+          <span className="text-base mt-0.5">👤</span>
           <div className="flex-1">
-            <p className="text-sm font-medium text-blue-800">Mode Personal</p>
-            <p className="text-xs text-blue-600 mt-0.5">
-              Anda menggunakan MoneyFam dalam mode personal. 
+            <p className="text-sm font-semibold" style={{ color: 'var(--accent-ink)' }}>Mode Personal</p>
+            <p className="text-xs mt-0.5" style={{ color: 'var(--accent-ink)' }}>
+              Anda menggunakan MoneyFam dalam mode personal.
               Buat atau bergabung ke keluarga di Pengaturan untuk fitur kolaboratif.
             </p>
           </div>

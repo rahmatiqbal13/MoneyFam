@@ -11,7 +11,10 @@
       "Bash(git submodule *)",
       "Bash(git mv *)",
       "Bash(git rm *)",
-      "Bash(git commit -m ' *)"
+      "Bash(git commit -m ' *)",
+      "Bash(npx skills *)",
+      "mcp__claude_ai_Vercel__import-claude-design-from-url",
+      "WebFetch(domain:claude.ai)"
     ]
   }
 }

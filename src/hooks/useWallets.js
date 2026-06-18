@@ -63,10 +63,26 @@ export function useCreateWallet() {
 
 export function useUpdateWallet() {
   const queryClient = useQueryClient()
+  const family = useAuthStore((s) => s.family)
+  const user = useAuthStore((s) => s.user)
 
   return useMutation({
     mutationFn: async ({ id, ...data }) => {
-      const { error } = await supabase.from('wallets').update(data).eq('id', id)
+      const allowedFields = ['name', 'icon', 'type', 'balance', 'is_active']
+      const updateData = {}
+      for (const key of allowedFields) {
+        if (key in data) updateData[key] = data[key]
+      }
+      updateData.updated_at = new Date().toISOString()
+
+      let query = supabase.from('wallets').update(updateData).eq('id', id)
+      if (family?.id) {
+        query = query.eq('family_id', family.id)
+      } else {
+        query = query.eq('user_id', user.id)
+      }
+
+      const { error } = await query
       if (error) throw error
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: [QUERY_KEY] }),
@@ -75,6 +91,8 @@ export function useUpdateWallet() {
 
 export function useDeleteWallet() {
   const queryClient = useQueryClient()
+  const family = useAuthStore((s) => s.family)
+  const user = useAuthStore((s) => s.user)
 
   return useMutation({
     mutationFn: async (id) => {
@@ -104,7 +122,14 @@ export function useDeleteWallet() {
         throw new Error('Tidak dapat menghapus kantong yang menjadi tujuan transfer. Selesaikan transfer terlebih dahulu.')
       }
       
-      const { error } = await supabase.from('wallets').delete().eq('id', id)
+      let query = supabase.from('wallets').delete().eq('id', id)
+      if (family?.id) {
+        query = query.eq('family_id', family.id)
+      } else {
+        query = query.eq('user_id', user.id)
+      }
+
+      const { error } = await query
       if (error) throw error
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: [QUERY_KEY] }),
@@ -118,6 +143,13 @@ export function useTransferBetweenWallets() {
 
   return useMutation({
     mutationFn: async ({ from_wallet_id, to_wallet_id, amount, date, note }) => {
+      if (from_wallet_id === to_wallet_id) {
+        throw new Error('Kantong asal dan tujuan tidak boleh sama.')
+      }
+      if (Number(amount) <= 0) {
+        throw new Error('Jumlah transfer harus lebih besar dari 0.')
+      }
+
       // Check balance before transfer (defense-in-depth)
       const { data: wallet, error: walletError } = await supabase
         .from('wallets')

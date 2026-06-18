@@ -24,7 +24,7 @@ export function useBudgets(yearMonth) {
       if (family?.id) {
         budgetQuery = budgetQuery.eq('family_id', family.id)
       } else {
-        budgetQuery = budgetQuery.is('family_id', null)
+        budgetQuery = budgetQuery.is('family_id', null).eq('user_id', user.id)
       }
       
       const { data: budgets, error } = await budgetQuery
@@ -90,10 +90,24 @@ export function useCreateBudget() {
 
 export function useUpdateBudget() {
   const queryClient = useQueryClient()
+  const family = useAuthStore((s) => s.family)
+  const user = useAuthStore((s) => s.user)
 
   return useMutation({
     mutationFn: async ({ id, ...data }) => {
-      const { error } = await supabase.from('budgets').update(data).eq('id', id)
+      const allowedFields = ['category_id', 'amount', 'year', 'month']
+      const updateData = {}
+      for (const key of allowedFields) {
+        if (key in data) updateData[key] = data[key]
+      }
+
+      let query = supabase.from('budgets').update(updateData).eq('id', id)
+      if (family?.id) {
+        query = query.eq('family_id', family.id)
+      } else {
+        query = query.eq('user_id', user.id)
+      }
+      const { error } = await query
       if (error) throw error
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: [QUERY_KEY] }),
@@ -102,10 +116,18 @@ export function useUpdateBudget() {
 
 export function useDeleteBudget() {
   const queryClient = useQueryClient()
+  const family = useAuthStore((s) => s.family)
+  const user = useAuthStore((s) => s.user)
 
   return useMutation({
     mutationFn: async (id) => {
-      const { error } = await supabase.from('budgets').delete().eq('id', id)
+      let query = supabase.from('budgets').delete().eq('id', id)
+      if (family?.id) {
+        query = query.eq('family_id', family.id)
+      } else {
+        query = query.eq('user_id', user.id)
+      }
+      const { error } = await query
       if (error) throw error
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: [QUERY_KEY] }),
@@ -141,14 +163,36 @@ export function useCopyBudgetFromLastMonth() {
       if (error) throw error
       if (!prevBudgets?.length) throw new Error('Tidak ada anggaran bulan lalu')
 
-      const inserts = prevBudgets.map((b) => ({
-        category_id: b.category_id,
-        amount: b.amount,
-        year,
-        month,
-        user_id: user.id,
-        ...(family?.id ? { family_id: family.id } : {}),
-      }))
+      // Check existing budgets for target month to avoid duplicates
+      let existingQuery = supabase
+        .from('budgets')
+        .select('category_id')
+        .eq('year', year)
+        .eq('month', month)
+
+      if (family?.id) {
+        existingQuery = existingQuery.eq('family_id', family.id)
+      } else {
+        existingQuery = existingQuery.eq('user_id', user.id)
+      }
+
+      const { data: existingBudgets } = await existingQuery
+      const existingCategoryIds = new Set((existingBudgets || []).map((b) => b.category_id))
+
+      const inserts = prevBudgets
+        .filter((b) => !existingCategoryIds.has(b.category_id))
+        .map((b) => ({
+          category_id: b.category_id,
+          amount: b.amount,
+          year,
+          month,
+          user_id: user.id,
+          ...(family?.id ? { family_id: family.id } : {}),
+        }))
+
+      if (inserts.length === 0) {
+        throw new Error('Semua kategori anggaran sudah ada di bulan ini')
+      }
 
       const { error: insertError } = await supabase.from('budgets').insert(inserts)
       if (insertError) throw insertError

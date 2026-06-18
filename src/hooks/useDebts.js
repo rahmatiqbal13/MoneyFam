@@ -87,13 +87,26 @@ export function useCreateDebt() {
 
 export function useUpdateDebt() {
   const queryClient = useQueryClient()
+  const family = useAuthStore((s) => s.family)
+  const user = useAuthStore((s) => s.user)
 
   return useMutation({
     mutationFn: async ({ id, ...data }) => {
-      const { error } = await supabase
-        .from('debts')
-        .update({ ...data, updated_at: new Date().toISOString() })
-        .eq('id', id)
+      const allowedFields = ['name', 'amount', 'remaining_amount', 'due_date', 'is_paid', 'type', 'person_name', 'note', 'category_id']
+      const updateData = {}
+      for (const key of allowedFields) {
+        if (key in data) updateData[key] = data[key]
+      }
+      updateData.updated_at = new Date().toISOString()
+
+      let query = supabase.from('debts').update(updateData).eq('id', id)
+      if (family?.id) {
+        query = query.eq('family_id', family.id)
+      } else {
+        query = query.eq('user_id', user.id)
+      }
+
+      const { error } = await query
       if (error) throw error
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: [QUERY_KEY] }),
@@ -102,10 +115,19 @@ export function useUpdateDebt() {
 
 export function useDeleteDebt() {
   const queryClient = useQueryClient()
+  const family = useAuthStore((s) => s.family)
+  const user = useAuthStore((s) => s.user)
 
   return useMutation({
     mutationFn: async (id) => {
-      const { error } = await supabase.from('debts').delete().eq('id', id)
+      let query = supabase.from('debts').delete().eq('id', id)
+      if (family?.id) {
+        query = query.eq('family_id', family.id)
+      } else {
+        query = query.eq('user_id', user.id)
+      }
+
+      const { error } = await query
       if (error) throw error
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: [QUERY_KEY] }),
@@ -208,33 +230,23 @@ export function useMarkDebtPaid() {
   return useMutation({
     mutationFn: async ({ 
       id, 
-      remainingAmount, 
       paymentDate,
       paymentTime,
       walletId, 
       categoryId, 
       note 
     }) => {
-      if (remainingAmount > 0) {
-        // Use new function that creates payment history
-        const { data, error } = await supabase.rpc('mark_debt_paid_with_payment', {
-          p_debt_id: id,
-          p_payment_date: paymentDate,
-          p_payment_time: paymentTime,
-          p_wallet_id: walletId || null,
-          p_category_id: categoryId || null,
-          p_note: note || 'Pelunasan'
-        })
-        if (error) throw error
-        return data
-      } else {
-        // Already paid, just mark
-        const { error } = await supabase
-          .from('debts')
-          .update({ is_paid: true, remaining_amount: 0, updated_at: new Date().toISOString() })
-          .eq('id', id)
-        if (error) throw error
-      }
+      // Biarkan server menghitung remainingAmount
+      const { data, error } = await supabase.rpc('mark_debt_paid_with_payment', {
+        p_debt_id: id,
+        p_payment_date: paymentDate,
+        p_payment_time: paymentTime,
+        p_wallet_id: walletId || null,
+        p_category_id: categoryId || null,
+        p_note: note || 'Pelunasan'
+      })
+      if (error) throw error
+      return data
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: [QUERY_KEY] })

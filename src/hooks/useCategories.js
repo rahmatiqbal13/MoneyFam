@@ -61,10 +61,7 @@ export function useCreateCategory() {
   const user = auth?.user
 
   return useMutation({
-    mutationFn: async (data) => {
-      console.log('[CreateCategory] Starting with data:', data)
-      console.log('[CreateCategory] User:', user?.id)
-      console.log('[CreateCategory] Family:', family?.id)
+    mutationFn: async (data) => {
       
       const insertData = {
         ...data,
@@ -75,9 +72,7 @@ export function useCreateCategory() {
       // Add family_id only if user has family
       if (family?.id) {
         insertData.family_id = family.id
-      }
-      
-      console.log('[CreateCategory] Insert data:', insertData)
+      }
       
       const { data: result, error } = await supabase
         .from('categories')
@@ -87,13 +82,10 @@ export function useCreateCategory() {
       if (error) {
         console.error('[CreateCategory] Error:', error)
         throw error
-      }
-      
-      console.log('[CreateCategory] Success:', result)
+      }
       return result
     },
-    onSuccess: () => {
-      console.log('[CreateCategory] onSuccess called')
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [QUERY_KEY] })
     },
     onError: (error) => {
@@ -109,14 +101,10 @@ export function useUpdateCategory() {
   const user = auth?.user
 
   return useMutation({
-    mutationFn: async ({ id, originalCategory, ...data }) => {
-      console.log('[UpdateCategory] Starting with id:', id, 'data:', data)
-      console.log('[UpdateCategory] User:', user?.id)
-      console.log('[UpdateCategory] Family:', family?.id)
+    mutationFn: async ({ id, originalCategory, ...data }) => {
       
       // Jika kategori default (family_id null), buat salinan baru untuk keluarga
-      if (originalCategory?.family_id === null) {
-        console.log('[UpdateCategory] Creating copy of default category')
+      if (originalCategory?.family_id === null) {
         const insertData = {
           ...data,
           is_default: false,
@@ -130,12 +118,10 @@ export function useUpdateCategory() {
         if (error) {
           console.error('[UpdateCategory] Insert error:', error)
           throw error
-        }
-        console.log('[UpdateCategory] Insert success:', result)
+        }
         return result
       } else {
-        // Update kategori milik user/keluarga secara normal
-        console.log('[UpdateCategory] Updating existing category')
+        // Update kategori milik user/keluarga secara normal
         let query = supabase.from('categories').update(data).eq('id', id)
         
         if (!family?.id && user?.id) {
@@ -150,13 +136,11 @@ export function useUpdateCategory() {
         if (error) {
           console.error('[UpdateCategory] Update error:', error)
           throw error
-        }
-        console.log('[UpdateCategory] Update success:', result)
+        }
         return result
       }
     },
-    onSuccess: () => {
-      console.log('[UpdateCategory] onSuccess called')
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [QUERY_KEY] })
     },
     onError: (error) => {
@@ -172,14 +156,10 @@ export function useDeleteCategory() {
   const user = auth?.user
 
   return useMutation({
-    mutationFn: async ({ id, isDefault }) => {
-      console.log('[DeleteCategory] Starting with id:', id, 'isDefault:', isDefault)
-      console.log('[DeleteCategory] User:', user?.id)
-      console.log('[DeleteCategory] Family:', family?.id)
+    mutationFn: async ({ id, isDefault }) => {
       
       if (isDefault && family?.id) {
-        // Family user: untuk kategori default, tambahkan ke tabel hidden_default_categories
-        console.log('[DeleteCategory] Hiding default category for family')
+        // Family user: untuk kategori default, tambahkan ke tabel hidden_default_categories
         const { data, error } = await supabase
           .from('hidden_default_categories')
           .insert({ family_id: family.id, category_id: id })
@@ -188,26 +168,21 @@ export function useDeleteCategory() {
         if (error) {
           console.error('[DeleteCategory] Hide error:', error)
           throw error
-        }
-        console.log('[DeleteCategory] Hide success:', data)
+        }
         return data
       } else if (isDefault && !family?.id) {
-        // Solo user: untuk kategori default, tidak bisa dihapus
-        console.log('[DeleteCategory] Cannot delete default category for solo user')
+        // Solo user: untuk kategori default, tidak bisa dihapus
         throw new Error('Kategori default tidak dapat dihapus. Anda bisa mengabaikannya saja.')
       } else {
-        // Untuk kategori custom, hapus secara normal
-        console.log('[DeleteCategory] Deleting custom category...')
+        // Untuk kategori custom, hapus secara normal
         
         let query = supabase.from('categories').delete().eq('id', id)
         
         if (!family?.id && user?.id) {
-          // Solo user: pastikan hanya hapus kategori sendiri
-          console.log('[DeleteCategory] Adding user_id filter for solo user')
+          // Solo user: pastikan hanya hapus kategori sendiri
           query = query.eq('user_id', user.id)
         } else if (family?.id) {
-          // Family user: pastikan hanya hapus kategori keluarga
-          console.log('[DeleteCategory] Adding family_id filter for family user')
+          // Family user: pastikan hanya hapus kategori keluarga
           query = query.eq('family_id', family.id)
         }
         
@@ -216,14 +191,11 @@ export function useDeleteCategory() {
         if (error) {
           console.error('[DeleteCategory] Delete error:', error)
           throw error
-        }
-        
-        console.log('[DeleteCategory] Delete success:', data)
+        }
         return data
       }
     },
-    onSuccess: () => {
-      console.log('[DeleteCategory] onSuccess called')
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [QUERY_KEY] })
     },
     onError: (error) => {

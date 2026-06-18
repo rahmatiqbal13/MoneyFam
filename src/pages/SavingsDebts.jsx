@@ -10,6 +10,7 @@ import { Select } from '@/components/ui/Select'
 import { Card, CardContent } from '@/components/ui/Card'
 import { Modal, ModalBody, ConfirmModal } from '@/components/ui/Modal'
 import { Badge } from '@/components/ui/Badge'
+import { useUndoableDelete } from '@/hooks/useUndoableDelete'
 import { useToast } from '@/components/ui/Toast'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import {
@@ -432,17 +433,19 @@ function SavingsPaymentHistory({ goalId }) {
     }
   }
 
-  const handleDelete = async () => {
-    try {
+  const { triggerDelete } = useUndoableDelete(
+    async (payment) => {
       await deleteMutation.mutateAsync({
-        paymentId: deletePayment.id,
-        goalId: deletePayment.goal_id,
+        paymentId: payment.id,
+        goalId: payment.goal_id,
       })
-      toast.success('Pembayaran dihapus')
-      setDeletePayment(null)
-    } catch (err) {
-      toast.error(err.message || 'Gagal menghapus')
-    }
+    },
+    { itemName: 'Pembayaran' }
+  )
+
+  const handleDelete = () => {
+    triggerDelete(deletePayment)
+    setDeletePayment(null)
   }
 
   return (
@@ -478,12 +481,14 @@ function SavingsPaymentHistory({ goalId }) {
                 <button
                   onClick={() => setEditPayment(payment)}
                   className="p-1 rounded text-gray-400 hover:text-blue-500 hover:bg-blue-50"
+                  aria-label="Edit pembayaran"
                 >
                   <Pencil className="w-3 h-3" />
                 </button>
                 <button
                   onClick={() => setDeletePayment(payment)}
                   className="p-1 rounded text-gray-400 hover:text-red-500 hover:bg-red-50"
+                  aria-label="Hapus pembayaran"
                 >
                   <Trash2 className="w-3 h-3" />
                 </button>
@@ -598,12 +603,14 @@ function SavingsGoalCard({ goal, onEdit, onDelete, onAddFund }) {
             <button
               onClick={() => onEdit(goal)}
               className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+              aria-label="Edit target tabungan"
             >
               <Pencil className="w-4 h-4" />
             </button>
             <button
               onClick={() => onDelete(goal.id)}
               className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+              aria-label="Hapus target tabungan"
             >
               <Trash2 className="w-4 h-4" />
             </button>
@@ -986,17 +993,19 @@ function DebtPaymentHistory({ debtId }) {
     }
   }
 
-  const handleDelete = async () => {
-    try {
+  const { triggerDelete } = useUndoableDelete(
+    async (payment) => {
       await deleteMutation.mutateAsync({
-        paymentId: deletePayment.id,
-        debtId: deletePayment.debt_id,
+        paymentId: payment.id,
+        debtId: payment.debt_id,
       })
-      toast.success('Pembayaran dihapus')
-      setDeletePayment(null)
-    } catch (err) {
-      toast.error(err.message || 'Gagal menghapus')
-    }
+    },
+    { itemName: 'Pembayaran' }
+  )
+
+  const handleDelete = () => {
+    triggerDelete(deletePayment)
+    setDeletePayment(null)
   }
 
   return (
@@ -1032,12 +1041,14 @@ function DebtPaymentHistory({ debtId }) {
                 <button
                   onClick={() => setEditPayment(payment)}
                   className="p-1 rounded text-gray-400 hover:text-blue-500 hover:bg-blue-50"
+                  aria-label="Edit pembayaran"
                 >
                   <Pencil className="w-3 h-3" />
                 </button>
                 <button
                   onClick={() => setDeletePayment(payment)}
                   className="p-1 rounded text-gray-400 hover:text-red-500 hover:bg-red-50"
+                  aria-label="Hapus pembayaran"
                 >
                   <Trash2 className="w-3 h-3" />
                 </button>
@@ -1166,12 +1177,14 @@ function DebtCard({ debt, onEdit, onDelete, onPay, onMarkPaid }) {
             <button
               onClick={() => onEdit(debt)}
               className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+              aria-label="Edit hutang/piutang"
             >
               <Pencil className="w-4 h-4" />
             </button>
             <button
               onClick={() => onDelete(debt.id)}
               className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+              aria-label="Hapus hutang/piutang"
             >
               <Trash2 className="w-4 h-4" />
             </button>
@@ -1256,17 +1269,19 @@ function SavingsGoalsTab() {
     return true
   })
 
-  const totalTarget = (goals || []).reduce((s, g) => s + Number(g.target_amount), 0)
-  const totalSaved = (goals || []).reduce((s, g) => s + Number(g.current_amount), 0)
+  const totalTarget = (goals || []).reduce((s, g) => s + (Number(g.target_amount) || 0), 0)
+  const totalSaved = (goals || []).reduce((s, g) => s + (Number(g.current_amount) || 0), 0)
 
-  const handleDelete = async () => {
-    try {
-      await deleteMutation.mutateAsync(deleteId)
-      toast.success('Target tabungan dihapus')
-      setDeleteId(null)
-    } catch {
-      toast.error('Gagal menghapus')
-    }
+  const { triggerDelete } = useUndoableDelete(
+    async (id) => {
+      await deleteMutation.mutateAsync(id)
+    },
+    { itemName: 'Target tabungan' }
+  )
+
+  const handleDelete = () => {
+    triggerDelete(deleteId)
+    setDeleteId(null)
   }
 
   return (
@@ -1509,19 +1524,21 @@ function DebtsTab() {
 
   const totalDebt = (debts || [])
     .filter((d) => d.type === 'debt' && !d.is_paid)
-    .reduce((s, d) => s + Number(d.remaining_amount), 0)
+    .reduce((s, d) => s + (Number(d.remaining_amount) || 0), 0)
   const totalReceivable = (debts || [])
     .filter((d) => d.type === 'receivable' && !d.is_paid)
-    .reduce((s, d) => s + Number(d.remaining_amount), 0)
+    .reduce((s, d) => s + (Number(d.remaining_amount) || 0), 0)
 
-  const handleDelete = async () => {
-    try {
-      await deleteMutation.mutateAsync(deleteId)
-      toast.success('Data dihapus')
-      setDeleteId(null)
-    } catch {
-      toast.error('Gagal menghapus')
-    }
+  const { triggerDelete } = useUndoableDelete(
+    async (id) => {
+      await deleteMutation.mutateAsync(id)
+    },
+    { itemName: 'Data hutang/piutang' }
+  )
+
+  const handleDelete = () => {
+    triggerDelete(deleteId)
+    setDeleteId(null)
   }
 
   const handleMarkPaid = async (walletId, categoryId, paymentDate, paymentTime, note) => {

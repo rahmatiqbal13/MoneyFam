@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/Button'
 import { BudgetCard } from '@/components/budget/BudgetCard'
 import { BudgetModal } from '@/components/budget/BudgetModal'
 import { ConfirmModal } from '@/components/ui/Modal'
+import { useUndoableDelete } from '@/hooks/useUndoableDelete'
 import { useToast } from '@/components/ui/Toast'
 import { useBudgets, useDeleteBudget, useCopyBudgetFromLastMonth } from '@/hooks/useBudget'
 import { useBudgetStore } from '@/stores/budgetStore'
@@ -42,14 +43,16 @@ export default function Budget() {
     setModalOpen(true)
   }
 
-  const handleDelete = async () => {
-    try {
-      await deleteMutation.mutateAsync(deleteId)
-      toast.success('Anggaran berhasil dihapus')
-      setDeleteId(null)
-    } catch (err) {
-      toast.error(err.message || 'Gagal menghapus anggaran')
-    }
+  const { triggerDelete } = useUndoableDelete(
+    async (id) => {
+      await deleteMutation.mutateAsync(id)
+    },
+    { itemName: 'Anggaran' }
+  )
+
+  const handleDelete = () => {
+    triggerDelete(deleteId)
+    setDeleteId(null)
   }
 
   const handleClose = () => {
