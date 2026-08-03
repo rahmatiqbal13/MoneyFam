@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { motion, useReducedMotion } from 'framer-motion'
 import {
   Plus, Pencil, Trash2, Target, CheckCircle2,
   Calendar, TrendingDown, TrendingUp, Minus, CreditCard,
@@ -137,7 +138,7 @@ function SavingsGoalModal({ isOpen, onClose, goal }) {
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Icon + Color picker */}
         <div>
-          <label className="text-sm font-medium text-gray-700 block mb-2">Ikon</label>
+          <label className="text-sm font-medium text-ink-2 block mb-2">Ikon</label>
           <div className="flex flex-wrap gap-2">
             {GOAL_ICONS.map((ic) => (
               <button
@@ -145,7 +146,7 @@ function SavingsGoalModal({ isOpen, onClose, goal }) {
                 type="button"
                 onClick={() => setForm((f) => ({ ...f, icon: ic }))}
                 className={`w-9 h-9 rounded-lg text-lg flex items-center justify-center border-2 transition-colors ${
-                  form.icon === ic ? 'border-primary bg-primary/10' : 'border-gray-200 hover:border-gray-300'
+                  form.icon === ic ? 'border-primary bg-primary/10' : 'border-line hover:border-line-2'
                 }`}
               >
                 {ic}
@@ -155,7 +156,7 @@ function SavingsGoalModal({ isOpen, onClose, goal }) {
         </div>
 
         <div>
-          <label className="text-sm font-medium text-gray-700 block mb-2">Warna</label>
+          <label className="text-sm font-medium text-ink-2 block mb-2">Warna</label>
           <div className="flex gap-2">
             {GOAL_COLORS.map((c) => (
               <button
@@ -287,24 +288,24 @@ function AddFundModal({ isOpen, onClose, goal }) {
     <Modal isOpen={isOpen} onClose={onClose} title={`Update Dana — ${goal?.name}`}>
       <ModalBody>
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="bg-gray-50 rounded-xl p-4 text-center">
-          <p className="text-xs text-gray-500">Dana terkumpul</p>
-          <p className="text-2xl font-bold text-gray-900 mt-1">
+        <div className="bg-surface-2 rounded-xl p-4 text-center">
+          <p className="text-xs text-ink-2">Dana terkumpul</p>
+          <p className="text-2xl font-bold text-ink mt-1">
             {formatCurrency(goal?.current_amount || 0)}
           </p>
-          <p className="text-xs text-gray-400 mt-0.5">
+          <p className="text-xs text-ink-3 mt-0.5">
             dari {formatCurrency(goal?.target_amount || 0)}
           </p>
         </div>
 
-        <div className="flex rounded-lg border border-gray-200 overflow-hidden">
+        <div className="flex rounded-lg border border-line overflow-hidden">
           {[{ key: 'add', label: 'Tambah Dana', icon: Plus }, { key: 'reduce', label: 'Kurangi Dana', icon: Minus }].map(({ key, label, icon: Icon }) => (
             <button
               key={key}
               type="button"
               onClick={() => setMode(key)}
               className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-sm font-medium transition-colors ${
-                mode === key ? 'bg-primary text-white' : 'text-gray-600 hover:bg-gray-50'
+                mode === key ? 'bg-primary text-white' : 'text-ink-2 hover:bg-surface-2'
               }`}
             >
               <Icon className="w-4 h-4" />
@@ -324,7 +325,7 @@ function AddFundModal({ isOpen, onClose, goal }) {
 
         {/* Date and Time */}
         <div className="flex flex-col gap-1">
-          <label className="text-sm font-medium text-gray-700">
+          <label className="text-sm font-medium text-ink-2">
             Tanggal & Waktu Pembayaran
           </label>
           <div className="flex gap-2">
@@ -332,13 +333,13 @@ function AddFundModal({ isOpen, onClose, goal }) {
               type="date"
               value={paymentDate}
               onChange={(e) => setPaymentDate(e.target.value)}
-              className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300 focus:border-primary"
+              className="flex-1 rounded-lg border border-line-2 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300 focus:border-primary"
             />
             <input
               type="time"
               value={paymentTime}
               onChange={(e) => setPaymentTime(e.target.value)}
-              className="w-28 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300 focus:border-primary"
+              className="w-28 rounded-lg border border-line-2 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300 focus:border-primary"
             />
           </div>
         </div>
@@ -406,11 +407,11 @@ function SavingsPaymentHistory({ goalId }) {
   const toast = useToast()
 
   if (isLoading) {
-    return <div className="text-center py-4 text-gray-400 text-sm">Memuat riwayat...</div>
+    return <div className="text-center py-4 text-ink-3 text-sm">Memuat riwayat...</div>
   }
 
   if (!payments?.length) {
-    return <div className="text-center py-4 text-gray-400 text-sm">Belum ada riwayat pembayaran</div>
+    return <div className="text-center py-4 text-ink-3 text-sm">Belum ada riwayat pembayaran</div>
   }
 
   const handleUpdate = async (e) => {
@@ -450,28 +451,28 @@ function SavingsPaymentHistory({ goalId }) {
 
   return (
     <>
-      <div className="mt-4 pt-4 border-t border-gray-100">
-        <h4 className="text-xs font-semibold text-gray-500 mb-3 flex items-center gap-1">
+      <div className="mt-4 pt-4 border-t border-line">
+        <h4 className="text-xs font-semibold text-ink-2 mb-3 flex items-center gap-1">
           <History className="w-3 h-3" />
           Riwayat Pembayaran ({payments.length})
         </h4>
         <div className="space-y-2 max-h-48 overflow-y-auto">
           {payments.map((payment) => (
-            <div key={payment.id} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg text-sm">
+            <div key={payment.id} className="flex items-center justify-between p-2 bg-surface-2 rounded-lg text-sm">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
                   <span className={`font-medium ${payment.type === 'deposit' ? 'text-emerald-600' : 'text-red-500'}`}>
                     {payment.type === 'deposit' ? '+' : '-'}{formatCurrency(payment.amount)}
                   </span>
-                  <span className="text-xs text-gray-400">
+                  <span className="text-xs text-ink-3">
                     {formatDate(payment.payment_date)} {payment.payment_time?.slice(0, 5)}
                   </span>
                 </div>
                 {payment.note && (
-                  <p className="text-xs text-gray-500 truncate">{payment.note}</p>
+                  <p className="text-xs text-ink-2 truncate">{payment.note}</p>
                 )}
                 {payment.wallets && (
-                  <p className="text-xs text-gray-400 flex items-center gap-1">
+                  <p className="text-xs text-ink-3 flex items-center gap-1">
                     <Wallet className="w-3 h-3" />
                     {payment.wallets.icon} {payment.wallets.name}
                   </p>
@@ -480,14 +481,14 @@ function SavingsPaymentHistory({ goalId }) {
               <div className="flex gap-1 ml-2">
                 <button
                   onClick={() => setEditPayment(payment)}
-                  className="p-1 rounded text-gray-400 hover:text-blue-500 hover:bg-blue-50"
+                  className="p-1 rounded text-ink-3 hover:text-blue-500 hover:bg-blue-50"
                   aria-label="Edit pembayaran"
                 >
                   <Pencil className="w-3 h-3" />
                 </button>
                 <button
                   onClick={() => setDeletePayment(payment)}
-                  className="p-1 rounded text-gray-400 hover:text-red-500 hover:bg-red-50"
+                  className="p-1 rounded text-ink-3 hover:text-red-500 hover:bg-red-50"
                   aria-label="Hapus pembayaran"
                 >
                   <Trash2 className="w-3 h-3" />
@@ -511,20 +512,20 @@ function SavingsPaymentHistory({ goalId }) {
                 required
               />
               <div className="flex flex-col gap-1">
-                <label className="text-sm font-medium text-gray-700">Tanggal & Waktu</label>
+                <label className="text-sm font-medium text-ink-2">Tanggal & Waktu</label>
                 <div className="flex gap-2">
                   <input
                     type="date"
                     name="paymentDate"
                     defaultValue={editPayment.payment_date}
-                    className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                    className="flex-1 rounded-lg border border-line-2 px-3 py-2 text-sm"
                     required
                   />
                   <input
                     type="time"
                     name="paymentTime"
                     defaultValue={editPayment.payment_time?.slice(0, 5) || '12:00'}
-                    className="w-28 rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                    className="w-28 rounded-lg border border-line-2 px-3 py-2 text-sm"
                     required
                   />
                 </div>
@@ -581,14 +582,14 @@ function SavingsGoalCard({ goal, onEdit, onDelete, onAddFund }) {
               {goal.icon}
             </div>
             <div>
-              <p className="font-semibold text-gray-900">{goal.name}</p>
+              <p className="font-semibold text-ink">{goal.name}</p>
               {goal.is_completed ? (
                 <Badge variant="green" className="mt-0.5">
                   <CheckCircle2 className="w-3 h-3 mr-1" />
                   Tercapai!
                 </Badge>
               ) : goal.target_date ? (
-                <p className={`text-xs mt-0.5 ${isOverdue ? 'text-red-500 font-medium' : 'text-gray-400'}`}>
+                <p className={`text-xs mt-0.5 ${isOverdue ? 'text-red-500 font-medium' : 'text-ink-3'}`}>
                   <Calendar className="w-3 h-3 inline mr-1" />
                   {isOverdue
                     ? `Terlewat ${Math.abs(days)} hari`
@@ -602,14 +603,14 @@ function SavingsGoalCard({ goal, onEdit, onDelete, onAddFund }) {
           <div className="flex gap-1">
             <button
               onClick={() => onEdit(goal)}
-              className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+              className="p-1.5 rounded-lg text-ink-3 hover:text-ink-2 hover:bg-surface-2 transition-colors"
               aria-label="Edit target tabungan"
             >
               <Pencil className="w-4 h-4" />
             </button>
             <button
               onClick={() => onDelete(goal.id)}
-              className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+              className="p-1.5 rounded-lg text-ink-3 hover:text-red-500 hover:bg-red-50 transition-colors"
               aria-label="Hapus target tabungan"
             >
               <Trash2 className="w-4 h-4" />
@@ -620,16 +621,16 @@ function SavingsGoalCard({ goal, onEdit, onDelete, onAddFund }) {
         {/* Progress */}
         <div className="space-y-2 mb-4">
           <div className="flex justify-between text-sm">
-            <span className="font-semibold text-gray-900">{formatCurrency(goal.current_amount)}</span>
-            <span className="text-gray-400">{formatCurrency(goal.target_amount)}</span>
+            <span className="font-semibold text-ink">{formatCurrency(goal.current_amount)}</span>
+            <span className="text-ink-3">{formatCurrency(goal.target_amount)}</span>
           </div>
-          <div className="w-full bg-gray-100 rounded-full h-2.5">
+          <div className="w-full bg-surface-2 rounded-full h-2.5">
             <div
               className="h-2.5 rounded-full transition-all"
               style={{ width: `${pct}%`, backgroundColor: goal.color || '#10b981' }}
             />
           </div>
-          <div className="flex justify-between text-xs text-gray-400">
+          <div className="flex justify-between text-xs text-ink-3">
             <span>{pct.toFixed(1)}% terkumpul</span>
             <span>Sisa {formatCurrency(Math.max(0, goal.target_amount - goal.current_amount))}</span>
           </div>
@@ -861,12 +862,12 @@ function PayDebtModal({ isOpen, onClose, debt }) {
     <Modal isOpen={isOpen} onClose={onClose} title={`Catat Pembayaran — ${debt?.name}`}>
       <ModalBody>
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="bg-gray-50 rounded-xl p-4">
+        <div className="bg-surface-2 rounded-xl p-4">
           <div className="flex justify-between text-sm mb-1">
-            <span className="text-gray-500">Sisa {typeLabel}</span>
-            <span className="font-bold text-gray-900">{formatCurrency(debt?.remaining_amount)}</span>
+            <span className="text-ink-2">Sisa {typeLabel}</span>
+            <span className="font-bold text-ink">{formatCurrency(debt?.remaining_amount)}</span>
           </div>
-          <div className="flex justify-between text-xs text-gray-400">
+          <div className="flex justify-between text-xs text-ink-3">
             <span>Total awal</span>
             <span>{formatCurrency(debt?.amount)}</span>
           </div>
@@ -884,7 +885,7 @@ function PayDebtModal({ isOpen, onClose, debt }) {
 
         {/* Date and Time */}
         <div className="flex flex-col gap-1">
-          <label className="text-sm font-medium text-gray-700">
+          <label className="text-sm font-medium text-ink-2">
             Tanggal & Waktu Pembayaran
           </label>
           <div className="flex gap-2">
@@ -892,13 +893,13 @@ function PayDebtModal({ isOpen, onClose, debt }) {
               type="date"
               value={paymentDate}
               onChange={(e) => setPaymentDate(e.target.value)}
-              className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300 focus:border-primary"
+              className="flex-1 rounded-lg border border-line-2 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300 focus:border-primary"
             />
             <input
               type="time"
               value={paymentTime}
               onChange={(e) => setPaymentTime(e.target.value)}
-              className="w-28 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300 focus:border-primary"
+              className="w-28 rounded-lg border border-line-2 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300 focus:border-primary"
             />
           </div>
         </div>
@@ -966,11 +967,11 @@ function DebtPaymentHistory({ debtId }) {
   const toast = useToast()
 
   if (isLoading) {
-    return <div className="text-center py-4 text-gray-400 text-sm">Memuat riwayat...</div>
+    return <div className="text-center py-4 text-ink-3 text-sm">Memuat riwayat...</div>
   }
 
   if (!payments?.length) {
-    return <div className="text-center py-4 text-gray-400 text-sm">Belum ada riwayat pembayaran</div>
+    return <div className="text-center py-4 text-ink-3 text-sm">Belum ada riwayat pembayaran</div>
   }
 
   const handleUpdate = async (e) => {
@@ -1010,28 +1011,28 @@ function DebtPaymentHistory({ debtId }) {
 
   return (
     <>
-      <div className="mt-4 pt-4 border-t border-gray-100">
-        <h4 className="text-xs font-semibold text-gray-500 mb-3 flex items-center gap-1">
+      <div className="mt-4 pt-4 border-t border-line">
+        <h4 className="text-xs font-semibold text-ink-2 mb-3 flex items-center gap-1">
           <History className="w-3 h-3" />
           Riwayat Pembayaran ({payments.length})
         </h4>
         <div className="space-y-2 max-h-48 overflow-y-auto">
           {payments.map((payment) => (
-            <div key={payment.id} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg text-sm">
+            <div key={payment.id} className="flex items-center justify-between p-2 bg-surface-2 rounded-lg text-sm">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <span className="font-medium text-gray-900">
+                  <span className="font-medium text-ink">
                     {formatCurrency(payment.amount)}
                   </span>
-                  <span className="text-xs text-gray-400">
+                  <span className="text-xs text-ink-3">
                     {formatDate(payment.payment_date)} {payment.payment_time?.slice(0, 5)}
                   </span>
                 </div>
                 {payment.note && (
-                  <p className="text-xs text-gray-500 truncate">{payment.note}</p>
+                  <p className="text-xs text-ink-2 truncate">{payment.note}</p>
                 )}
                 {payment.wallets && (
-                  <p className="text-xs text-gray-400 flex items-center gap-1">
+                  <p className="text-xs text-ink-3 flex items-center gap-1">
                     <Wallet className="w-3 h-3" />
                     {payment.wallets.icon} {payment.wallets.name}
                   </p>
@@ -1040,14 +1041,14 @@ function DebtPaymentHistory({ debtId }) {
               <div className="flex gap-1 ml-2">
                 <button
                   onClick={() => setEditPayment(payment)}
-                  className="p-1 rounded text-gray-400 hover:text-blue-500 hover:bg-blue-50"
+                  className="p-1 rounded text-ink-3 hover:text-blue-500 hover:bg-blue-50"
                   aria-label="Edit pembayaran"
                 >
                   <Pencil className="w-3 h-3" />
                 </button>
                 <button
                   onClick={() => setDeletePayment(payment)}
-                  className="p-1 rounded text-gray-400 hover:text-red-500 hover:bg-red-50"
+                  className="p-1 rounded text-ink-3 hover:text-red-500 hover:bg-red-50"
                   aria-label="Hapus pembayaran"
                 >
                   <Trash2 className="w-3 h-3" />
@@ -1071,20 +1072,20 @@ function DebtPaymentHistory({ debtId }) {
                 required
               />
               <div className="flex flex-col gap-1">
-                <label className="text-sm font-medium text-gray-700">Tanggal & Waktu</label>
+                <label className="text-sm font-medium text-ink-2">Tanggal & Waktu</label>
                 <div className="flex gap-2">
                   <input
                     type="date"
                     name="paymentDate"
                     defaultValue={editPayment.payment_date}
-                    className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                    className="flex-1 rounded-lg border border-line-2 px-3 py-2 text-sm"
                     required
                   />
                   <input
                     type="time"
                     name="paymentTime"
                     defaultValue={editPayment.payment_time?.slice(0, 5) || '12:00'}
-                    className="w-28 rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                    className="w-28 rounded-lg border border-line-2 px-3 py-2 text-sm"
                     required
                   />
                 </div>
@@ -1148,7 +1149,7 @@ function DebtCard({ debt, onEdit, onDelete, onPay, onMarkPaid }) {
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <p className="font-semibold text-gray-900">{debt.name}</p>
+                <p className="font-semibold text-ink">{debt.name}</p>
                 <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${
                   isDebt
                     ? 'bg-red-100 text-red-600'
@@ -1162,7 +1163,7 @@ function DebtCard({ debt, onEdit, onDelete, onPay, onMarkPaid }) {
                   <CheckCircle2 className="w-3 h-3" /> Lunas
                 </span>
               ) : debt.due_date ? (
-                <p className={`text-xs mt-0.5 ${isOverdue ? 'text-red-500 font-medium' : 'text-gray-400'}`}>
+                <p className={`text-xs mt-0.5 ${isOverdue ? 'text-red-500 font-medium' : 'text-ink-3'}`}>
                   <Calendar className="w-3 h-3 inline mr-1" />
                   {isOverdue
                     ? `Jatuh tempo terlewat ${Math.abs(days)} hari`
@@ -1176,14 +1177,14 @@ function DebtCard({ debt, onEdit, onDelete, onPay, onMarkPaid }) {
           <div className="flex gap-1">
             <button
               onClick={() => onEdit(debt)}
-              className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+              className="p-1.5 rounded-lg text-ink-3 hover:text-ink-2 hover:bg-surface-2 transition-colors"
               aria-label="Edit hutang/piutang"
             >
               <Pencil className="w-4 h-4" />
             </button>
             <button
               onClick={() => onDelete(debt.id)}
-              className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+              className="p-1.5 rounded-lg text-ink-3 hover:text-red-500 hover:bg-red-50 transition-colors"
               aria-label="Hapus hutang/piutang"
             >
               <Trash2 className="w-4 h-4" />
@@ -1194,25 +1195,25 @@ function DebtCard({ debt, onEdit, onDelete, onPay, onMarkPaid }) {
         {/* Progress */}
         <div className="space-y-2 mb-4">
           <div className="flex justify-between text-sm">
-            <span className="text-gray-500 text-xs">Sisa</span>
+            <span className="text-ink-2 text-xs">Sisa</span>
             <span className={`font-bold ${isDebt ? 'text-red-500' : 'text-emerald-600'}`}>
               {formatCurrency(debt.remaining_amount)}
             </span>
           </div>
-          <div className="w-full bg-gray-100 rounded-full h-2">
+          <div className="w-full bg-surface-2 rounded-full h-2">
             <div
               className={`h-2 rounded-full transition-all ${isDebt ? 'bg-red-400' : 'bg-emerald-400'}`}
               style={{ width: `${pct}%` }}
             />
           </div>
-          <div className="flex justify-between text-xs text-gray-400">
+          <div className="flex justify-between text-xs text-ink-3">
             <span>{pct.toFixed(0)}% sudah dibayar</span>
             <span>dari {formatCurrency(debt.amount)}</span>
           </div>
         </div>
 
         {debt.description && (
-          <p className="text-xs text-gray-400 mb-3 truncate">{debt.description}</p>
+          <p className="text-xs text-ink-3 mb-3 truncate">{debt.description}</p>
         )}
 
         {/* Actions */}
@@ -1255,6 +1256,7 @@ function DebtCard({ debt, onEdit, onDelete, onPay, onMarkPaid }) {
 
 function SavingsGoalsTab() {
   const toast = useToast()
+  const reduceMotion = useReducedMotion()
   const { data: goals, isLoading } = useSavingsGoals()
   const deleteMutation = useDeleteSavingsGoal()
 
@@ -1288,24 +1290,24 @@ function SavingsGoalsTab() {
     <div className="space-y-4">
       {/* Summary strip */}
       {goals?.length > 0 && (
-        <div className="bg-white border border-gray-200 rounded-xl p-4 grid grid-cols-3 gap-4">
+        <div className="bg-surface border border-line rounded-xl p-4 grid grid-cols-3 gap-4">
           <div>
-            <p className="text-xs text-gray-400">Total Target</p>
-            <p className="text-sm font-bold text-gray-900">{formatCurrency(totalTarget)}</p>
+            <p className="text-xs text-ink-3">Total Target</p>
+            <p className="text-sm font-bold text-ink">{formatCurrency(totalTarget)}</p>
           </div>
           <div>
-            <p className="text-xs text-gray-400">Terkumpul</p>
+            <p className="text-xs text-ink-3">Terkumpul</p>
             <p className="text-sm font-bold text-emerald-600">{formatCurrency(totalSaved)}</p>
           </div>
           <div>
-            <p className="text-xs text-gray-400">Sisa</p>
-            <p className="text-sm font-bold text-gray-900">{formatCurrency(Math.max(0, totalTarget - totalSaved))}</p>
+            <p className="text-xs text-ink-3">Sisa</p>
+            <p className="text-sm font-bold text-ink">{formatCurrency(Math.max(0, totalTarget - totalSaved))}</p>
           </div>
         </div>
       )}
 
       {/* Filter tabs */}
-      <div className="flex gap-1 bg-gray-100 rounded-lg p-1 w-fit">
+      <div className="flex gap-1 bg-surface-2 rounded-lg p-1 w-fit">
         {[
           { key: 'all', label: 'Semua' },
           { key: 'active', label: 'Aktif' },
@@ -1315,7 +1317,7 @@ function SavingsGoalsTab() {
             key={key}
             onClick={() => setFilter(key)}
             className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
-              filter === key ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'
+              filter === key ? 'bg-surface shadow-sm text-ink' : 'text-ink-2 hover:text-ink'
             }`}
           >
             {label}
@@ -1332,24 +1334,30 @@ function SavingsGoalsTab() {
         </div>
       ) : !filtered.length ? (
         <div className="py-16 text-center">
-          <Target className="w-12 h-12 text-gray-200 mx-auto mb-3" />
-          <p className="text-gray-400 font-medium">
+          <Target className="w-12 h-12 text-ink-3 mx-auto mb-3" />
+          <p className="text-ink-3 font-medium">
             {filter === 'all' ? 'Belum ada target tabungan' : `Tidak ada target ${filter === 'completed' ? 'tercapai' : 'aktif'}`}
           </p>
           {filter === 'all' && (
-            <p className="text-gray-300 text-sm mt-1">Buat target untuk mulai menabung</p>
+            <p className="text-ink-3 text-sm mt-1">Buat target untuk mulai menabung</p>
           )}
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filtered.map((g) => (
-            <SavingsGoalCard
+          {filtered.map((g, i) => (
+            <motion.div
               key={g.id}
-              goal={g}
-              onEdit={(g) => setGoalModal({ open: true, goal: g })}
-              onDelete={setDeleteId}
-              onAddFund={(g) => setAddFundModal({ open: true, goal: g })}
-            />
+              initial={reduceMotion ? false : { opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.25, delay: Math.min(i * 0.04, 0.24), ease: 'easeOut' }}
+            >
+              <SavingsGoalCard
+                goal={g}
+                onEdit={(g) => setGoalModal({ open: true, goal: g })}
+                onDelete={setDeleteId}
+                onAddFund={(g) => setAddFundModal({ open: true, goal: g })}
+              />
+            </motion.div>
           ))}
         </div>
       )}
@@ -1415,7 +1423,7 @@ function MarkPaidModal({ isOpen, onClose, debt, onConfirm, loading }) {
     <Modal isOpen={isOpen} onClose={onClose} title="Tandai Lunas" size="sm">
       <ModalBody>
         <div className="space-y-4">
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-ink-2">
             Tandai <span className="font-semibold">{debt?.name}</span> sebagai lunas?
             Sisa {isDebt ? 'hutang' : 'piutang'} sebesar{' '}
             <span className="font-semibold">{formatCurrency(debt?.remaining_amount)}</span> akan menjadi 0.
@@ -1423,7 +1431,7 @@ function MarkPaidModal({ isOpen, onClose, debt, onConfirm, loading }) {
 
           {/* Date and Time */}
           <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium text-gray-700">
+            <label className="text-sm font-medium text-ink-2">
               Tanggal & Waktu Pelunasan
             </label>
             <div className="flex gap-2">
@@ -1431,13 +1439,13 @@ function MarkPaidModal({ isOpen, onClose, debt, onConfirm, loading }) {
                 type="date"
                 value={paymentDate}
                 onChange={(e) => setPaymentDate(e.target.value)}
-                className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300 focus:border-primary"
+                className="flex-1 rounded-lg border border-line-2 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300 focus:border-primary"
               />
               <input
                 type="time"
                 value={paymentTime}
                 onChange={(e) => setPaymentTime(e.target.value)}
-                className="w-28 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300 focus:border-primary"
+                className="w-28 rounded-lg border border-line-2 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300 focus:border-primary"
               />
             </div>
           </div>
@@ -1505,6 +1513,7 @@ function MarkPaidModal({ isOpen, onClose, debt, onConfirm, loading }) {
 
 function DebtsTab() {
   const toast = useToast()
+  const reduceMotion = useReducedMotion()
   const { data: debts, isLoading } = useDebts()
   const deleteMutation = useDeleteDebt()
   const markPaidMutation = useMarkDebtPaid()
@@ -1566,13 +1575,13 @@ function DebtsTab() {
     <div className="space-y-4">
       {/* Summary */}
       {debts?.length > 0 && (
-        <div className="bg-white border border-gray-200 rounded-xl p-4 grid grid-cols-2 gap-4">
+        <div className="bg-surface border border-line rounded-xl p-4 grid grid-cols-2 gap-4">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 bg-red-50 rounded-lg flex items-center justify-center">
               <TrendingDown className="w-5 h-5 text-red-500" />
             </div>
             <div>
-              <p className="text-xs text-gray-400">Total Hutang</p>
+              <p className="text-xs text-ink-3">Total Hutang</p>
               <p className="text-sm font-bold text-red-500">{formatCurrency(totalDebt)}</p>
             </div>
           </div>
@@ -1581,7 +1590,7 @@ function DebtsTab() {
               <TrendingUp className="w-5 h-5 text-emerald-500" />
             </div>
             <div>
-              <p className="text-xs text-gray-400">Total Piutang</p>
+              <p className="text-xs text-ink-3">Total Piutang</p>
               <p className="text-sm font-bold text-emerald-600">{formatCurrency(totalReceivable)}</p>
             </div>
           </div>
@@ -1589,7 +1598,7 @@ function DebtsTab() {
       )}
 
       {/* Filter */}
-      <div className="flex gap-1 bg-gray-100 rounded-lg p-1 w-fit flex-wrap">
+      <div className="flex gap-1 bg-surface-2 rounded-lg p-1 w-fit flex-wrap">
         {[
           { key: 'all', label: 'Semua' },
           { key: 'debt', label: 'Hutang' },
@@ -1600,7 +1609,7 @@ function DebtsTab() {
             key={key}
             onClick={() => setFilter(key)}
             className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
-              filter === key ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'
+              filter === key ? 'bg-surface shadow-sm text-ink' : 'text-ink-2 hover:text-ink'
             }`}
           >
             {label}
@@ -1617,20 +1626,26 @@ function DebtsTab() {
         </div>
       ) : !filtered.length ? (
         <div className="py-16 text-center">
-          <CreditCard className="w-12 h-12 text-gray-200 mx-auto mb-3" />
-          <p className="text-gray-400 font-medium">Tidak ada data</p>
+          <CreditCard className="w-12 h-12 text-ink-3 mx-auto mb-3" />
+          <p className="text-ink-3 font-medium">Tidak ada data</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {filtered.map((d) => (
-            <DebtCard
+          {filtered.map((d, i) => (
+            <motion.div
               key={d.id}
-              debt={d}
-              onEdit={(d) => setDebtModal({ open: true, debt: d })}
-              onDelete={setDeleteId}
-              onPay={(d) => setPayModal({ open: true, debt: d })}
-              onMarkPaid={(d) => setMarkPaidModal({ open: true, debt: d })}
-            />
+              initial={reduceMotion ? false : { opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.25, delay: Math.min(i * 0.04, 0.24), ease: 'easeOut' }}
+            >
+              <DebtCard
+                debt={d}
+                onEdit={(d) => setDebtModal({ open: true, debt: d })}
+                onDelete={setDeleteId}
+                onPay={(d) => setPayModal({ open: true, debt: d })}
+                onMarkPaid={(d) => setMarkPaidModal({ open: true, debt: d })}
+              />
+            </motion.div>
           ))}
         </div>
       )}
@@ -1680,7 +1695,7 @@ export default function SavingsDebts() {
       {/* Header */}
       <div className="flex items-center justify-between">
         {/* Tabs */}
-        <div className="flex gap-1 bg-gray-100 rounded-xl p-1">
+        <div className="flex gap-1 bg-surface-2 rounded-xl p-1">
           {[
             { key: 'savings', label: '🎯  Target Tabungan' },
             { key: 'debts', label: '💳  Hutang & Piutang' },
@@ -1690,8 +1705,8 @@ export default function SavingsDebts() {
               onClick={() => setActiveTab(key)}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                 activeTab === key
-                  ? 'bg-white shadow-sm text-gray-900'
-                  : 'text-gray-500 hover:text-gray-700'
+                  ? 'bg-surface shadow-sm text-ink'
+                  : 'text-ink-2 hover:text-ink'
               }`}
             >
               {label}

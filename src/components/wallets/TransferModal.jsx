@@ -123,16 +123,20 @@ export function TransferModal({ isOpen, onClose, fromWallet = null }) {
           />
 
           <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium text-gray-700">
-              Tanggal <span className="text-red-500">*</span>
+            <label className="text-sm font-medium" style={{ color: 'var(--ink-2)' }}>
+              Tanggal <span style={{ color: '#DC2626' }}>*</span>
             </label>
             <input
               type="date"
               value={form.date}
               onChange={update('date')}
-              className={`w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300 focus:border-primary ${
-                errors.date ? 'border-red-500' : 'border-gray-300'
-              }`}
+              className="w-full border px-3 py-2 text-sm focus:outline-none focus:ring-2"
+              style={{
+                borderRadius: 'var(--r-sm)',
+                background: 'var(--surface)',
+                color: 'var(--ink)',
+                borderColor: errors.date ? '#DC2626' : 'var(--line-2)',
+              }}
             />
           </div>
 

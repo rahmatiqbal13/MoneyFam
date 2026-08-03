@@ -58,13 +58,13 @@ function monthLabel(year, month) {
 function ChartTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null
   return (
-    <div className="bg-white border border-gray-200 rounded-xl shadow-lg p-3 text-sm">
-      <p className="font-semibold text-gray-800 mb-2">{label}</p>
+    <div className="bg-surface border border-line rounded-xl shadow-lg p-3 text-sm">
+      <p className="font-semibold text-ink mb-2">{label}</p>
       {payload.map((p) => (
         <div key={p.dataKey} className="flex items-center gap-2">
           <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: p.color }} />
-          <span className="text-gray-600">{p.name}:</span>
-          <span className="font-medium text-gray-900">{formatCurrency(p.value)}</span>
+          <span className="text-ink-2">{p.name}:</span>
+          <span className="font-medium text-ink">{formatCurrency(p.value)}</span>
         </div>
       ))}
     </div>
@@ -97,7 +97,7 @@ function SummaryCards({ stats, isLoading }) {
         return (
           <div key={c.label} className="bg-surface rounded-xl border border-line p-4">
             <div className="flex items-center justify-between mb-3">
-              <p className="text-xs text-gray-500">{c.label}</p>
+              <p className="text-xs text-ink-2">{c.label}</p>
               <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${c.iconBg}`}>
                 <Icon className={`w-4 h-4 ${c.iconColor}`} />
               </div>
@@ -238,33 +238,33 @@ function DayTransactionsModal({ date, onClose, onTransactionDeleted }) {
   return (
     <>
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-        <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[80vh] overflow-hidden">
+        <div className="bg-surface rounded-2xl shadow-xl w-full max-w-lg max-h-[80vh] overflow-hidden">
           {/* Header */}
-          <div className="flex items-center justify-between p-4 border-b border-gray-100">
+          <div className="flex items-center justify-between p-4 border-b border-line">
             <div>
-              <h3 className="text-lg font-semibold text-gray-900">
+              <h3 className="text-lg font-semibold text-ink">
                 {new Date(date).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
               </h3>
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-ink-2">
                 {transactions.length} transaksi
               </p>
             </div>
             <button 
               onClick={onClose}
-              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              className="p-2 hover:bg-surface-2 rounded-lg transition-colors"
             >
-              <X className="w-5 h-5 text-gray-500" />
+              <X className="w-5 h-5 text-ink-2" />
             </button>
           </div>
 
           {/* Summary */}
-          <div className="grid grid-cols-2 gap-4 p-4 bg-gray-50">
+          <div className="grid grid-cols-2 gap-4 p-4 bg-surface-2">
             <div className="text-center">
-              <p className="text-xs text-gray-500 mb-1">Pemasukan</p>
+              <p className="text-xs text-ink-2 mb-1">Pemasukan</p>
               <p className="text-lg font-bold text-emerald-600">{formatCurrency(totalIncome)}</p>
             </div>
             <div className="text-center">
-              <p className="text-xs text-gray-500 mb-1">Pengeluaran</p>
+              <p className="text-xs text-ink-2 mb-1">Pengeluaran</p>
               <p className="text-lg font-bold text-red-500">{formatCurrency(totalExpense)}</p>
             </div>
           </div>
@@ -277,15 +277,15 @@ function DayTransactionsModal({ date, onClose, onTransactionDeleted }) {
               </div>
             ) : transactions.length === 0 ? (
               <div className="text-center py-8">
-                <Receipt className="w-12 h-12 text-gray-200 mx-auto mb-3" />
-                <p className="text-gray-400 text-sm">Tidak ada transaksi</p>
+                <Receipt className="w-12 h-12 text-ink-3 mx-auto mb-3" />
+                <p className="text-ink-3 text-sm">Tidak ada transaksi</p>
               </div>
             ) : (
               <div className="space-y-2">
                 {transactions.map((tx) => (
                   <div 
                     key={tx.id} 
-                    className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl group"
+                    className="flex items-center gap-3 p-3 bg-surface-2 rounded-xl group"
                   >
                     <div 
                       className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
@@ -294,10 +294,10 @@ function DayTransactionsModal({ date, onClose, onTransactionDeleted }) {
                       <span className="text-lg">{tx.categories?.icon || (tx.type === 'income' ? '💰' : tx.type === 'expense' ? '💸' : '🔄')}</span>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900 truncate">
+                      <p className="text-sm font-medium text-ink truncate">
                         {tx.description || tx.categories?.name || 'Transaksi'}
                       </p>
-                      <p className="text-xs text-gray-400">
+                      <p className="text-xs text-ink-3">
                         {tx.wallets?.name || 'Tanpa wallet'} • {tx.categories?.name || 'Tanpa kategori'}
                       </p>
                     </div>
@@ -312,14 +312,14 @@ function DayTransactionsModal({ date, onClose, onTransactionDeleted }) {
                       <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button
                           onClick={() => setEditingTx(tx)}
-                          className="p-1.5 rounded-lg text-gray-400 hover:text-blue-500 hover:bg-blue-50 transition-colors"
+                          className="p-1.5 rounded-lg text-ink-3 hover:text-blue-500 hover:bg-blue-50 transition-colors"
                           title="Edit"
                         >
                           <Edit2 className="w-3.5 h-3.5" />
                         </button>
                         <button
                           onClick={() => setDeletingTx(tx)}
-                          className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                          className="p-1.5 rounded-lg text-ink-3 hover:text-red-500 hover:bg-red-50 transition-colors"
                           title="Hapus"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -337,42 +337,42 @@ function DayTransactionsModal({ date, onClose, onTransactionDeleted }) {
       {/* Edit Modal */}
       {editingTx && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
-            <div className="flex items-center justify-between p-4 border-b border-gray-100">
-              <h3 className="text-lg font-semibold text-gray-900">Edit Transaksi</h3>
+          <div className="bg-surface rounded-2xl shadow-xl w-full max-w-md">
+            <div className="flex items-center justify-between p-4 border-b border-line">
+              <h3 className="text-lg font-semibold text-ink">Edit Transaksi</h3>
               <button 
                 onClick={() => setEditingTx(null)}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                className="p-2 hover:bg-surface-2 rounded-lg transition-colors"
               >
-                <X className="w-5 h-5 text-gray-500" />
+                <X className="w-5 h-5 text-ink-2" />
               </button>
             </div>
             <form onSubmit={handleEdit} className="p-4 space-y-4">
               <div>
-                <label className="text-sm font-medium text-gray-700 block mb-1">Deskripsi</label>
+                <label className="text-sm font-medium text-ink-2 block mb-1">Deskripsi</label>
                 <input
                   type="text"
                   name="description"
                   defaultValue={editingTx.description || ''}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300"
+                  className="w-full rounded-lg border border-line-2 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300"
                   placeholder="Deskripsi transaksi"
                 />
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-700 block mb-1">Jumlah (Rp)</label>
+                <label className="text-sm font-medium text-ink-2 block mb-1">Jumlah (Rp)</label>
                 <input
                   type="number"
                   name="amount"
                   defaultValue={editingTx.amount}
                   required
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300"
+                  className="w-full rounded-lg border border-line-2 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300"
                 />
               </div>
               <div className="flex gap-2 pt-2">
                 <button
                   type="button"
                   onClick={() => setEditingTx(null)}
-                  className="flex-1 px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors"
+                  className="flex-1 px-4 py-2 rounded-lg border border-line-2 text-ink-2 hover:bg-surface-2 transition-colors"
                 >
                   Batal
                 </button>
@@ -392,13 +392,13 @@ function DayTransactionsModal({ date, onClose, onTransactionDeleted }) {
       {/* Delete Confirmation Modal */}
       {deletingTx && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6">
+          <div className="bg-surface rounded-2xl shadow-xl w-full max-w-sm p-6">
             <div className="text-center mb-4">
               <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-3">
                 <Trash2 className="w-6 h-6 text-red-500" />
               </div>
-              <h3 className="text-lg font-semibold text-gray-900">Hapus Transaksi?</h3>
-              <p className="text-sm text-gray-500 mt-1">
+              <h3 className="text-lg font-semibold text-ink">Hapus Transaksi?</h3>
+              <p className="text-sm text-ink-2 mt-1">
                 Transaksi "{deletingTx.description || deletingTx.categories?.name || 'Tanpa deskripsi'}" sebesar {formatCurrency(deletingTx.amount)} akan dihapus permanen.
               </p>
             </div>
@@ -406,7 +406,7 @@ function DayTransactionsModal({ date, onClose, onTransactionDeleted }) {
               <button
                 onClick={() => setDeletingTx(null)}
                 disabled={isSubmitting}
-                className="flex-1 px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
+                className="flex-1 px-4 py-2 rounded-lg border border-line-2 text-ink-2 hover:bg-surface-2 transition-colors disabled:opacity-50"
               >
                 Batal
               </button>
@@ -483,7 +483,7 @@ function SpendingHeatmap({ year, month }) {
         {/* Day labels */}
         <div className="grid grid-cols-7 gap-1 mb-1">
           {dayNames.map((d) => (
-            <div key={d} className="text-center text-xs text-gray-400 font-medium py-0.5">
+            <div key={d} className="text-center text-xs text-ink-3 font-medium py-0.5">
               {d}
             </div>
           ))}
@@ -522,7 +522,7 @@ function SpendingHeatmap({ year, month }) {
 
         {/* Legend */}
         <div className="flex items-center gap-1.5 mt-3 flex-wrap">
-          <span className="text-xs text-gray-400">Pengeluaran:</span>
+          <span className="text-xs text-ink-3">Pengeluaran:</span>
           <div className="flex items-center gap-1">
             {[
               { color: 'bg-gray-100', label: 'Nol' },
@@ -534,14 +534,14 @@ function SpendingHeatmap({ year, month }) {
             ].map(({ color, label }, i) => (
               <div key={i} className="flex items-center gap-0.5">
                 <div className={`w-4 h-4 rounded ${color}`} />
-                {label && <span className="text-xs text-gray-400">{label}</span>}
+                {label && <span className="text-xs text-ink-3">{label}</span>}
               </div>
             ))}
           </div>
         </div>
 
         {/* Helper text */}
-        <p className="text-xs text-gray-400 mt-2 text-center">
+        <p className="text-xs text-ink-3 mt-2 text-center">
           Klik tanggal untuk melihat detail transaksi
         </p>
       </div>
@@ -582,26 +582,26 @@ function FutureProjection({ year, month, stats }) {
     <div className={`rounded-xl border p-4 ${isOnTrack ? 'bg-emerald-50 border-emerald-200' : 'bg-amber-50 border-amber-200'}`}>
       <div className="flex items-center gap-2 mb-3">
         <Flame className={`w-4 h-4 ${isOnTrack ? 'text-emerald-600' : 'text-amber-600'}`} />
-        <p className="text-sm font-semibold text-gray-800">Proyeksi Akhir Bulan</p>
-        <span className="text-xs text-gray-400">({daysLeft} hari lagi)</span>
+        <p className="text-sm font-semibold text-ink">Proyeksi Akhir Bulan</p>
+        <span className="text-xs text-ink-3">({daysLeft} hari lagi)</span>
       </div>
       <div className="grid grid-cols-3 gap-3">
         <div>
-          <p className="text-xs text-gray-400">Rata-rata Pengeluaran/Hari</p>
-          <p className="text-sm font-bold text-gray-900">{formatCurrency(Math.round(dailyAvgExpense))}</p>
+          <p className="text-xs text-ink-3">Rata-rata Pengeluaran/Hari</p>
+          <p className="text-sm font-bold text-ink">{formatCurrency(Math.round(dailyAvgExpense))}</p>
         </div>
         <div>
-          <p className="text-xs text-gray-400">Proyeksi Total Pengeluaran</p>
+          <p className="text-xs text-ink-3">Proyeksi Total Pengeluaran</p>
           <p className="text-sm font-bold text-red-600">{formatCurrency(Math.round(projectedExpense))}</p>
         </div>
         <div>
-          <p className="text-xs text-gray-400">Proyeksi Sisa Bulan</p>
+          <p className="text-xs text-ink-3">Proyeksi Sisa Bulan</p>
           <p className={`text-sm font-bold ${isOnTrack ? 'text-emerald-600' : 'text-red-600'}`}>
             {projectedSavings >= 0 ? '+' : ''}{formatCurrency(Math.round(projectedSavings))}
           </p>
         </div>
       </div>
-      <p className="text-xs text-gray-500 mt-2">
+      <p className="text-xs text-ink-2 mt-2">
         {isOnTrack
           ? `Jika pola ini berlanjut, kamu masih akan surplus ${formatCurrency(Math.round(projectedSavings))} akhir bulan. 🎉`
           : `Pengeluaran diprediksi melebihi pemasukan. Pertimbangkan mengurangi pengeluaran ${Math.abs(Math.round(daysLeft > 0 ? (projectedExpense - stats.income) / daysLeft : 0)).toLocaleString('id-ID')}/hari.`
@@ -616,7 +616,7 @@ function FutureProjection({ year, month, stats }) {
 function CategoryBreakdown({ data, isLoading, isError }) {
   if (isLoading) return <Spinner />
   if (isError) return <p className="text-sm text-red-500 text-center py-6">Gagal memuat data</p>
-  if (!data?.length) return <p className="text-sm text-gray-400 text-center py-8">Belum ada pengeluaran</p>
+  if (!data?.length) return <p className="text-sm text-ink-3 text-center py-8">Belum ada pengeluaran</p>
 
   return (
     <div className="space-y-3">
@@ -625,20 +625,20 @@ function CategoryBreakdown({ data, isLoading, isError }) {
           <div className="flex items-center justify-between mb-1">
             <div className="flex items-center gap-2 min-w-0">
               <span className="text-base">{cat.icon}</span>
-              <span className="text-sm text-gray-700 truncate">{cat.name}</span>
-              <span className="text-xs text-gray-400 flex-shrink-0">({cat.count}×)</span>
+              <span className="text-sm text-ink-2 truncate">{cat.name}</span>
+              <span className="text-xs text-ink-3 flex-shrink-0">({cat.count}×)</span>
             </div>
             <div className="text-right flex-shrink-0 ml-2">
-              <span className="text-sm font-semibold text-gray-900">{formatCurrency(cat.amount)}</span>
-              <span className="text-xs text-gray-400 ml-1.5">{cat.pct.toFixed(1)}%</span>
+              <span className="text-sm font-semibold text-ink">{formatCurrency(cat.amount)}</span>
+              <span className="text-xs text-ink-3 ml-1.5">{cat.pct.toFixed(1)}%</span>
             </div>
           </div>
-          <div className="w-full bg-gray-100 rounded-full h-1.5">
+          <div className="w-full bg-surface-2 rounded-full h-1.5">
             <div className="h-1.5 rounded-full transition-all" style={{ width: `${cat.pct}%`, backgroundColor: cat.color || '#10b981' }} />
           </div>
         </div>
       ))}
-      {data.length > 8 && <p className="text-xs text-gray-400 text-center pt-1">+{data.length - 8} kategori lainnya</p>}
+      {data.length > 8 && <p className="text-xs text-ink-3 text-center pt-1">+{data.length - 8} kategori lainnya</p>}
     </div>
   )
 }
@@ -649,7 +649,7 @@ function BudgetVsActual({ year, month }) {
   const ym = `${year}-${String(month).padStart(2, '0')}`
   const { data: budgets, isLoading } = useBudgets(ym)
   if (isLoading) return <Spinner />
-  if (!budgets?.length) return <p className="text-sm text-gray-400 text-center py-8">Belum ada anggaran bulan ini</p>
+  if (!budgets?.length) return <p className="text-sm text-ink-3 text-center py-8">Belum ada anggaran bulan ini</p>
 
   return (
     <div className="space-y-3">
@@ -662,16 +662,16 @@ function BudgetVsActual({ year, month }) {
             <div className="flex items-center justify-between mb-1">
               <div className="flex items-center gap-2 min-w-0">
                 <span className="text-base">{b.categories?.icon}</span>
-                <span className="text-sm text-gray-700 truncate">{b.categories?.name}</span>
+                <span className="text-sm text-ink-2 truncate">{b.categories?.name}</span>
               </div>
               <div className="text-right flex-shrink-0 ml-2">
-                <span className={`text-sm font-semibold ${over ? 'text-red-500' : 'text-gray-900'}`}>
+                <span className={`text-sm font-semibold ${over ? 'text-red-500' : 'text-ink'}`}>
                   {formatCurrency(b.spent)}
                 </span>
-                <span className="text-xs text-gray-400 ml-1">/ {formatCurrency(b.amount)}</span>
+                <span className="text-xs text-ink-3 ml-1">/ {formatCurrency(b.amount)}</span>
               </div>
             </div>
-            <div className="w-full bg-gray-100 rounded-full h-1.5">
+            <div className="w-full bg-surface-2 rounded-full h-1.5">
               <div className={`h-1.5 rounded-full transition-all ${barColor}`} style={{ width: `${pct}%` }} />
             </div>
             {over && <p className="text-xs text-red-400 mt-0.5">Lebih {formatCurrency(b.spent - b.amount)}</p>}
@@ -688,17 +688,17 @@ function TopTransactions({ year, month }) {
   const { data, isLoading, isError, error } = useTopTransactions(year, month, 5)
   if (isLoading) return <Spinner />
   if (isError) return <p className="text-sm text-red-500 text-center py-6">{error?.message}</p>
-  if (!data?.length) return <p className="text-sm text-gray-400 text-center py-8">Belum ada pengeluaran bulan ini</p>
+  if (!data?.length) return <p className="text-sm text-ink-3 text-center py-8">Belum ada pengeluaran bulan ini</p>
 
   return (
     <div className="space-y-2">
       {data.map((tx, i) => (
-        <div key={tx.id} className="flex items-center gap-3 py-2.5 border-b border-gray-50 last:border-0">
-          <span className="w-6 h-6 rounded-full bg-gray-100 text-gray-500 text-xs flex items-center justify-center font-bold flex-shrink-0">{i + 1}</span>
+        <div key={tx.id} className="flex items-center gap-3 py-2.5 border-b border-line last:border-0">
+          <span className="w-6 h-6 rounded-full bg-surface-2 text-ink-2 text-xs flex items-center justify-center font-bold flex-shrink-0">{i + 1}</span>
           <span className="text-lg flex-shrink-0">{tx.categories?.icon || '📦'}</span>
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-medium text-gray-800 truncate">{tx.description || tx.categories?.name || 'Transaksi'}</p>
-            <p className="text-xs text-gray-400">{tx.categories?.name} · {formatDate(tx.date)}</p>
+            <p className="text-sm font-medium text-ink truncate">{tx.description || tx.categories?.name || 'Transaksi'}</p>
+            <p className="text-xs text-ink-3">{tx.categories?.name} · {formatDate(tx.date)}</p>
           </div>
           <p className="text-sm font-semibold text-red-500 flex-shrink-0">-{formatCurrency(tx.amount)}</p>
         </div>
@@ -718,33 +718,33 @@ function MemberBreakdown({ year, month }) {
     <Card>
       <CardHeader>
         <div className="flex items-center gap-2">
-          <Users className="w-4 h-4 text-gray-400" />
+          <Users className="w-4 h-4 text-ink-3" />
           <CardTitle>Kontribusi Per Anggota</CardTitle>
         </div>
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {data.map((member) => (
-            <div key={member.id} className="bg-gray-50 rounded-xl p-4">
+            <div key={member.id} className="bg-surface-2 rounded-xl p-4">
               <div className="flex items-center gap-3 mb-3">
                 <div className="w-9 h-9 rounded-full bg-primary flex items-center justify-center text-white font-bold text-sm">
                   {member.name[0].toUpperCase()}
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-gray-800">{member.name}</p>
-                  <p className="text-xs text-gray-400 capitalize">{member.role === 'owner' ? 'Pemilik' : 'Anggota'}</p>
+                  <p className="text-sm font-semibold text-ink">{member.name}</p>
+                  <p className="text-xs text-ink-3 capitalize">{member.role === 'owner' ? 'Pemilik' : 'Anggota'}</p>
                 </div>
               </div>
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-sm">
                   <span className="flex items-center gap-1 text-emerald-600"><ArrowUpRight className="w-3.5 h-3.5" />Pemasukan</span>
-                  <span className="font-medium text-gray-900">{formatCurrency(member.income)}</span>
+                  <span className="font-medium text-ink">{formatCurrency(member.income)}</span>
                 </div>
                 <div className="flex items-center justify-between text-sm">
                   <span className="flex items-center gap-1 text-red-500"><ArrowDownRight className="w-3.5 h-3.5" />Pengeluaran</span>
-                  <span className="font-medium text-gray-900">{formatCurrency(member.expense)}</span>
+                  <span className="font-medium text-ink">{formatCurrency(member.expense)}</span>
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-1.5 mt-1">
+                <div className="w-full bg-surface-2 rounded-full h-1.5 mt-1">
                   <div className="h-1.5 rounded-full bg-red-400" style={{ width: `${(member.expense / maxExpense) * 100}%` }} />
                 </div>
               </div>
@@ -781,7 +781,7 @@ function MonthlyView({ year, month }) {
                 <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#9ca3af' }} axisLine={false} tickLine={false} />
                 <YAxis tickFormatter={formatYAxis} tick={{ fontSize: 11, fill: '#9ca3af' }} axisLine={false} tickLine={false} width={42} />
                 <Tooltip content={<ChartTooltip />} />
-                <Legend iconType="circle" iconSize={8} formatter={(v) => <span className="text-xs text-gray-500">{v}</span>} />
+                <Legend iconType="circle" iconSize={8} formatter={(v) => <span className="text-xs text-ink-2">{v}</span>} />
                 <Bar dataKey="income" name="Pemasukan" fill="#10b981" radius={[4, 4, 0, 0]} />
                 <Bar dataKey="expense" name="Pengeluaran" fill="#ef4444" radius={[4, 4, 0, 0]} />
               </BarChart>
@@ -856,7 +856,7 @@ function PeriodView({ period, dateFrom, dateTo, periodLabel, year }) {
                   <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#9ca3af' }} axisLine={false} tickLine={false} />
                   <YAxis tickFormatter={formatYAxis} tick={{ fontSize: 11, fill: '#9ca3af' }} axisLine={false} tickLine={false} width={42} />
                   <Tooltip content={<ChartTooltip />} />
-                  <Legend iconType="circle" iconSize={8} formatter={(v) => <span className="text-xs text-gray-500">{v}</span>} />
+                  <Legend iconType="circle" iconSize={8} formatter={(v) => <span className="text-xs text-ink-2">{v}</span>} />
                   <Bar dataKey="income" name="Pemasukan" fill="#10b981" radius={[4, 4, 0, 0]} />
                   <Bar dataKey="expense" name="Pengeluaran" fill="#ef4444" radius={[4, 4, 0, 0]} />
                 </BarChart>
@@ -973,13 +973,13 @@ export default function Reports() {
     <div className="space-y-5 max-w-5xl mx-auto">
       {/* Period tabs */}
       <div className="flex items-center gap-3 flex-wrap">
-        <div className="flex gap-1 bg-gray-100 rounded-xl p-1">
+        <div className="flex gap-1 bg-surface-2 rounded-xl p-1">
           {PERIODS.map((p) => (
             <button
               key={p.key}
               onClick={() => setPeriod(p.key)}
               className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                period === p.key ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'
+                period === p.key ? 'bg-surface shadow-sm text-ink' : 'text-ink-2 hover:text-ink'
               }`}
             >
               {p.label}
@@ -991,16 +991,16 @@ export default function Reports() {
       {/* Navigation */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <button onClick={() => handleNav(-1)} className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors">
-            <ChevronLeft className="w-5 h-5 text-gray-600" />
+          <button onClick={() => handleNav(-1)} className="p-1.5 rounded-lg hover:bg-surface-2 transition-colors">
+            <ChevronLeft className="w-5 h-5 text-ink-2" />
           </button>
-          <h2 className="text-base font-semibold text-gray-900 min-w-44 text-center">{displayLabel}</h2>
+          <h2 className="text-base font-semibold text-ink min-w-44 text-center">{displayLabel}</h2>
           <button
             onClick={() => handleNav(1)}
             disabled={isCurrentPeriod}
-            className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+            className="p-1.5 rounded-lg hover:bg-surface-2 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
           >
-            <ChevronRight className="w-5 h-5 text-gray-600" />
+            <ChevronRight className="w-5 h-5 text-ink-2" />
           </button>
         </div>
         {!isCurrentPeriod && (

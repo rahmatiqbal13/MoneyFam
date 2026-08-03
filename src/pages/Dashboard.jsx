@@ -7,9 +7,10 @@ import { RecentTransactions } from '@/components/dashboard/RecentTransactions'
 import { IncomeExpenseChart } from '@/components/dashboard/IncomeExpenseChart'
 import { CategoryChart } from '@/components/dashboard/CategoryChart'
 import { WalletSummary } from '@/components/dashboard/WalletSummary'
-import { useMonthlyStats } from '@/hooks/useTransactions'
+import { useMonthlyStats, useActivityReminders } from '@/hooks/useTransactions'
 import { useWallets } from '@/hooks/useWallets'
 import { useInvestments } from '@/hooks/useInvestments'
+import { useDebtDueReminders } from '@/hooks/useDebts'
 import { useAuthStore } from '@/stores/authStore'
 import { formatMonthYear, formatCurrency } from '@/lib/utils'
 
@@ -17,6 +18,9 @@ export default function Dashboard() {
   const now = new Date()
   const profile = useAuthStore((s) => s.profile)
   const family = useAuthStore((s) => s.family)
+
+  useDebtDueReminders()
+  useActivityReminders()
 
   const { data: stats, isLoading: statsLoading } = useMonthlyStats(
     now.getFullYear(),

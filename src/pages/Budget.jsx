@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { motion, useReducedMotion } from 'framer-motion'
 import { Plus, ChevronLeft, ChevronRight, Copy, PieChart } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { BudgetCard } from '@/components/budget/BudgetCard'
@@ -12,6 +13,7 @@ import { formatCurrency, getBudgetStatus } from '@/lib/utils'
 
 export default function Budget() {
   const toast = useToast()
+  const reduceMotion = useReducedMotion()
   const { selectedMonth, setSelectedMonth } = useBudgetStore()
 
   const { data: budgets, isLoading } = useBudgets(selectedMonth)
@@ -84,12 +86,12 @@ export default function Budget() {
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-3">
-          <button onClick={() => navigateMonth(-1)} className="p-1.5 rounded-lg hover:bg-gray-100">
-            <ChevronLeft className="w-5 h-5 text-gray-600" />
+          <button onClick={() => navigateMonth(-1)} className="p-1.5 rounded-lg hover:bg-surface-2">
+            <ChevronLeft className="w-5 h-5 text-ink-2" />
           </button>
-          <h2 className="text-base font-semibold text-gray-900 min-w-36 text-center">{monthLabel}</h2>
-          <button onClick={() => navigateMonth(1)} className="p-1.5 rounded-lg hover:bg-gray-100">
-            <ChevronRight className="w-5 h-5 text-gray-600" />
+          <h2 className="text-base font-semibold text-ink min-w-36 text-center">{monthLabel}</h2>
+          <button onClick={() => navigateMonth(1)} className="p-1.5 rounded-lg hover:bg-surface-2">
+            <ChevronRight className="w-5 h-5 text-ink-2" />
           </button>
         </div>
         <div className="flex gap-2">
@@ -111,25 +113,25 @@ export default function Budget() {
 
       {/* Summary */}
       {budgets?.length > 0 && (
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
+        <div className="bg-surface rounded-xl border border-line p-4">
           <div className="grid grid-cols-3 gap-4">
             <div>
-              <p className="text-xs text-gray-400">Total Anggaran</p>
-              <p className="text-sm font-bold text-gray-900">{formatCurrency(totalBudget)}</p>
+              <p className="text-xs text-ink-3">Total Anggaran</p>
+              <p className="text-sm font-bold text-ink">{formatCurrency(totalBudget)}</p>
             </div>
             <div>
-              <p className="text-xs text-gray-400">Terpakai</p>
-              <p className="text-sm font-bold text-gray-900">{formatCurrency(totalSpent)}</p>
+              <p className="text-xs text-ink-3">Terpakai</p>
+              <p className="text-sm font-bold text-ink">{formatCurrency(totalSpent)}</p>
             </div>
             <div>
-              <p className="text-xs text-gray-400">{totalSpent > totalBudget ? 'Lebih' : 'Sisa'}</p>
+              <p className="text-xs text-ink-3">{totalSpent > totalBudget ? 'Lebih' : 'Sisa'}</p>
               <p className={`text-sm font-bold ${totalSpent > totalBudget ? 'text-red-500' : 'text-emerald-600'}`}>
                 {formatCurrency(Math.abs(totalBudget - totalSpent))}
               </p>
             </div>
           </div>
           {overCount > 0 && (
-            <div className="mt-3 pt-3 border-t border-gray-100">
+            <div className="mt-3 pt-3 border-t border-line">
               <p className="text-xs text-red-500 font-medium">
                 ⚠️ {overCount} kategori melebihi anggaran
               </p>
@@ -153,9 +155,9 @@ export default function Budget() {
         </div>
       ) : !budgets?.length ? (
         <div className="py-16 text-center">
-          <PieChart className="w-12 h-12 text-gray-200 mx-auto mb-3" />
-          <p className="text-gray-400 font-medium">Belum ada anggaran bulan ini</p>
-          <p className="text-gray-300 text-sm mt-1">Buat anggaran untuk mengontrol pengeluaran</p>
+          <PieChart className="w-12 h-12 text-ink-3 mx-auto mb-3" />
+          <p className="text-ink-3 font-medium">Belum ada anggaran bulan ini</p>
+          <p className="text-ink-3 text-sm mt-1">Buat anggaran untuk mengontrol pengeluaran</p>
           <Button className="mt-4" size="sm" onClick={() => setModalOpen(true)}>
             <Plus className="w-4 h-4" />
             Tambah Anggaran
@@ -163,13 +165,19 @@ export default function Budget() {
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {budgets.map((budget) => (
-            <BudgetCard
+          {budgets.map((budget, i) => (
+            <motion.div
               key={budget.id}
-              budget={budget}
-              onEdit={handleEdit}
-              onDelete={setDeleteId}
-            />
+              initial={reduceMotion ? false : { opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.25, delay: Math.min(i * 0.04, 0.24), ease: 'easeOut' }}
+            >
+              <BudgetCard
+                budget={budget}
+                onEdit={handleEdit}
+                onDelete={setDeleteId}
+              />
+            </motion.div>
           ))}
         </div>
       )}

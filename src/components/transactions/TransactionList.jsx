@@ -98,6 +98,12 @@ export function TransactionList({ transactions = [], onEdit, filters = {}, onRes
                     <p className="text-xs text-gray-400">{tx.categories.name}</p>
                   </>
                 )}
+                {tx.creator_name && (
+                  <>
+                    <span className="text-gray-300">·</span>
+                    <p className="text-xs text-gray-400 truncate">Oleh {tx.creator_name}</p>
+                  </>
+                )}
               </div>
             </div>
 

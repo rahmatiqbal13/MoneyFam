@@ -1,7 +1,9 @@
+import { useEffect, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/stores/authStore'
 import { shouldSendNotification } from './useNotifications'
+import { formatCurrency } from '@/lib/utils'
 
 const QUERY_KEY = 'transactions'
 const PAGE_SIZE = 50
@@ -82,6 +84,107 @@ async function checkAndCreateBudgetWarning(familyId, userId, categoryId, amount)
   }
 }
 
+// Ingatkan user (opt-in, default off) kalau belum ada transaksi tercatat hari ini.
+// Dicek malam hari saja, maksimal 1x/hari per user.
+async function checkDailyReminder(familyId, userId) {
+  if (!userId) return
+  const shouldSend = await shouldSendNotification(userId, 'reminder_daily')
+  if (!shouldSend) return
+
+  const now = new Date()
+  if (now.getHours() < 18) return
+
+  const todayStr = now.toISOString().split('T')[0]
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString()
+
+  const { data: existing } = await supabase
+    .from('notifications')
+    .select('id')
+    .eq('type', 'reminder_daily')
+    .eq('user_id', userId)
+    .gte('created_at', startOfToday)
+    .limit(1)
+  if (existing?.length) return
+
+  let txQuery = supabase.from('transactions').select('id', { count: 'exact', head: true }).eq('date', todayStr)
+  txQuery = familyId ? txQuery.eq('family_id', familyId) : txQuery.eq('user_id', userId)
+  const { count } = await txQuery
+  if (count > 0) return
+
+  await supabase.from('notifications').insert({
+    family_id: familyId || null,
+    user_id: userId,
+    type: 'reminder_daily',
+    title: 'Belum Ada Transaksi Hari Ini',
+    message: 'Jangan lupa catat pemasukan atau pengeluaran hari ini supaya laporan tetap akurat.',
+    data: { date: todayStr },
+  })
+}
+
+// Kirim ringkasan bulan lalu (opt-in) di awal bulan berjalan (tanggal 1-5), sekali per bulan.
+async function checkMonthlyReport(familyId, userId) {
+  if (!userId) return
+  const shouldSend = await shouldSendNotification(userId, 'monthly_report')
+  if (!shouldSend) return
+
+  const now = new Date()
+  if (now.getDate() > 5) return
+
+  const prevMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+  const year = prevMonthDate.getFullYear()
+  const month = prevMonthDate.getMonth() + 1
+  const period = `${year}-${String(month).padStart(2, '0')}`
+
+  const { data: existing } = await supabase
+    .from('notifications')
+    .select('id')
+    .eq('type', 'monthly_report')
+    .eq('user_id', userId)
+    .contains('data', { period })
+    .limit(1)
+  if (existing?.length) return
+
+  const start = `${period}-01`
+  const end = new Date(year, month, 0).toISOString().split('T')[0]
+  let txQuery = supabase
+    .from('transactions')
+    .select('type, amount')
+    .in('type', ['income', 'expense'])
+    .gte('date', start)
+    .lte('date', end)
+  txQuery = familyId ? txQuery.eq('family_id', familyId) : txQuery.eq('user_id', userId)
+  const { data: txs, error } = await txQuery
+  if (error || !txs?.length) return
+
+  const income = txs.filter((t) => t.type === 'income').reduce((s, t) => s + Number(t.amount), 0)
+  const expense = txs.filter((t) => t.type === 'expense').reduce((s, t) => s + Number(t.amount), 0)
+  const savings = income - expense
+  const monthLabel = new Intl.DateTimeFormat('id-ID', { month: 'long', year: 'numeric' }).format(prevMonthDate)
+
+  await supabase.from('notifications').insert({
+    family_id: familyId || null,
+    user_id: userId,
+    type: 'monthly_report',
+    title: `Ringkasan ${monthLabel}`,
+    message: `Pemasukan ${formatCurrency(income)}, Pengeluaran ${formatCurrency(expense)}, Tabungan ${formatCurrency(savings)}.`,
+    data: { period },
+  })
+}
+
+// Jalankan pengecekan pengingat harian & laporan bulanan sekali per mount (mis. dari Dashboard).
+export function useActivityReminders() {
+  const family = useAuthStore((s) => s.family)
+  const user = useAuthStore((s) => s.user)
+  const checkedRef = useRef(false)
+
+  useEffect(() => {
+    if (!user?.id || checkedRef.current) return
+    checkedRef.current = true
+    checkDailyReminder(family?.id || null, user.id).catch((err) => console.error('Daily reminder error:', err))
+    checkMonthlyReport(family?.id || null, user.id).catch((err) => console.error('Monthly report error:', err))
+  }, [user?.id, family?.id])
+}
+
 export function useTransactions(filters = {}, page = 0) {
   const family = useAuthStore((s) => s.family)
   const user = useAuthStore((s) => s.user)
@@ -121,9 +224,26 @@ export function useTransactions(filters = {}, page = 0) {
         query = query.ilike('description', `%${escaped}%`)
       }
 
-      const { data, error, count } = await query
-      if (error) throw error
-      return { data: data || [], count: count || 0 }
+      // Ambil profil anggota keluarga secara terpisah (tidak ada FK langsung
+      // transactions -> profiles untuk di-embed lewat PostgREST) supaya UI
+      // bisa menampilkan siapa yang mencatat tiap transaksi.
+      const [txResult, profileResult] = await Promise.all([
+        query,
+        family?.id
+          ? supabase.from('profiles').select('id, full_name').eq('family_id', family.id)
+          : Promise.resolve({ data: null, error: null }),
+      ])
+
+      if (txResult.error) throw txResult.error
+      if (profileResult.error) throw profileResult.error
+
+      let data = txResult.data || []
+      if (profileResult.data) {
+        const profileMap = new Map(profileResult.data.map((p) => [p.id, p.full_name]))
+        data = data.map((t) => ({ ...t, creator_name: profileMap.get(t.user_id) || null }))
+      }
+
+      return { data, count: txResult.count || 0 }
     },
     enabled: !!user?.id,
     staleTime: 1000 * 30,
@@ -157,10 +277,24 @@ export function useRecentTransactions(limit = 5) {
       } else {
         query = query.eq('user_id', user.id)
       }
-      
-      const { data, error } = await query
-      if (error) throw error
-      return data || []
+
+      const [txResult, profileResult] = await Promise.all([
+        query,
+        family?.id
+          ? supabase.from('profiles').select('id, full_name').eq('family_id', family.id)
+          : Promise.resolve({ data: null, error: null }),
+      ])
+
+      if (txResult.error) throw txResult.error
+      if (profileResult.error) throw profileResult.error
+
+      let data = txResult.data || []
+      if (profileResult.data) {
+        const profileMap = new Map(profileResult.data.map((p) => [p.id, p.full_name]))
+        data = data.map((t) => ({ ...t, creator_name: profileMap.get(t.user_id) || null }))
+      }
+
+      return data
     },
     enabled: !!user?.id,
     staleTime: 1000 * 30,

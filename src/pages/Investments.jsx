@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { motion, useReducedMotion } from 'framer-motion'
 import {
   Plus, Pencil, Trash2, RefreshCw, TrendingUp, TrendingDown,
   BarChart3, AlertCircle,
@@ -47,7 +48,7 @@ function pctColor(pct) {
   if (pct > 0) return 'text-emerald-500'
   if (pct < -5) return 'text-red-600'
   if (pct < 0) return 'text-red-500'
-  return 'text-gray-500'
+  return 'text-ink-2'
 }
 
 function formatPct(pct) {
@@ -164,7 +165,7 @@ function InvestmentModal({ isOpen, onClose, investment }) {
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Type selector */}
           <div>
-            <label className="text-sm font-medium text-gray-700 block mb-2">Jenis Investasi</label>
+            <label className="text-sm font-medium text-ink-2 block mb-2">Jenis Investasi</label>
             <div className="grid grid-cols-3 gap-2">
               {INVESTMENT_TYPES.map((t) => (
                 <button
@@ -174,7 +175,7 @@ function InvestmentModal({ isOpen, onClose, investment }) {
                   className={`flex flex-col items-center gap-1 p-2.5 rounded-xl border-2 text-xs font-medium transition-all ${
                     form.type === t.value
                       ? 'border-primary bg-primary/5 text-primary'
-                      : 'border-gray-200 text-gray-500 hover:border-gray-300'
+                      : 'border-line text-ink-2 hover:border-line-2'
                   }`}
                 >
                   <span className="text-xl">{t.icon}</span>
@@ -327,9 +328,9 @@ function UpdatePriceModal({ isOpen, onClose, investment }) {
     <Modal isOpen={isOpen} onClose={onClose} title={`Update Harga — ${investment?.name}`} size="sm">
       <ModalBody>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="bg-gray-50 rounded-xl p-3 text-sm text-gray-600">
+          <div className="bg-surface-2 rounded-xl p-3 text-sm text-ink-2">
             Harga terakhir:{' '}
-            <span className="font-semibold text-gray-900">
+            <span className="font-semibold text-ink">
               {formatCurrency(investment?.current_price || 0)}
             </span>
           </div>
@@ -378,10 +379,10 @@ function InvestmentCard({ inv, onEdit, onDelete, onUpdatePrice }) {
               {typeInfo.icon}
             </div>
             <div className="min-w-0">
-              <p className="font-semibold text-gray-900 truncate text-sm">{inv.name}</p>
+              <p className="font-semibold text-ink truncate text-sm">{inv.name}</p>
               <div className="flex items-center gap-1.5 flex-wrap">
                 {inv.code && (
-                  <span className="text-xs font-mono bg-gray-100 px-1.5 py-0.5 rounded text-gray-600">
+                  <span className="text-xs font-mono bg-surface-2 px-1.5 py-0.5 rounded text-ink-2">
                     {inv.code}
                   </span>
                 )}
@@ -397,7 +398,7 @@ function InvestmentCard({ inv, onEdit, onDelete, onUpdatePrice }) {
           <div className="flex gap-1 flex-shrink-0">
             <button
               onClick={() => onUpdatePrice(inv)}
-              className="p-1.5 rounded-lg text-gray-400 hover:text-blue-500 hover:bg-blue-50 transition-colors"
+              className="p-1.5 rounded-lg text-ink-3 hover:text-blue-500 hover:bg-blue-50 transition-colors"
               title="Update harga"
               aria-label="Update harga investasi"
             >
@@ -405,14 +406,14 @@ function InvestmentCard({ inv, onEdit, onDelete, onUpdatePrice }) {
             </button>
             <button
               onClick={() => onEdit(inv)}
-              className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+              className="p-1.5 rounded-lg text-ink-3 hover:text-ink-2 hover:bg-surface-2 transition-colors"
               aria-label="Edit investasi"
             >
               <Pencil className="w-3.5 h-3.5" />
             </button>
             <button
               onClick={() => onDelete(inv.id)}
-              className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+              className="p-1.5 rounded-lg text-ink-3 hover:text-red-500 hover:bg-red-50 transition-colors"
               aria-label="Hapus investasi"
             >
               <Trash2 className="w-3.5 h-3.5" />
@@ -422,12 +423,12 @@ function InvestmentCard({ inv, onEdit, onDelete, onUpdatePrice }) {
 
         {/* Values */}
         <div className="grid grid-cols-2 gap-2 mb-3">
-          <div className="bg-gray-50 rounded-lg p-2.5">
-            <p className="text-xs text-gray-400 mb-0.5">Nilai Sekarang</p>
-            <p className="text-sm font-bold text-gray-900">{formatCurrency(totalNow)}</p>
+          <div className="bg-surface-2 rounded-lg p-2.5">
+            <p className="text-xs text-ink-3 mb-0.5">Nilai Sekarang</p>
+            <p className="text-sm font-bold text-ink">{formatCurrency(totalNow)}</p>
           </div>
           <div className={`rounded-lg p-2.5 ${isProfit ? 'bg-emerald-50' : 'bg-red-50'}`}>
-            <p className="text-xs text-gray-400 mb-0.5">Untung / Rugi</p>
+            <p className="text-xs text-ink-3 mb-0.5">Untung / Rugi</p>
             <p className={`text-sm font-bold ${isProfit ? 'text-emerald-600' : 'text-red-600'}`}>
               {isProfit ? '+' : ''}{formatCurrency(pl)}
             </p>
@@ -435,7 +436,7 @@ function InvestmentCard({ inv, onEdit, onDelete, onUpdatePrice }) {
         </div>
 
         {/* Details row */}
-        <div className="flex items-center justify-between text-xs text-gray-400">
+        <div className="flex items-center justify-between text-xs text-ink-3">
           <span>
             {inv.quantity} × {formatCurrency(inv.current_price || inv.buy_price)}
           </span>
@@ -447,7 +448,7 @@ function InvestmentCard({ inv, onEdit, onDelete, onUpdatePrice }) {
 
         {/* Price updated */}
         {inv.price_updated_at && inv.type === 'kripto' && (
-          <p className="text-xs text-gray-300 mt-1.5">
+          <p className="text-xs text-ink-3 mt-1.5">
             Harga diperbarui {timeSince(inv.price_updated_at)}
           </p>
         )}
@@ -498,10 +499,10 @@ function PortfolioSummary({ investments }) {
     if (!active || !payload?.length) return null
     const d = payload[0]
     return (
-      <div className="bg-white border border-gray-200 rounded-xl shadow-lg p-3 text-sm">
-        <p className="font-semibold text-gray-800">{d.name}</p>
-        <p className="text-gray-600 mt-0.5">{formatCurrency(d.value)}</p>
-        <p className="text-gray-400 text-xs">{(d.percent * 100).toFixed(1)}%</p>
+      <div className="bg-surface border border-line rounded-xl shadow-lg p-3 text-sm">
+        <p className="font-semibold text-ink">{d.name}</p>
+        <p className="text-ink-2 mt-0.5">{formatCurrency(d.value)}</p>
+        <p className="text-ink-3 text-xs">{(d.percent * 100).toFixed(1)}%</p>
       </div>
     )
   }
@@ -509,17 +510,17 @@ function PortfolioSummary({ investments }) {
   return (
     <div className="space-y-3">
       <div className="grid grid-cols-3 gap-3">
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <p className="text-xs text-gray-400 mb-1">Total Modal</p>
-          <p className="text-base font-bold text-gray-900">{formatCurrency(totalModal)}</p>
-          <p className="text-xs text-gray-400 mt-0.5">{investments.length} aset</p>
+        <div className="bg-surface rounded-xl border border-line p-4">
+          <p className="text-xs text-ink-3 mb-1">Total Modal</p>
+          <p className="text-base font-bold text-ink">{formatCurrency(totalModal)}</p>
+          <p className="text-xs text-ink-3 mt-0.5">{investments.length} aset</p>
         </div>
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <p className="text-xs text-gray-400 mb-1">Nilai Sekarang</p>
-          <p className="text-base font-bold text-gray-900">{formatCurrency(totalNow)}</p>
+        <div className="bg-surface rounded-xl border border-line p-4">
+          <p className="text-xs text-ink-3 mb-1">Nilai Sekarang</p>
+          <p className="text-base font-bold text-ink">{formatCurrency(totalNow)}</p>
         </div>
         <div className={`rounded-xl border p-4 ${isProfit ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200'}`}>
-          <p className="text-xs text-gray-400 mb-1">Untung / Rugi</p>
+          <p className="text-xs text-ink-3 mb-1">Untung / Rugi</p>
           <p className={`text-base font-bold ${isProfit ? 'text-emerald-600' : 'text-red-600'}`}>
             {isProfit ? '+' : ''}{formatCurrency(pl)}
           </p>
@@ -531,8 +532,8 @@ function PortfolioSummary({ investments }) {
 
       {/* Type breakdown */}
       {byType.length > 1 && (
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <p className="text-xs text-gray-500 font-medium mb-3">Alokasi per Jenis</p>
+        <div className="bg-surface rounded-xl border border-line p-4">
+          <p className="text-xs text-ink-2 font-medium mb-3">Alokasi per Jenis</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
             {/* Donut chart */}
             <ResponsiveContainer width="100%" height={180}>
@@ -561,15 +562,15 @@ function PortfolioSummary({ investments }) {
                 return (
                   <div key={t.value}>
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-xs text-gray-600">
+                      <span className="text-xs text-ink-2">
                         {t.icon} {t.label}
                       </span>
                       <div className="text-right">
-                        <span className="text-xs font-semibold text-gray-900">{formatCurrency(t.value)}</span>
-                        <span className="text-xs text-gray-400 ml-1.5">{pct.toFixed(1)}%</span>
+                        <span className="text-xs font-semibold text-ink">{formatCurrency(t.value)}</span>
+                        <span className="text-xs text-ink-3 ml-1.5">{pct.toFixed(1)}%</span>
                       </div>
                     </div>
-                    <div className="w-full bg-gray-100 rounded-full h-1.5">
+                    <div className="w-full bg-surface-2 rounded-full h-1.5">
                       <div
                         className="h-1.5 rounded-full"
                         style={{ width: `${pct}%`, backgroundColor: t.color }}
@@ -590,6 +591,7 @@ function PortfolioSummary({ investments }) {
 
 export default function Investments() {
   const toast = useToast()
+  const reduceMotion = useReducedMotion()
   const { data: investments, isLoading } = useInvestments()
   const deleteMutation = useDeleteInvestment()
   const refreshMutation = useRefreshCryptoPrices()
@@ -640,8 +642,8 @@ export default function Investments() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-gray-900">Investasi</h1>
-          <p className="text-sm text-gray-400">Portfolio & tracking aset</p>
+          <h1 className="text-xl font-bold text-ink">Investasi</h1>
+          <p className="text-sm text-ink-3">Portfolio & tracking aset</p>
         </div>
         <div className="flex gap-2">
           {hasCrypto && (
@@ -680,11 +682,11 @@ export default function Investments() {
       )}
 
       {/* Filter tabs */}
-      <div className="flex gap-1 bg-gray-100 rounded-xl p-1 overflow-x-auto">
+      <div className="flex gap-1 bg-surface-2 rounded-xl p-1 overflow-x-auto">
         <button
           onClick={() => setFilterType('all')}
           className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${
-            filterType === 'all' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'
+            filterType === 'all' ? 'bg-surface shadow-sm text-ink' : 'text-ink-2 hover:text-ink'
           }`}
         >
           Semua ({(investments || []).length})
@@ -698,8 +700,8 @@ export default function Investments() {
               onClick={() => setFilterType(t.value)}
               className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${
                 filterType === t.value
-                  ? 'bg-white shadow-sm text-gray-900'
-                  : 'text-gray-500 hover:text-gray-700'
+                  ? 'bg-surface shadow-sm text-ink'
+                  : 'text-ink-2 hover:text-ink'
               }`}
             >
               {t.icon} {t.label} ({count})
@@ -717,24 +719,30 @@ export default function Investments() {
         </div>
       ) : !filtered.length ? (
         <div className="py-16 text-center">
-          <BarChart3 className="w-12 h-12 text-gray-200 mx-auto mb-3" />
-          <p className="text-gray-400 font-medium">
+          <BarChart3 className="w-12 h-12 text-ink-3 mx-auto mb-3" />
+          <p className="text-ink-3 font-medium">
             {filterType === 'all' ? 'Belum ada investasi' : `Tidak ada ${getTypeInfo(filterType).label}`}
           </p>
           {filterType === 'all' && (
-            <p className="text-gray-300 text-sm mt-1">Tambah portofolio pertama kamu</p>
+            <p className="text-ink-3 text-sm mt-1">Tambah portofolio pertama kamu</p>
           )}
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filtered.map((inv) => (
-            <InvestmentCard
+          {filtered.map((inv, i) => (
+            <motion.div
               key={inv.id}
-              inv={inv}
-              onEdit={(inv) => setModal({ open: true, investment: inv })}
-              onDelete={setDeleteId}
-              onUpdatePrice={(inv) => setPriceModal({ open: true, investment: inv })}
-            />
+              initial={reduceMotion ? false : { opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.25, delay: Math.min(i * 0.04, 0.24), ease: 'easeOut' }}
+            >
+              <InvestmentCard
+                inv={inv}
+                onEdit={(inv) => setModal({ open: true, investment: inv })}
+                onDelete={setDeleteId}
+                onUpdatePrice={(inv) => setPriceModal({ open: true, investment: inv })}
+              />
+            </motion.div>
           ))}
         </div>
       )}

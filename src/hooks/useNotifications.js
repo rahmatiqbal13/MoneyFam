@@ -4,21 +4,27 @@ import { useAuthStore } from '@/stores/authStore'
 
 const NOTIFICATIONS_KEY = 'notifications'
 const SETTINGS_KEY = 'notification_settings'
+const PAGE_SIZE = 20
 
-export function useNotifications() {
+export { PAGE_SIZE as NOTIFICATIONS_PAGE_SIZE }
+
+export function useNotifications(page = 0) {
   const user = useAuthStore((s) => s.user)
 
   return useQuery({
-    queryKey: [NOTIFICATIONS_KEY, user?.id],
+    queryKey: [NOTIFICATIONS_KEY, user?.id, page],
     queryFn: async () => {
-      if (!user?.id) return []
-      const { data, error } = await supabase
+      if (!user?.id) return { data: [], count: 0 }
+      const from = page * PAGE_SIZE
+      const to = from + PAGE_SIZE - 1
+      const { data, error, count } = await supabase
         .from('notifications')
-        .select('*')
+        .select('*', { count: 'exact' })
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
+        .range(from, to)
       if (error) throw error
-      return data || []
+      return { data: data || [], count: count || 0 }
     },
     enabled: !!user?.id,
     staleTime: 1000 * 30,

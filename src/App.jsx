@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, lazy } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ToastProvider } from '@/components/ui/Toast'
@@ -7,22 +7,26 @@ import { ErrorBoundary } from '@/components/ErrorBoundary'
 import PWAInstallPrompt from '@/components/PWAInstallPrompt'
 import { useAuthStore } from '@/stores/authStore'
 
-// Pages
+// Pages — Login/Register/ForgotPassword/ResetPassword/Dashboard load eagerly
+// (first thing an unauthenticated or freshly-logged-in user sees). The rest
+// are code-split via lazy() so the initial bundle stays lean; Layout renders
+// them behind a <Suspense> boundary.
 import Login from '@/pages/Login'
 import Register from '@/pages/Register'
 import ForgotPassword from '@/pages/ForgotPassword'
 import ResetPassword from '@/pages/ResetPassword'
 import Dashboard from '@/pages/Dashboard'
-import Transactions from '@/pages/Transactions'
-import Wallets from '@/pages/Wallets'
-import Budget from '@/pages/Budget'
-import Reports from '@/pages/Reports'
-import SavingsDebts from '@/pages/SavingsDebts'
-import Categories from '@/pages/Categories'
-import Settings from '@/pages/Settings'
-import Investments from '@/pages/Investments'
-import PensionCalculator from '@/pages/PensionCalculator'
-import Notifications from '@/pages/Notifications'
+
+const Transactions = lazy(() => import('@/pages/Transactions'))
+const Wallets = lazy(() => import('@/pages/Wallets'))
+const Budget = lazy(() => import('@/pages/Budget'))
+const Reports = lazy(() => import('@/pages/Reports'))
+const SavingsDebts = lazy(() => import('@/pages/SavingsDebts'))
+const Categories = lazy(() => import('@/pages/Categories'))
+const Settings = lazy(() => import('@/pages/Settings'))
+const Investments = lazy(() => import('@/pages/Investments'))
+const PensionCalculator = lazy(() => import('@/pages/PensionCalculator'))
+const Notifications = lazy(() => import('@/pages/Notifications'))
 
 const queryClient = new QueryClient({
   defaultOptions: {

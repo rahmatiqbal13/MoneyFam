@@ -62,8 +62,8 @@ export default function Wallets() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-base font-semibold text-gray-900">Kantong / Dompet</h2>
-          <p className="text-xs text-gray-400 mt-0.5">{wallets?.length || 0} kantong</p>
+          <h2 className="text-base font-semibold text-ink">Kantong / Dompet</h2>
+          <p className="text-xs text-ink-3 mt-0.5">{wallets?.length || 0} kantong</p>
         </div>
         <div className="flex gap-2">
           <Button
@@ -109,9 +109,9 @@ export default function Wallets() {
         </div>
       ) : !wallets?.length ? (
         <div className="py-16 text-center">
-          <Wallet className="w-12 h-12 text-gray-200 mx-auto mb-3" />
-          <p className="text-gray-400 font-medium">Belum ada kantong</p>
-          <p className="text-gray-300 text-sm mt-1">Tambah kantong pertama kamu</p>
+          <Wallet className="w-12 h-12 text-ink-3 mx-auto mb-3" />
+          <p className="text-ink-3 font-medium">Belum ada kantong</p>
+          <p className="text-ink-3 text-sm mt-1">Tambah kantong pertama kamu</p>
           <Button className="mt-4" size="sm" onClick={() => setWalletModalOpen(true)}>
             <Plus className="w-4 h-4" />
             Tambah Kantong

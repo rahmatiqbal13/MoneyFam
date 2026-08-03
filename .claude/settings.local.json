@@ -22,7 +22,10 @@
       "Bash(pkill -f \"npm run dev\")",
       "Bash(sort -t: -k2 -n)",
       "Bash(curl -s http://localhost:5184/src/components/ui/Modal.jsx)",
-      "Bash(pkill -f \"vite.*5184\")"
+      "Bash(pkill -f \"vite.*5184\")",
+      "Bash(pkill -f \"vite.*5186\")",
+      "Bash(pkill -f \"vite.*5187\")",
+      "Bash(pkill -f \"vite.*5188\")"
     ]
   }
 }

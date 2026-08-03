@@ -19,11 +19,11 @@ function ToggleSwitch({ checked, onChange, disabled }) {
       onClick={() => !disabled && onChange(!checked)}
       disabled={disabled}
       className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
-        disabled ? 'bg-gray-100 cursor-not-allowed' : checked ? 'bg-primary' : 'bg-gray-200'
+        disabled ? 'bg-surface-2 cursor-not-allowed' : checked ? 'bg-primary' : 'bg-surface-2'
       }`}
     >
       <span
-        className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${
+        className={`inline-block h-3.5 w-3.5 transform rounded-full bg-surface shadow transition-transform ${
           checked ? 'translate-x-5' : 'translate-x-1'
         } ${disabled ? 'bg-gray-300' : ''}`}
       />
@@ -286,7 +286,7 @@ export default function Settings() {
       <Card>
         <CardHeader>
           <div className="flex items-center gap-2">
-            <User className="w-4 h-4 text-gray-500" />
+            <User className="w-4 h-4 text-ink-2" />
             <CardTitle>Profil</CardTitle>
           </div>
         </CardHeader>
@@ -299,12 +299,12 @@ export default function Settings() {
                 </span>
               </div>
               <div>
-                <p className="font-semibold text-gray-900">{profile?.full_name || 'User'}</p>
-                <p className="text-sm text-gray-400">{user?.email}</p>
+                <p className="font-semibold text-ink">{profile?.full_name || 'User'}</p>
+                <p className="text-sm text-ink-3">{user?.email}</p>
                 {family && (
-                  <p className="text-xs text-gray-400 mt-0.5">
+                  <p className="text-xs text-ink-3 mt-0.5">
                     {family.name} ·{' '}
-                    <span className={isOwner ? 'text-amber-600 font-medium' : 'text-gray-400'}>
+                    <span className={isOwner ? 'text-amber-600 font-medium' : 'text-ink-3'}>
                       {isOwner ? 'Pemilik' : 'Anggota'}
                     </span>
                   </p>
@@ -343,7 +343,7 @@ export default function Settings() {
       {family && <Card>
         <CardHeader>
           <div className="flex items-center gap-2">
-            <Users className="w-4 h-4 text-gray-500" />
+            <Users className="w-4 h-4 text-ink-2" />
             <CardTitle>Anggota Keluarga</CardTitle>
           </div>
         </CardHeader>
@@ -365,25 +365,25 @@ export default function Settings() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5">
-                      <p className="text-sm font-medium text-gray-900 truncate">{m.full_name}</p>
+                      <p className="text-sm font-medium text-ink truncate">{m.full_name}</p>
                       {m.role === 'owner' && (
                         <Crown className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />
                       )}
                     </div>
-                    <p className="text-xs text-gray-400 truncate">{m.email}</p>
+                    <p className="text-xs text-ink-3 truncate">{m.email}</p>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
                     <span className={`text-xs px-2 py-0.5 rounded-full ${
                       m.role === 'owner'
                         ? 'bg-amber-50 text-amber-700'
-                        : 'bg-gray-100 text-gray-500'
+                        : 'bg-surface-2 text-ink-2'
                     }`}>
                       {m.role === 'owner' ? 'Pemilik' : 'Anggota'}
                     </span>
                     {isOwner && m.id !== user?.id && (
                       <button
                         onClick={() => setRemoveMemberId(m.id)}
-                        className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                        className="p-1.5 rounded-lg text-ink-3 hover:text-red-500 hover:bg-red-50 transition-colors"
                         title="Keluarkan anggota"
                         aria-label="Keluarkan anggota"
                       >
@@ -403,12 +403,12 @@ export default function Settings() {
         <Card>
           <CardHeader>
             <div className="flex items-center gap-2">
-              <Users className="w-4 h-4 text-gray-500" />
+              <Users className="w-4 h-4 text-ink-2" />
               <CardTitle>Bergabung / Buat Keluarga</CardTitle>
             </div>
           </CardHeader>
           <CardContent>
-            <div className="flex rounded-lg border border-gray-200 overflow-hidden mb-4">
+            <div className="flex rounded-lg border border-line overflow-hidden mb-4">
               {[
                 { key: 'create', label: 'Buat Keluarga Baru' },
                 { key: 'join', label: 'Bergabung dengan Kode' },
@@ -418,7 +418,7 @@ export default function Settings() {
                   type="button"
                   onClick={() => setFamilyTab(key)}
                   className={`flex-1 py-2 text-sm font-medium transition-colors ${
-                    familyTab === key ? 'bg-primary text-white' : 'text-gray-500 hover:bg-gray-50'
+                    familyTab === key ? 'bg-primary text-white' : 'text-ink-2 hover:bg-surface-2'
                   }`}
                 >
                   {label}
@@ -428,7 +428,7 @@ export default function Settings() {
 
             {familyTab === 'create' ? (
               <form onSubmit={handleCreateFamily} className="space-y-3">
-                <p className="text-sm text-gray-500">Buat keluarga baru — Anda akan menjadi pemilik dan bisa mengundang anggota lain.</p>
+                <p className="text-sm text-ink-2">Buat keluarga baru — Anda akan menjadi pemilik dan bisa mengundang anggota lain.</p>
                 <div className="flex gap-2">
                   <Input
                     placeholder="Nama keluarga, misal: Keluarga Budi"
@@ -442,7 +442,7 @@ export default function Settings() {
               </form>
             ) : (
               <form onSubmit={handleJoinFamily} className="space-y-3">
-                <p className="text-sm text-gray-500">Masukkan kode undangan dari pemilik keluarga.</p>
+                <p className="text-sm text-ink-2">Masukkan kode undangan dari pemilik keluarga.</p>
                 <div className="flex gap-2">
                   <Input
                     placeholder="Contoh: AB3X7K"
@@ -464,12 +464,12 @@ export default function Settings() {
         <Card>
           <CardHeader>
             <div className="flex items-center gap-2">
-              <Users className="w-4 h-4 text-gray-500" />
+              <Users className="w-4 h-4 text-ink-2" />
               <CardTitle>Bergabung ke Keluarga Lain</CardTitle>
             </div>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-gray-500 mb-3">
+            <p className="text-sm text-ink-2 mb-3">
               Masukkan kode undangan untuk pindah ke keluarga lain.
               <span className="block mt-1 text-xs text-amber-600">
                 Akun Anda akan dipindahkan dari keluarga saat ini.
@@ -494,19 +494,19 @@ export default function Settings() {
         <Card>
           <CardHeader>
             <div className="flex items-center gap-2">
-              <Users className="w-4 h-4 text-gray-500" />
+              <Users className="w-4 h-4 text-ink-2" />
               <CardTitle>Kode Undangan</CardTitle>
             </div>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-gray-500 mb-4">
+            <p className="text-sm text-ink-2 mb-4">
               Bagikan kode ini agar anggota keluarga bisa bergabung saat mendaftar.
             </p>
 
             {family?.invite_code ? (
               <div className="flex items-center gap-3 mb-4">
-                <div className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-center">
-                  <span className="text-2xl font-bold tracking-[0.3em] text-gray-900 font-mono">
+                <div className="flex-1 bg-surface-2 border border-line rounded-xl px-4 py-3 text-center">
+                  <span className="text-2xl font-bold tracking-[0.3em] text-ink font-mono">
                     {family.invite_code}
                   </span>
                 </div>
@@ -516,8 +516,8 @@ export default function Settings() {
                 </Button>
               </div>
             ) : (
-              <div className="bg-gray-50 border border-dashed border-gray-300 rounded-xl px-4 py-4 text-center mb-4">
-                <p className="text-sm text-gray-400">Belum ada kode undangan</p>
+              <div className="bg-surface-2 border border-dashed border-line-2 rounded-xl px-4 py-4 text-center mb-4">
+                <p className="text-sm text-ink-3">Belum ada kode undangan</p>
               </div>
             )}
 
@@ -532,7 +532,7 @@ export default function Settings() {
             </Button>
 
             {family?.invite_code && (
-              <p className="text-xs text-gray-400 mt-2">
+              <p className="text-xs text-ink-3 mt-2">
                 Membuat kode baru akan menonaktifkan kode lama.
               </p>
             )}
@@ -544,7 +544,7 @@ export default function Settings() {
       <Card>
         <CardHeader>
           <div className="flex items-center gap-2">
-            <Bell className="w-4 h-4 text-gray-500" />
+            <Bell className="w-4 h-4 text-ink-2" />
             <CardTitle>Notifikasi</CardTitle>
           </div>
         </CardHeader>
@@ -560,8 +560,8 @@ export default function Settings() {
             ].map((item) => (
               <div key={item.key} className="flex items-center justify-between py-1">
                 <div>
-                  <p className="text-sm font-medium text-gray-800">{item.label}</p>
-                  <p className="text-xs text-gray-400">{item.desc}</p>
+                  <p className="text-sm font-medium text-ink">{item.label}</p>
+                  <p className="text-xs text-ink-3">{item.desc}</p>
                 </div>
                 <ToggleSwitch
                   checked={notifications[item.key]}
@@ -571,8 +571,8 @@ export default function Settings() {
               </div>
             ))}
           </div>
-          <div className="mt-4 pt-4 border-t border-gray-100">
-            <p className="text-xs text-gray-400">
+          <div className="mt-4 pt-4 border-t border-line">
+            <p className="text-xs text-ink-3">
               Notifikasi akan muncul di dalam aplikasi. Push notification akan segera hadir.
             </p>
           </div>
@@ -583,21 +583,21 @@ export default function Settings() {
       <Card>
         <CardHeader>
           <div className="flex items-center gap-2">
-            <Shield className="w-4 h-4 text-gray-500" />
+            <Shield className="w-4 h-4 text-ink-2" />
             <CardTitle>Keamanan</CardTitle>
           </div>
         </CardHeader>
         <CardContent>
           <div className="space-y-2">
             <button
-              className="flex items-center justify-between w-full py-3 px-1 rounded-lg hover:bg-gray-50 transition-colors text-left"
+              className="flex items-center justify-between w-full py-3 px-1 rounded-lg hover:bg-surface-2 transition-colors text-left"
               onClick={() => setChangePasswordOpen(true)}
             >
               <div>
-                <p className="text-sm font-medium text-gray-800">Ubah Password</p>
-                <p className="text-xs text-gray-400">Ganti password akun kamu</p>
+                <p className="text-sm font-medium text-ink">Ubah Password</p>
+                <p className="text-xs text-ink-3">Ganti password akun kamu</p>
               </div>
-              <ChevronRight className="w-4 h-4 text-gray-400 flex-shrink-0" />
+              <ChevronRight className="w-4 h-4 text-ink-3 flex-shrink-0" />
             </button>
             {[
               { label: 'Autentikasi 2 Faktor', desc: 'Tambah lapisan keamanan ekstra' },
@@ -605,14 +605,14 @@ export default function Settings() {
             ].map((item) => (
               <button
                 key={item.label}
-                className="flex items-center justify-between w-full py-3 px-1 rounded-lg hover:bg-gray-50 transition-colors text-left"
+                className="flex items-center justify-between w-full py-3 px-1 rounded-lg hover:bg-surface-2 transition-colors text-left"
                 onClick={() => toast.info(`Fitur "${item.label}" segera hadir`)}
               >
                 <div>
-                  <p className="text-sm font-medium text-gray-800">{item.label}</p>
-                  <p className="text-xs text-gray-400">{item.desc}</p>
+                  <p className="text-sm font-medium text-ink">{item.label}</p>
+                  <p className="text-xs text-ink-3">{item.desc}</p>
                 </div>
-                <ChevronRight className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                <ChevronRight className="w-4 h-4 text-ink-3 flex-shrink-0" />
               </button>
             ))}
           </div>
@@ -627,7 +627,7 @@ export default function Settings() {
 
       {/* App info */}
       <div className="text-center py-4">
-        <p className="text-xs text-gray-300">MoneyFam v0.1.0 · Family Finance Tracker</p>
+        <p className="text-xs text-ink-3">MoneyFam v0.1.0 · Family Finance Tracker</p>
       </div>
 
       {/* Modals */}

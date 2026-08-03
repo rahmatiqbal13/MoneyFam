@@ -12,19 +12,19 @@ function StatsBar({ stats, isLoading }) {
   return (
     <div className="grid grid-cols-3 gap-3">
       <div className="bg-emerald-50 rounded-xl p-3 text-center">
-        <p className="text-xs text-gray-500">Pemasukan</p>
+        <p className="text-xs text-ink-2">Pemasukan</p>
         <p className="text-sm font-bold text-emerald-600">
           {isLoading ? '-' : formatCurrency(stats?.income)}
         </p>
       </div>
       <div className="bg-red-50 rounded-xl p-3 text-center">
-        <p className="text-xs text-gray-500">Pengeluaran</p>
+        <p className="text-xs text-ink-2">Pengeluaran</p>
         <p className="text-sm font-bold text-red-500">
           {isLoading ? '-' : formatCurrency(stats?.expense)}
         </p>
       </div>
       <div className="bg-blue-50 rounded-xl p-3 text-center">
-        <p className="text-xs text-gray-500">Tabungan</p>
+        <p className="text-xs text-ink-2">Tabungan</p>
         <p className="text-sm font-bold text-blue-600">
           {isLoading ? '-' : formatCurrency(Math.max(0, stats?.savings || 0))}
         </p>
@@ -61,8 +61,8 @@ export default function Transactions() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-base font-semibold text-gray-900">Daftar Transaksi</h2>
-          <p className="text-xs text-gray-400 mt-0.5">
+          <h2 className="text-base font-semibold text-ink">Daftar Transaksi</h2>
+          <p className="text-xs text-ink-3 mt-0.5">
             {isLoading ? '...' : `${totalCount} transaksi`}
           </p>
         </div>
@@ -99,14 +99,14 @@ export default function Transactions() {
       {/* Pagination */}
       {totalPages > 1 && (
         <div className="flex items-center justify-between pt-2">
-          <p className="text-xs text-gray-400">
+          <p className="text-xs text-ink-3">
             Halaman {page + 1} dari {totalPages}
           </p>
           <div className="flex items-center gap-1">
             <button
               onClick={() => setPage(page - 1)}
               disabled={page === 0}
-              className="p-1.5 rounded-lg text-gray-500 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              className="p-1.5 rounded-lg text-ink-2 hover:bg-surface-2 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
               aria-label="Halaman sebelumnya"
             >
               <ChevronLeft className="w-4 h-4" />
@@ -118,7 +118,7 @@ export default function Transactions() {
                   key={pageNum}
                   onClick={() => setPage(pageNum)}
                   className={`w-7 h-7 rounded-lg text-xs font-medium transition-colors ${
-                    pageNum === page ? 'bg-primary text-white' : 'text-gray-500 hover:bg-gray-100'
+                    pageNum === page ? 'bg-primary text-white' : 'text-ink-2 hover:bg-surface-2'
                   }`}
                 >
                   {pageNum + 1}
@@ -128,7 +128,7 @@ export default function Transactions() {
             <button
               onClick={() => setPage(page + 1)}
               disabled={page >= totalPages - 1}
-              className="p-1.5 rounded-lg text-gray-500 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              className="p-1.5 rounded-lg text-ink-2 hover:bg-surface-2 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
               aria-label="Halaman berikutnya"
             >
               <ChevronRight className="w-4 h-4" />

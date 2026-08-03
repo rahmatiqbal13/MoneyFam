@@ -1,22 +1,35 @@
-import { useState } from 'react'
+import { Suspense, useState } from 'react'
 import { Outlet } from 'react-router-dom'
 import { Plus } from 'lucide-react'
 import { Sidebar } from './Sidebar'
 import { Header } from './Header'
 import { TransactionModal } from '@/components/transactions/TransactionModal'
 
+function PageLoader() {
+  return (
+    <div className="flex items-center justify-center py-24">
+      <div
+        className="w-8 h-8 border-2 rounded-full animate-spin"
+        style={{ borderColor: 'var(--line-2)', borderTopColor: 'var(--accent)' }}
+      />
+    </div>
+  )
+}
+
 export function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [transactionModalOpen, setTransactionModalOpen] = useState(false)
 
   return (
-    <div className="flex h-screen overflow-hidden" style={{ background: 'var(--bg)' }}>
+    <div className="flex h-dvh overflow-hidden" style={{ background: 'var(--bg)' }}>
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         <Header onMenuClick={() => setSidebarOpen(true)} />
         <main className="flex-1 overflow-y-auto">
-          <div className="p-4 lg:p-6 max-w-screen-xl mx-auto">
-            <Outlet />
+          <div className="p-4 lg:p-6 pb-24 max-w-screen-xl mx-auto">
+            <Suspense fallback={<PageLoader />}>
+              <Outlet />
+            </Suspense>
           </div>
         </main>
       </div>

@@ -87,6 +87,7 @@ export function RecentTransactions() {
             </p>
             <p className="text-xs truncate" style={{ color: 'var(--ink-3)' }}>
               {tx.wallets?.name} · {formatDateShort(tx.date)}
+              {tx.creator_name && ` · ${tx.creator_name}`}
             </p>
           </div>
           <TransactionAmount type={tx.type} amount={tx.amount} />

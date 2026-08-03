@@ -246,7 +246,10 @@ export function TransactionModal({ isOpen, onClose, transaction = null }) {
       <form onSubmit={handleSubmit}>
         <ModalBody className="space-y-4">
           {/* Type tabs */}
-          <div className="flex rounded-lg border border-gray-200 overflow-hidden">
+          <div
+            className="flex overflow-hidden"
+            style={{ border: '1px solid var(--line)', borderRadius: 'var(--r-sm)' }}
+          >
             {TYPES.map((t) => (
               <button
                 key={t.value}
@@ -259,8 +262,15 @@ export function TransactionModal({ isOpen, onClose, transaction = null }) {
                       : t.value === 'expense'
                       ? 'bg-red-500 text-white'
                       : 'bg-blue-500 text-white'
-                    : 'bg-white text-gray-600 hover:bg-gray-50'
+                    : ''
                 }`}
+                style={form.type !== t.value ? { background: 'transparent', color: 'var(--ink-2)' } : undefined}
+                onMouseEnter={(e) => {
+                  if (form.type !== t.value) e.currentTarget.style.background = 'var(--surface-2)'
+                }}
+                onMouseLeave={(e) => {
+                  if (form.type !== t.value) e.currentTarget.style.background = 'transparent'
+                }}
               >
                 {t.label}
               </button>
@@ -281,26 +291,36 @@ export function TransactionModal({ isOpen, onClose, transaction = null }) {
 
           {/* Date and Time */}
           <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium text-gray-700">
-              Tanggal & Waktu <span className="text-red-500">*</span>
+            <label className="text-sm font-medium" style={{ color: 'var(--ink-2)' }}>
+              Tanggal & Waktu <span style={{ color: '#DC2626' }}>*</span>
             </label>
             <div className="flex gap-2">
               <input
                 type="date"
                 value={form.date}
                 onChange={update('date')}
-                className={`flex-1 rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300 focus:border-primary ${
-                  errors.date ? 'border-red-500' : 'border-gray-300'
-                }`}
+                className="flex-1 border px-3 py-2 text-sm focus:outline-none focus:ring-2"
+                style={{
+                  borderRadius: 'var(--r-sm)',
+                  background: 'var(--surface)',
+                  color: 'var(--ink)',
+                  borderColor: errors.date ? '#DC2626' : 'var(--line-2)',
+                }}
               />
               <input
                 type="time"
                 value={form.time}
                 onChange={update('time')}
-                className="w-28 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300 focus:border-primary"
+                className="w-28 border px-3 py-2 text-sm focus:outline-none focus:ring-2"
+                style={{
+                  borderRadius: 'var(--r-sm)',
+                  background: 'var(--surface)',
+                  color: 'var(--ink)',
+                  borderColor: 'var(--line-2)',
+                }}
               />
             </div>
-            {errors.date && <p className="text-xs text-red-500">{errors.date}</p>}
+            {errors.date && <p className="text-xs" style={{ color: '#DC2626' }}>{errors.date}</p>}
           </div>
 
           {/* Description */}
@@ -375,16 +395,20 @@ export function TransactionModal({ isOpen, onClose, transaction = null }) {
 
           {/* Receipt Upload */}
           <div className="flex flex-col gap-2">
-            <label className="text-sm font-medium text-gray-700">
+            <label className="text-sm font-medium" style={{ color: 'var(--ink-2)' }}>
               Foto Nota (Opsional)
             </label>
-            
+
             {receiptPreview ? (
-              <div className="relative rounded-lg border border-gray-200 overflow-hidden">
+              <div
+                className="relative overflow-hidden"
+                style={{ border: '1px solid var(--line)', borderRadius: 'var(--r-sm)' }}
+              >
                 <img
                   src={receiptPreview}
                   alt="Preview nota"
-                  className="w-full h-48 object-contain bg-gray-50"
+                  className="w-full h-48 object-contain"
+                  style={{ background: 'var(--surface-2)' }}
                 />
                 <button
                   type="button"
@@ -398,13 +422,24 @@ export function TransactionModal({ isOpen, onClose, transaction = null }) {
                 </button>
               </div>
             ) : (
-              <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-primary-400 hover:bg-gray-50 transition-colors">
+              <label
+                className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed cursor-pointer transition-colors"
+                style={{ borderColor: 'var(--line-2)', borderRadius: 'var(--r-sm)' }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = 'var(--accent)'
+                  e.currentTarget.style.background = 'var(--surface-2)'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = 'var(--line-2)'
+                  e.currentTarget.style.background = 'transparent'
+                }}
+              >
                 <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                  <svg className="w-8 h-8 mb-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-8 h-8 mb-2" style={{ color: 'var(--ink-3)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                   </svg>
-                  <p className="text-sm text-gray-500">Klik untuk upload nota</p>
-                  <p className="text-xs text-gray-400">JPG, PNG (max 5MB)</p>
+                  <p className="text-sm" style={{ color: 'var(--ink-2)' }}>Klik untuk upload nota</p>
+                  <p className="text-xs" style={{ color: 'var(--ink-3)' }}>JPG, PNG (max 5MB)</p>
                 </div>
                 <input
                   type="file"

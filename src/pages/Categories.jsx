@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { motion, useReducedMotion } from 'framer-motion'
 import { Plus, Edit2, Trash2, Tag, RotateCcw } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Modal, ModalBody, ModalFooter, ConfirmModal } from '@/components/ui/Modal'
@@ -77,11 +78,11 @@ function CategoryModal({ isOpen, onClose, category, activeTab }) {
             onChange={(e) => setForm({ ...form, name: e.target.value })} error={errors.name} required />
 
           <div className="flex flex-col gap-2">
-            <label className="text-sm font-medium text-gray-700">Ikon</label>
+            <label className="text-sm font-medium text-ink-2">Ikon</label>
             <div className="flex flex-wrap gap-1.5">
               {CATEGORY_ICONS.map((icon) => (
                 <button key={icon} type="button" onClick={() => setForm({ ...form, icon })}
-                  className={`w-9 h-9 rounded-lg text-lg flex items-center justify-center border-2 transition-colors ${form.icon === icon ? 'border-primary bg-primary-50' : 'border-gray-200 hover:border-gray-300'}`}>
+                  className={`w-9 h-9 rounded-lg text-lg flex items-center justify-center border-2 transition-colors ${form.icon === icon ? 'border-primary bg-primary-50' : 'border-line hover:border-line-2'}`}>
                   {icon}
                 </button>
               ))}
@@ -89,7 +90,7 @@ function CategoryModal({ isOpen, onClose, category, activeTab }) {
           </div>
 
           <div className="flex flex-col gap-2">
-            <label className="text-sm font-medium text-gray-700">Warna</label>
+            <label className="text-sm font-medium text-ink-2">Warna</label>
             <div className="flex flex-wrap gap-2">
               {CATEGORY_COLORS.map((color) => (
                 <button key={color} type="button" onClick={() => setForm({ ...form, color })}
@@ -100,11 +101,11 @@ function CategoryModal({ isOpen, onClose, category, activeTab }) {
           </div>
 
           {/* Preview */}
-          <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg">
+          <div className="flex items-center gap-2 p-3 bg-surface-2 rounded-lg">
             <div className="w-8 h-8 rounded-lg flex items-center justify-center text-base" style={{ backgroundColor: form.color + '20' }}>
               {form.icon}
             </div>
-            <span className="text-sm font-medium text-gray-700">{form.name || 'Preview Kategori'}</span>
+            <span className="text-sm font-medium text-ink-2">{form.name || 'Preview Kategori'}</span>
             <Badge variant={form.type === 'expense' ? 'red' : 'green'} className="ml-auto">
               {form.type === 'expense' ? 'Pengeluaran' : 'Pemasukan'}
             </Badge>
@@ -121,6 +122,7 @@ function CategoryModal({ isOpen, onClose, category, activeTab }) {
 
 export default function Categories() {
   const toast = useToast()
+  const reduceMotion = useReducedMotion()
   const { activeTab, setActiveTab } = useCategoryStore()
 
   const { data: allCategories, isLoading } = useCategories()
@@ -169,10 +171,10 @@ export default function Categories() {
   return (
     <div className="space-y-5 max-w-3xl mx-auto">
       <div className="flex items-center justify-between">
-        <div className="flex rounded-lg border border-gray-200 overflow-hidden">
+        <div className="flex rounded-lg border border-line overflow-hidden">
           {['expense', 'income'].map((tab) => (
             <button key={tab} onClick={() => setActiveTab(tab)}
-              className={`px-4 py-2 text-sm font-medium transition-colors ${activeTab === tab ? 'bg-primary text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>
+              className={`px-4 py-2 text-sm font-medium transition-colors ${activeTab === tab ? 'bg-primary text-white' : 'bg-surface text-ink-2 hover:bg-surface-2'}`}>
               {tab === 'expense' ? 'Pengeluaran' : 'Pemasukan'}
             </button>
           ))}
@@ -199,32 +201,38 @@ export default function Categories() {
         </div>
       ) : !categories.length ? (
         <div className="py-16 text-center">
-          <Tag className="w-10 h-10 text-gray-200 mx-auto mb-3" />
-          <p className="text-gray-400 font-medium">Belum ada kategori {activeTab === 'expense' ? 'pengeluaran' : 'pemasukan'}</p>
+          <Tag className="w-10 h-10 text-ink-3 mx-auto mb-3" />
+          <p className="text-ink-3 font-medium">Belum ada kategori {activeTab === 'expense' ? 'pengeluaran' : 'pemasukan'}</p>
           <Button className="mt-4" size="sm" onClick={() => setModalOpen(true)}>
             <Plus className="w-4 h-4" /> Tambah Kategori
           </Button>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {categories.map((cat) => (
-            <div key={cat.id} className="flex items-center gap-3 p-4 bg-white rounded-xl border border-gray-200 hover:shadow-sm transition-shadow">
+          {categories.map((cat, i) => (
+            <motion.div
+              key={cat.id}
+              initial={reduceMotion ? false : { opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.25, delay: Math.min(i * 0.03, 0.24), ease: 'easeOut' }}
+              className="flex items-center gap-3 p-4 bg-surface rounded-xl border border-line hover:shadow-sm transition-shadow"
+            >
               <div className="w-9 h-9 rounded-lg flex items-center justify-center text-lg flex-shrink-0" style={{ backgroundColor: (cat.color || '#6b7280') + '20' }}>
                 {cat.icon || '📦'}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-900 truncate">{cat.name}</p>
-                {cat.is_default && <p className="text-xs text-gray-400">Default</p>}
+                <p className="text-sm font-medium text-ink truncate">{cat.name}</p>
+                {cat.is_default && <p className="text-xs text-ink-3">Default</p>}
               </div>
               <div className="flex gap-1">
-                <button onClick={() => handleEdit(cat)} className="p-1.5 rounded-lg text-gray-400 hover:text-blue-500 hover:bg-blue-50 transition-colors" aria-label="Edit kategori">
+                <button onClick={() => handleEdit(cat)} className="p-1.5 rounded-lg text-ink-3 hover:text-blue-500 hover:bg-blue-50 transition-colors" aria-label="Edit kategori">
                   <Edit2 className="w-3.5 h-3.5" />
                 </button>
-                <button onClick={() => setDeleteCategory(cat)} className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors" aria-label="Hapus kategori">
+                <button onClick={() => setDeleteCategory(cat)} className="p-1.5 rounded-lg text-ink-3 hover:text-red-500 hover:bg-red-50 transition-colors" aria-label="Hapus kategori">
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
               </div>
-            </div>
+            </motion.div>
           ))}
         </div>
       )}

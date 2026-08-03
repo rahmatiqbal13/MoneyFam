@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   Calculator, ChevronDown, ChevronUp, Save, CheckCircle2,
-  AlertCircle, Info,
+  AlertCircle, Info, Target,
 } from 'lucide-react'
 import {
   ResponsiveContainer,
@@ -19,7 +20,7 @@ import { Input } from '@/components/ui/Input'
 import { useToast } from '@/components/ui/Toast'
 import { formatCurrency } from '@/lib/utils'
 import { usePensionSettings, useSavePensionSettings, useInvestments } from '@/hooks/useInvestments'
-import { useSavingsGoals } from '@/hooks/useSavingsGoals'
+import { useSavingsGoals, useCreateSavingsGoal } from '@/hooks/useSavingsGoals'
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -121,8 +122,10 @@ const SCENARIO_COLORS = { 10: '#f59e0b', 15: '#3b82f6', 20: '#10b981' }
 
 export default function PensionCalculator() {
   const toast = useToast()
+  const navigate = useNavigate()
   const { data: savedSettings, isError: settingsError } = usePensionSettings()
   const saveMutation = useSavePensionSettings()
+  const createGoalMutation = useCreateSavingsGoal()
   const { data: investments } = useInvestments()
   const { data: savingsGoals } = useSavingsGoals()
   const [showAssumptions, setShowAssumptions] = useState(false)
@@ -221,6 +224,27 @@ export default function PensionCalculator() {
       toast.success('Data tersimpan')
     } catch (err) {
       toast.error(err.message || 'Gagal menyimpan')
+    }
+  }
+
+  const handleCreateGoal = async () => {
+    if (!result) return
+    const targetDate = new Date()
+    targetDate.setFullYear(targetDate.getFullYear() + result.yearsToRetire)
+
+    try {
+      await createGoalMutation.mutateAsync({
+        name: `Dana Pensiun (Usia ${form.targetAge})`,
+        target_amount: Math.round(result.totalNeeded),
+        current_amount: Math.round(Number(form.existingFund) || 0),
+        target_date: targetDate.toISOString().split('T')[0],
+        icon: '🏖️',
+        color: '#f59e0b',
+      })
+      toast.success('Target tabungan dana pensiun dibuat! Lihat & lacak progressnya di Tabungan & Hutang.')
+      navigate('/savings')
+    } catch (err) {
+      toast.error(err.message || 'Gagal membuat target tabungan')
     }
   }
 
@@ -479,6 +503,16 @@ export default function PensionCalculator() {
                   Mulai dari yang kamu mampu, dan tingkatkan setiap kali gaji naik. 💪
                 </div>
               </div>
+
+              <Button
+                type="button"
+                className="w-full mt-3"
+                onClick={handleCreateGoal}
+                loading={createGoalMutation.isPending}
+              >
+                <Target className="w-4 h-4" />
+                Jadikan Target Tabungan
+              </Button>
             </CardContent>
           </Card>
 

@@ -144,18 +144,18 @@ export function WalletModal({ isOpen, onClose, wallet = null }) {
 
           {/* Icon picker */}
           <div className="flex flex-col gap-2">
-            <label className="text-sm font-medium text-gray-700">Ikon</label>
+            <label className="text-sm font-medium" style={{ color: 'var(--ink-2)' }}>Ikon</label>
             <div className="flex flex-wrap gap-2">
               {WALLET_ICONS.map((icon) => (
                 <button
                   key={icon}
                   type="button"
                   onClick={() => setForm({ ...form, icon })}
-                  className={`w-10 h-10 rounded-lg text-xl flex items-center justify-center border-2 transition-colors ${
-                    form.icon === icon
-                      ? 'border-primary bg-primary-50'
-                      : 'border-gray-200 hover:border-gray-300'
-                  }`}
+                  className="w-10 h-10 rounded-lg text-xl flex items-center justify-center border-2 transition-colors"
+                  style={{
+                    borderColor: form.icon === icon ? 'var(--accent)' : 'var(--line)',
+                    background: form.icon === icon ? 'var(--accent-soft)' : 'transparent',
+                  }}
                 >
                   {icon}
                 </button>
@@ -165,7 +165,7 @@ export function WalletModal({ isOpen, onClose, wallet = null }) {
 
           {/* Color picker */}
           <div className="flex flex-col gap-2">
-            <label className="text-sm font-medium text-gray-700">Warna</label>
+            <label className="text-sm font-medium" style={{ color: 'var(--ink-2)' }}>Warna</label>
             <div className="flex flex-wrap gap-2">
               {WALLET_COLORS.map((color) => (
                 <button
@@ -173,9 +173,12 @@ export function WalletModal({ isOpen, onClose, wallet = null }) {
                   type="button"
                   onClick={() => setForm({ ...form, color })}
                   className={`w-8 h-8 rounded-full border-2 transition-transform ${
-                    form.color === color ? 'border-gray-800 scale-110' : 'border-transparent'
+                    form.color === color ? 'scale-110' : ''
                   }`}
-                  style={{ backgroundColor: color }}
+                  style={{
+                    backgroundColor: color,
+                    borderColor: form.color === color ? 'var(--ink)' : 'transparent',
+                  }}
                 />
               ))}
             </div>

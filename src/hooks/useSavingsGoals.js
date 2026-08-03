@@ -1,10 +1,44 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/stores/authStore'
+import { shouldSendNotification } from './useNotifications'
 
 const TX_KEY = 'transactions'
 const QUERY_KEY = 'savings_goals'
 const PAYMENTS_KEY = 'savings_payments'
+
+// Cek apakah goal baru saja tercapai, dan kirim notifikasi sekali saja per goal.
+async function checkGoalAchievedNotification(familyId, userId, goalId) {
+  if (!goalId || !userId) return
+  const { data: goal } = await supabase
+    .from('savings_goals')
+    .select('id, name, is_completed')
+    .eq('id', goalId)
+    .maybeSingle()
+
+  if (!goal?.is_completed) return
+
+  const { data: existing } = await supabase
+    .from('notifications')
+    .select('id')
+    .eq('type', 'goal_achieved')
+    .eq('user_id', userId)
+    .contains('data', { goal_id: goalId })
+    .limit(1)
+  if (existing?.length) return
+
+  const shouldSend = await shouldSendNotification(userId, 'goal_achieved')
+  if (!shouldSend) return
+
+  await supabase.from('notifications').insert({
+    family_id: familyId || null,
+    user_id: userId,
+    type: 'goal_achieved',
+    title: 'Target Tabungan Tercapai',
+    message: `Selamat! Target tabungan "${goal.name}" sudah tercapai.`,
+    data: { goal_id: goalId },
+  })
+}
 
 export function useSavingsGoals() {
   const family = useAuthStore((s) => s.family)
@@ -108,7 +142,11 @@ export function useUpdateSavingsGoal() {
       const { error } = await query
       if (error) throw error
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: [QUERY_KEY] }),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEY] })
+      checkGoalAchievedNotification(family?.id || null, user.id, variables.id)
+        .catch((err) => console.error('Goal achieved notification error:', err))
+    },
   })
 }
 
@@ -136,17 +174,19 @@ export function useDeleteSavingsGoal() {
 // Add payment to savings goal with optional wallet
 export function useAddSavingsPayment() {
   const queryClient = useQueryClient()
+  const family = useAuthStore((s) => s.family)
+  const user = useAuthStore((s) => s.user)
 
   return useMutation({
-    mutationFn: async ({ 
-      goalId, 
-      amount, 
+    mutationFn: async ({
+      goalId,
+      amount,
       type,
-      paymentDate, 
+      paymentDate,
       paymentTime,
-      walletId, 
-      categoryId, 
-      note 
+      walletId,
+      categoryId,
+      note
     }) => {
       const { data, error } = await supabase.rpc('add_savings_payment', {
         p_goal_id: goalId,
@@ -158,7 +198,7 @@ export function useAddSavingsPayment() {
         p_category_id: categoryId || null,
         p_note: note || null
       })
-      
+
       if (error) throw error
       return data
     },
@@ -167,6 +207,10 @@ export function useAddSavingsPayment() {
       queryClient.invalidateQueries({ queryKey: [PAYMENTS_KEY, variables.goalId] })
       queryClient.invalidateQueries({ queryKey: [TX_KEY] })
       queryClient.invalidateQueries({ queryKey: ['wallets'] })
+      if (variables.type === 'deposit') {
+        checkGoalAchievedNotification(family?.id || null, user.id, variables.goalId)
+          .catch((err) => console.error('Goal achieved notification error:', err))
+      }
     },
   })
 }

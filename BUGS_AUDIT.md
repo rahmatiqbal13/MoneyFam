@@ -420,4 +420,21 @@
 
 ---
 
+## Audit Lanjutan (Pass 3) — 2026-08-03
+
+### P3-01 — `notifications.family_id NOT NULL` Menyebabkan Semua Notifikasi Gagal untuk User Mode Personal ✅
+- **File**: `supabase/schema.sql` (tabel & policy `notifications`), `supabase/migration_notifications_fix.sql`
+- **Severity**: **HIGH**
+- **Status**: **FIXED** — Kolom `family_id` diubah jadi nullable, policy `notifications_insert` diperbarui untuk menangani mode personal (`family_id is null and user_id = auth.uid()`) maupun mode keluarga secara terpisah. Migration sudah dijalankan di Supabase SQL Editor project production (2026-08-03).
+- **Deskripsi**: Tabel `notifications` mewajibkan `family_id` terisi, tapi kode client selalu mengirim `family_id: null` untuk user tanpa keluarga (`checkAndCreateBudgetWarning` di `useTransactions.js`). Insert selalu ditolak database (`NOT NULL` violation), error hanya di-`console.error` tanpa notifikasi ke user — akibatnya user mode personal tidak pernah menerima notifikasi apa pun meski fitur budget_warning sudah "aktif" secara kode.
+- **Temuan terkait (bukan bug, tapi gap fitur) — sudah ditutup**: dari 5 jenis notifikasi yang ditawarkan di halaman Pengaturan (`budget_warning`, `monthly_report`, `transaction_alert`, `reminder_daily`, `goal_achieved`, `debt_due`), sebelumnya cuma `budget_warning` yang benar-benar pernah di-trigger di kode. Semua sudah diimplementasikan kecuali `transaction_alert`:
+  - `goal_achieved` — saat target tabungan tercapai (`useSavingsGoals.js`)
+  - `debt_due` — pengingat jatuh tempo hutang, dicek tiap buka Dashboard (`useDebts.js`)
+  - `reminder_daily` — dicek malam hari (≥18:00) tiap buka Dashboard, kalau belum ada transaksi hari itu (`useTransactions.js`)
+  - `monthly_report` — ringkasan bulan lalu, dicek di awal bulan (tanggal 1-5) tiap buka Dashboard (`useTransactions.js`)
+
+  Semua dicek client-side saat Dashboard di-mount (bukan server cron) dengan idempotency check ke tabel `notifications`, jadi tidak perlu Supabase Edge Function — trade-off-nya notifikasi baru muncul saat user membuka app, bukan tepat di jam tertentu, yang dianggap cukup untuk notifikasi in-app (bukan push/email). `transaction_alert` (alert transaksi besar) masih belum diimplementasikan karena "besar" belum punya definisi threshold — perlu keputusan produk dulu.
+
+---
+
 *Dokumen ini harus di-review setiap sprint. Update status checklist saat bug diperbaiki.*
