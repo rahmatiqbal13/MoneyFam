@@ -43,19 +43,19 @@ function CategoryModal({ isOpen, onClose, category, activeTab }) {
   }, [isOpen, category, activeTab])
 
   const handleSubmit = async (e) => {
-    e.preventDefault()
+    e.preventDefault()
     if (!form.name.trim()) {
       setErrors({ name: 'Nama kategori wajib diisi' })
       return
     }
     setErrors({})
     try {
-      if (isEdit) {
+      if (isEdit) {
         await updateMutation.mutateAsync({ id: category.id, originalCategory: category, ...form })
-        toast.success('Kategori berhasil diperbarui')
-      } else {
+        toast.success('Kategori berhasil diperbarui')
+      } else {
         await createMutation.mutateAsync(form)
-        toast.success('Kategori berhasil ditambahkan')
+        toast.success('Kategori berhasil ditambahkan')
       }
       onClose()
     } catch (err) {
@@ -191,9 +191,9 @@ export default function Categories() {
       {isLoading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {[...Array(6)].map((_, i) => (
-            <div key={i} className="flex items-center gap-3 p-4 bg-white rounded-xl border border-gray-200 animate-pulse">
-              <div className="w-9 h-9 bg-gray-100 rounded-lg" />
-              <div className="h-4 bg-gray-100 rounded w-32" />
+            <div key={i} className="flex items-center gap-3 p-4 bg-surface rounded-xl border border-line animate-pulse">
+              <div className="w-9 h-9 bg-surface-2 rounded-lg" />
+              <div className="h-4 bg-surface-2 rounded w-32" />
             </div>
           ))}
         </div>

@@ -371,4 +371,53 @@
 
 ---
 
+## Audit Lanjutan (Pass 2) — 2026-08-03
+
+> Fokus pada area yang belum di-review mendalam di Pass 1: RPC/RLS di `supabase/schema.sql`, `cookieStorage.js`, `DangerZoneSection.jsx`, dan regresi console.log.
+
+### P2-01 — RPC `create_family` Tidak Verifikasi `auth.uid()` (IDOR/Account Takeover) ✅
+- **File**: `supabase/schema.sql` (fungsi `create_family`), `supabase/migration_security_fixes.sql`
+- **Severity**: **CRITICAL**
+- **Status**: **FIXED** — Ditambahkan `if p_user_id <> auth.uid() then raise exception` di awal fungsi.
+- **Deskripsi**: Fungsi `security definer` ini menerima `p_user_id` dari client tanpa verifikasi bahwa itu adalah pemanggil sendiri. Siapa pun yang login bisa memanggil `supabase.rpc('create_family', { p_user_id: '<uuid korban>' })` dan mengubah paksa `family_id`/`role` profil user lain, bypass RLS karena `security definer`.
+- **Aksi diperlukan**: Jalankan `supabase/migration_security_fixes.sql` di Supabase SQL Editor project production.
+
+### P2-02 — RPC `delete_all_family_transactions` Bisa Dipanggil Anggota Non-Owner ✅
+- **File**: `supabase/schema.sql` (fungsi `delete_all_family_transactions`), `src/pages/Settings.jsx`, `supabase/migration_security_fixes.sql`
+- **Severity**: **HIGH**
+- **Status**: **FIXED** — RPC sekarang memverifikasi `role = 'owner'`, bukan hanya keanggotaan family. `DangerZoneSection` di Settings sekarang hanya dirender jika `isOwner` true (konsisten dengan pola gating owner-only yang sudah dipakai untuk fitur kode undangan).
+- **Deskripsi**: RPC hanya cek `family_id` cocok, bukan role. Tombol "Hapus Semua Transaksi" juga tampil ke semua anggota. Akibatnya anggota biasa bisa menghapus seluruh riwayat transaksi keluarga dan reset semua saldo kantong.
+- **Aksi diperlukan**: Jalankan `supabase/migration_security_fixes.sql` di Supabase SQL Editor project production.
+
+### P2-03 — Klaim Fix M-03 (Cookie Storage) Tidak Akurat ✅
+- **File**: `src/lib/cookieStorage.js`
+- **Severity**: **MEDIUM (dokumentasi keliru)**
+- **Status**: **FIXED** — Komentar di file diperbaiki agar jujur: cookie non-httpOnly ini punya exposure XSS yang sama dengan localStorage (bisa dibaca `document.cookie`). Mitigasi XSS sesungguhnya adalah sanitasi input (M-05) dan menghindari `dangerouslySetInnerHTML`, bukan mekanisme storage-nya. `SameSite=Strict` tetap dipertahankan sebagai defense-in-depth.
+- **Deskripsi**: M-03 di Pass 1 mengklaim pindah ke cookie storage menutup risiko pencurian token via XSS. Klaim ini keliru — `HttpOnly` (satu-satunya proteksi nyata terhadap JS yang membaca token) tidak bisa diset dari client-side SPA.
+- **Catatan**: Proteksi httpOnly sungguhan butuh backend/edge function sebagai proxy sesi — di luar scope perbaikan bug ini, dicatat sebagai potensi improvement arsitektur di masa depan.
+
+### P2-04 — Cookie `Secure` Hardcoded + Tidak Ada Chunking untuk Limit ~4KB ✅
+- **File**: `src/lib/cookieStorage.js`
+- **Severity**: **MEDIUM**
+- **Status**: **FIXED** — Flag `Secure` sekarang dinamis berdasar `location.protocol === 'https:'` (tidak lagi gagal diam-diam di origin non-HTTPS). Ditambahkan chunking otomatis (potong ke cookie `key.0`, `key.1`, ... + `key.n`) untuk value yang melebihi ~3.5KB, dengan fallback baca cookie legacy non-chunked.
+- **Deskripsi**: `Secure=true` di-hardcode sehingga cookie gagal ter-set di origin HTTP non-localhost. Session JSON (access+refresh token+user object) berisiko melebihi batas ~4KB per cookie tanpa chunking, menyebabkan auth gagal persist tanpa error yang terlihat.
+
+### P2-05 — Regresi M-17: `console.log` Kembali Muncul di `useDataImportExport.js` ✅
+- **File**: `src/hooks/useDataImportExport.js`
+- **Severity**: **MEDIUM (regresi)**
+- **Status**: **FIXED** — 16 `console.log` debug dihapus. `console.error` untuk error tracking tetap dipertahankan.
+- **Deskripsi**: Audit Pass 1 (M-17) menyatakan file ini sudah dibersihkan dari `console.log`, tapi ditemukan 16 baris debug log masih ada saat pemeriksaan Pass 2.
+
+### P2-06 — RLS `notifications_insert` Tidak Verifikasi `user_id` Anggota Family ✅
+- **File**: `supabase/schema.sql` (policy `notifications_insert`), `supabase/migration_security_fixes.sql`
+- **Severity**: **LOW**
+- **Status**: **FIXED** — Policy sekarang juga memverifikasi `user_id` yang di-insert adalah anggota `family_id` tersebut via `exists (select 1 from profiles where id = user_id and family_id = family_id)`.
+- **Deskripsi**: Policy lama hanya memverifikasi `family_id = get_user_family_id()`, tidak memverifikasi bahwa `user_id` yang di-insert benar anggota family itu. Anggota keluarga bisa insert notifikasi (judul/pesan bebas) yang mengarah ke `user_id` sembarang (termasuk di luar family-nya) — berpotensi disalahgunakan untuk spam/social engineering. `select` tetap dibatasi `user_id = auth.uid()` sehingga korban akan melihatnya sebagai notifikasi miliknya sendiri.
+- **Aksi diperlukan**: Jalankan `supabase/migration_security_fixes.sql` di Supabase SQL Editor project production.
+
+### Cara Menerapkan Perbaikan Level Database (P2-01, P2-02, P2-06)
+`schema.sql` sudah diperbarui sebagai source of truth. **Status: `supabase/migration_security_fixes.sql` sudah dijalankan di Supabase SQL Editor project production (2026-08-03) — fix RPC/RLS di atas sudah aktif.**
+
+---
+
 *Dokumen ini harus di-review setiap sprint. Update status checklist saat bug diperbaiki.*

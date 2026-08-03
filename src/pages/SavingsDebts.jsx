@@ -1327,7 +1327,7 @@ function SavingsGoalsTab() {
       {isLoading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {[...Array(3)].map((_, i) => (
-            <div key={i} className="bg-white rounded-xl border border-gray-200 p-5 animate-pulse h-48" />
+            <div key={i} className="bg-surface rounded-xl border border-line p-5 animate-pulse h-48" />
           ))}
         </div>
       ) : !filtered.length ? (
@@ -1612,7 +1612,7 @@ function DebtsTab() {
       {isLoading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {[...Array(2)].map((_, i) => (
-            <div key={i} className="bg-white rounded-xl border border-gray-200 p-5 animate-pulse h-44" />
+            <div key={i} className="bg-surface rounded-xl border border-line p-5 animate-pulse h-44" />
           ))}
         </div>
       ) : !filtered.length ? (

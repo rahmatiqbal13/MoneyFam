@@ -351,7 +351,7 @@ export default function Settings() {
           {membersLoading ? (
             <div className="space-y-3">
               {[...Array(2)].map((_, i) => (
-                <div key={i} className="h-12 bg-gray-100 rounded-lg animate-pulse" />
+                <div key={i} className="h-12 bg-surface-2 rounded-lg animate-pulse" />
               ))}
             </div>
           ) : (
@@ -622,8 +622,8 @@ export default function Settings() {
       {/* Import & Export */}
       <ImportExportSection />
 
-      {/* Danger Zone */}
-      <DangerZoneSection />
+      {/* Danger Zone — hanya pemilik keluarga (atau akun personal) yang boleh menghapus semua data */}
+      {isOwner && <DangerZoneSection />}
 
       {/* App info */}
       <div className="text-center py-4">

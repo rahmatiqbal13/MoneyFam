@@ -93,9 +93,18 @@ export default function Login() {
               autoComplete="email"
             />
             <div className="flex flex-col gap-1">
-              <label className="text-sm font-medium" style={{ color: 'var(--ink-2)' }}>
-                Password <span style={{ color: '#DC2626' }}>*</span>
-              </label>
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-medium" style={{ color: 'var(--ink-2)' }}>
+                  Password <span style={{ color: '#DC2626' }}>*</span>
+                </label>
+                <Link
+                  to="/forgot-password"
+                  className="text-xs font-medium hover:underline"
+                  style={{ color: 'var(--accent-ink)' }}
+                >
+                  Lupa password?
+                </Link>
+              </div>
               <div className="relative">
                 <input
                   type={showPassword ? 'text' : 'password'}

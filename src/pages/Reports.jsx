@@ -95,7 +95,7 @@ function SummaryCards({ stats, isLoading }) {
       {cards.map((c) => {
         const Icon = c.icon
         return (
-          <div key={c.label} className="bg-white rounded-xl border border-gray-200 p-4">
+          <div key={c.label} className="bg-surface rounded-xl border border-line p-4">
             <div className="flex items-center justify-between mb-3">
               <p className="text-xs text-gray-500">{c.label}</p>
               <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${c.iconBg}`}>
@@ -103,7 +103,7 @@ function SummaryCards({ stats, isLoading }) {
               </div>
             </div>
             {isLoading
-              ? <div className="h-6 bg-gray-100 rounded animate-pulse w-24" />
+              ? <div className="h-6 bg-surface-2 rounded animate-pulse w-24" />
               : <p className={`text-lg font-bold ${c.valueColor}`}>
                   {c.isPercent ? `${c.value}%` : formatCurrency(c.value)}
                 </p>

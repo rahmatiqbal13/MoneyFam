@@ -14,7 +14,15 @@
       "Bash(git commit -m ' *)",
       "Bash(npx skills *)",
       "mcp__claude_ai_Vercel__import-claude-design-from-url",
-      "WebFetch(domain:claude.ai)"
+      "WebFetch(domain:claude.ai)",
+      "Bash(supabase --version)",
+      "Bash(node -e \"const pkg=require\\('./node_modules/lucide-react/package.json'\\); console.log\\(pkg.version\\)\")",
+      "Bash(node -e ' *)",
+      "Bash(pkill -f \"vite.*5183\")",
+      "Bash(pkill -f \"npm run dev\")",
+      "Bash(sort -t: -k2 -n)",
+      "Bash(curl -s http://localhost:5184/src/components/ui/Modal.jsx)",
+      "Bash(pkill -f \"vite.*5184\")"
     ]
   }
 }

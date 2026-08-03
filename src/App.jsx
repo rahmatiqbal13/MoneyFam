@@ -10,6 +10,8 @@ import { useAuthStore } from '@/stores/authStore'
 // Pages
 import Login from '@/pages/Login'
 import Register from '@/pages/Register'
+import ForgotPassword from '@/pages/ForgotPassword'
+import ResetPassword from '@/pages/ResetPassword'
 import Dashboard from '@/pages/Dashboard'
 import Transactions from '@/pages/Transactions'
 import Wallets from '@/pages/Wallets'
@@ -133,6 +135,18 @@ export default function App() {
                     </PublicRoute>
                   }
                 />
+                <Route
+                  path="/forgot-password"
+                  element={
+                    <PublicRoute>
+                      <ForgotPassword />
+                    </PublicRoute>
+                  }
+                />
+                {/* Tidak dibungkus PublicRoute/ProtectedRoute: link recovery membuat
+                    sesi sementara sehingga `user` di authStore bisa terisi, tapi
+                    halaman ini tetap harus bisa diakses untuk set password baru. */}
+                <Route path="/reset-password" element={<ResetPassword />} />
 
                 {/* Protected routes */}
                 <Route

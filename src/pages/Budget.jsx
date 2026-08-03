@@ -142,12 +142,12 @@ export default function Budget() {
       {isLoading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {[...Array(4)].map((_, i) => (
-            <div key={i} className="bg-white rounded-xl border border-gray-200 p-4 animate-pulse">
+            <div key={i} className="bg-surface rounded-xl border border-line p-4 animate-pulse">
               <div className="flex items-center gap-2.5 mb-4">
-                <div className="w-9 h-9 bg-gray-100 rounded-lg" />
-                <div className="h-4 bg-gray-100 rounded w-24" />
+                <div className="w-9 h-9 bg-surface-2 rounded-lg" />
+                <div className="h-4 bg-surface-2 rounded w-24" />
               </div>
-              <div className="h-2 bg-gray-100 rounded-full w-full" />
+              <div className="h-2 bg-surface-2 rounded-full w-full" />
             </div>
           ))}
         </div>

@@ -57,6 +57,10 @@ declare
   v_family_id uuid;
   v_profile_exists boolean;
 begin
+  if p_user_id <> auth.uid() then
+    raise exception 'Not authorized';
+  end if;
+
   -- Generate UUID untuk family
   v_family_id := gen_random_uuid();
   
@@ -240,7 +244,14 @@ create policy "notifications_select" on notifications
 
 drop policy if exists "notifications_insert" on notifications;
 create policy "notifications_insert" on notifications
-  for insert with check (family_id = get_user_family_id());
+  for insert with check (
+    family_id = get_user_family_id()
+    and exists (
+      select 1 from profiles
+      where id = notifications.user_id
+      and family_id = notifications.family_id
+    )
+  );
 
 drop policy if exists "notifications_update" on notifications;
 create policy "notifications_update" on notifications
@@ -545,13 +556,14 @@ security definer
 set search_path = public
 as $$
 begin
-  -- Verify caller is a member of this family
+  -- Verify caller is the owner of this family
   if not exists (
     select 1 from profiles
     where id = auth.uid()
     and family_id = p_family_id
+    and role = 'owner'
   ) then
-    raise exception 'Not authorized';
+    raise exception 'Hanya pemilik keluarga yang bisa menghapus semua transaksi';
   end if;
 
   -- Triggers will fire per-row but the final reset below is the source of truth

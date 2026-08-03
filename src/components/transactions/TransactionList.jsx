@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { motion, useReducedMotion } from 'framer-motion'
 import { Edit2, Trash2, ArrowUpRight, ArrowDownRight, ArrowLeftRight, FilterX } from 'lucide-react'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { TransactionTypeBadge } from '@/components/ui/Badge'
@@ -36,6 +37,7 @@ function EmptyState({ hasFilters, onResetFilters }) {
 export function TransactionList({ transactions = [], onEdit, filters = {}, onResetFilters }) {
   const deleteMutation = useDeleteTransaction()
   const [deleteId, setDeleteId] = useState(null)
+  const reduceMotion = useReducedMotion()
 
   const { triggerDelete } = useUndoableDelete(
     async (id) => {
@@ -56,9 +58,12 @@ export function TransactionList({ transactions = [], onEdit, filters = {}, onRes
   return (
     <>
       <div className="space-y-1">
-        {transactions.map((tx) => (
-          <div
+        {transactions.map((tx, i) => (
+          <motion.div
             key={tx.id}
+            initial={reduceMotion ? false : { opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.25, delay: Math.min(i * 0.025, 0.2), ease: 'easeOut' }}
             className="flex items-center gap-3 py-3 px-4 bg-white rounded-xl border border-gray-100 hover:border-gray-200 hover:shadow-sm transition-all"
           >
             {/* Icon */}
@@ -129,7 +134,7 @@ export function TransactionList({ transactions = [], onEdit, filters = {}, onRes
                 </button>
               </div>
             </div>
-          </div>
+          </motion.div>
         ))}
       </div>
 

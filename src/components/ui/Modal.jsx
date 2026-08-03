@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import { X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from './Button'
@@ -71,7 +72,7 @@ export function Modal({ isOpen, onClose, title, children, size = 'md', className
     }
   }, [isOpen, onClose])
 
-  if (!isOpen) return null
+  const reduceMotion = useReducedMotion()
 
   const sizes = {
     sm:  'max-w-sm',
@@ -86,58 +87,70 @@ export function Modal({ isOpen, onClose, title, children, size = 'md', className
   }
 
   return (
-    <div
-      ref={overlayRef}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: 'rgba(42,36,24,.45)', backdropFilter: 'blur(4px)' }}
-      onClick={handleOverlayClick}
-    >
-      <div
-        ref={modalRef}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={titleId.current}
-        tabIndex={-1}
-        className={cn('w-full overflow-hidden outline-none', sizes[size], className)}
-        style={{
-          background: 'var(--surface)',
-          borderRadius: 'var(--r-xl)',
-          boxShadow: 'var(--shadow-lg)',
-          border: '1px solid var(--line)',
-        }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div
-          className="flex items-center justify-between px-5 py-4"
-          style={{ borderBottom: '1px solid var(--line)' }}
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          ref={overlayRef}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: 'rgba(42,36,24,.45)', backdropFilter: 'blur(4px)' }}
+          onClick={handleOverlayClick}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.15 }}
         >
-          <h2
-            id={titleId.current}
-            className="text-base font-semibold"
-            style={{ color: 'var(--ink)' }}
-          >
-            {title}
-          </h2>
-          <button
-            onClick={onClose}
-            aria-label="Tutup modal"
-            className="p-1.5 rounded-xl transition-colors"
-            style={{ color: 'var(--ink-3)' }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'var(--surface-2)'
-              e.currentTarget.style.color = 'var(--ink)'
+          <motion.div
+            ref={modalRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={titleId.current}
+            tabIndex={-1}
+            className={cn('w-full overflow-hidden outline-none', sizes[size], className)}
+            style={{
+              background: 'var(--surface)',
+              borderRadius: 'var(--r-xl)',
+              boxShadow: 'var(--shadow-lg)',
+              border: '1px solid var(--line)',
             }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'transparent'
-              e.currentTarget.style.color = 'var(--ink-3)'
-            }}
+            onClick={(e) => e.stopPropagation()}
+            initial={reduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.95, y: 8 }}
+            animate={reduceMotion ? { opacity: 1 } : { opacity: 1, scale: 1, y: 0 }}
+            exit={reduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.95, y: 8 }}
+            transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
           >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-        <div className="overflow-y-auto max-h-[80vh]">{children}</div>
-      </div>
-    </div>
+            <div
+              className="flex items-center justify-between px-5 py-4"
+              style={{ borderBottom: '1px solid var(--line)' }}
+            >
+              <h2
+                id={titleId.current}
+                className="text-base font-semibold"
+                style={{ color: 'var(--ink)' }}
+              >
+                {title}
+              </h2>
+              <button
+                onClick={onClose}
+                aria-label="Tutup modal"
+                className="p-1.5 rounded-xl transition-colors active:scale-90"
+                style={{ color: 'var(--ink-3)' }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'var(--surface-2)'
+                  e.currentTarget.style.color = 'var(--ink)'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'transparent'
+                  e.currentTarget.style.color = 'var(--ink-3)'
+                }}
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="overflow-y-auto max-h-[80vh]">{children}</div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   )
 }
 

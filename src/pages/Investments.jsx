@@ -712,7 +712,7 @@ export default function Investments() {
       {isLoading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {[...Array(3)].map((_, i) => (
-            <div key={i} className="bg-white rounded-xl border border-gray-200 p-4 animate-pulse h-40" />
+            <div key={i} className="bg-surface rounded-xl border border-line p-4 animate-pulse h-40" />
           ))}
         </div>
       ) : !filtered.length ? (

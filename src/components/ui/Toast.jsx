@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useCallback, useRef, useEffect } from 'react'
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import { CheckCircle, XCircle, AlertCircle, Info, X } from 'lucide-react'
 
 const ToastContext = createContext(null)
@@ -35,6 +36,7 @@ const IconMap = {
 
 export function ToastProvider({ children }) {
   const [toasts, setToasts] = useState([])
+  const reduceMotion = useReducedMotion()
 
   const timersRef = useRef(new Map())
 
@@ -79,49 +81,56 @@ export function ToastProvider({ children }) {
         className="fixed bottom-4 right-4 z-[100] flex flex-col gap-2"
         style={{ maxWidth: 360, width: 'calc(100vw - 2rem)' }}
       >
-        {toasts.map((t) => {
-          const s = toastStyles[t.type]
-          const IconComp = IconMap[t.type]
-          return (
-            <div
-              key={t.id}
-              className="flex items-start gap-3 p-3.5"
-              style={{
-                ...s,
-                borderRadius: 'var(--r-md)',
-                boxShadow: 'var(--shadow-md)',
-              }}
-            >
-              <span className="flex-shrink-0 mt-0.5">
-                <IconComp className="w-5 h-5" style={{ color: s.iconColor }} />
-              </span>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium" style={{ color: 'var(--ink)' }}>{t.message}</p>
-                {t.action && (
-                  <button
-                    onClick={() => {
-                      t.action.onClick()
-                      removeToast(t.id)
-                    }}
-                    className="mt-1.5 text-xs font-semibold hover:underline"
-                    style={{ color: 'var(--accent-ink)' }}
-                  >
-                    {t.action.label}
-                  </button>
-                )}
-              </div>
-              <button
-                onClick={() => removeToast(t.id)}
-                className="flex-shrink-0 transition-colors"
-                style={{ color: 'var(--ink-3)' }}
-                onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--ink)')}
-                onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--ink-3)')}
+        <AnimatePresence initial={false}>
+          {toasts.map((t) => {
+            const s = toastStyles[t.type]
+            const IconComp = IconMap[t.type]
+            return (
+              <motion.div
+                key={t.id}
+                layout={!reduceMotion}
+                className="flex items-start gap-3 p-3.5"
+                style={{
+                  ...s,
+                  borderRadius: 'var(--r-md)',
+                  boxShadow: 'var(--shadow-md)',
+                }}
+                initial={reduceMotion ? { opacity: 0 } : { opacity: 0, x: 40, scale: 0.95 }}
+                animate={{ opacity: 1, x: 0, scale: 1 }}
+                exit={reduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.9, transition: { duration: 0.15 } }}
+                transition={{ type: 'spring', stiffness: 400, damping: 32 }}
               >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-          )
-        })}
+                <span className="flex-shrink-0 mt-0.5">
+                  <IconComp className="w-5 h-5" style={{ color: s.iconColor }} />
+                </span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium" style={{ color: 'var(--ink)' }}>{t.message}</p>
+                  {t.action && (
+                    <button
+                      onClick={() => {
+                        t.action.onClick()
+                        removeToast(t.id)
+                      }}
+                      className="mt-1.5 text-xs font-semibold hover:underline"
+                      style={{ color: 'var(--accent-ink)' }}
+                    >
+                      {t.action.label}
+                    </button>
+                  )}
+                </div>
+                <button
+                  onClick={() => removeToast(t.id)}
+                  className="flex-shrink-0 transition-colors"
+                  style={{ color: 'var(--ink-3)' }}
+                  onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--ink)')}
+                  onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--ink-3)')}
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </motion.div>
+            )
+          })}
+        </AnimatePresence>
       </div>
     </ToastContext.Provider>
   )

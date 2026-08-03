@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { motion, useReducedMotion } from 'framer-motion'
 import { ArrowUpRight, ArrowDownRight, ArrowLeftRight } from 'lucide-react'
 import { formatCurrency, formatDateShort } from '@/lib/utils'
 import { useRecentTransactions } from '@/hooks/useTransactions'
@@ -30,6 +31,7 @@ function TypeIcon({ type }) {
 
 export function RecentTransactions() {
   const { data: transactions, isLoading } = useRecentTransactions(5)
+  const reduceMotion = useReducedMotion()
 
   if (isLoading) {
     return (
@@ -58,9 +60,12 @@ export function RecentTransactions() {
 
   return (
     <div className="space-y-0.5">
-      {transactions.map((tx) => (
-        <div
+      {transactions.map((tx, i) => (
+        <motion.div
           key={tx.id}
+          initial={reduceMotion ? false : { opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.25, delay: i * 0.04, ease: 'easeOut' }}
           className="flex items-center gap-3 py-2.5 px-2 transition-colors"
           style={{ borderRadius: 'var(--r-sm)', cursor: 'default' }}
           onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--surface-2)')}
@@ -85,7 +90,7 @@ export function RecentTransactions() {
             </p>
           </div>
           <TransactionAmount type={tx.type} amount={tx.amount} />
-        </div>
+        </motion.div>
       ))}
       <div className="pt-2">
         <Link

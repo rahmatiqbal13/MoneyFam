@@ -62,7 +62,6 @@ export function useDataImport() {
     mutationFn: async (file) => {
       if (!user?.id) throw new Error('Anda harus login terlebih dahulu')
 
-      console.log('[Import] Membaca file CSV...')
       const csvContent = await readFileAsText(file)
       const rawData = await parseCSV(csvContent)
 
@@ -70,11 +69,8 @@ export function useDataImport() {
         throw new Error('File CSV kosong atau format tidak valid')
       }
 
-      console.log(`[Import] CSV berhasil dibaca: ${rawData.length} baris`)
       const { wallets, categories, transactions } = convertOlloToMoneyFam(rawData)
-      console.log(`[Import] Parsed: ${wallets.length} wallet, ${categories.length} kategori, ${transactions.length} transaksi`)
 
-      console.log('[Import] Mengambil wallet & kategori yang sudah ada...')
       let walletQuery = supabase.from('wallets').select('id, name')
       if (family?.id) {
         walletQuery = walletQuery.eq('family_id', family.id)
@@ -86,7 +82,6 @@ export function useDataImport() {
         console.error('[Import] Error fetch wallets:', walletFetchError)
         throw new Error('Gagal mengambil data wallet yang sudah ada')
       }
-      console.log(`[Import] Wallet existing: ${existingWallets?.length || 0}`)
 
       // Build category query based on family existence
       let catQuery = supabase.from('categories').select('id, name, type')
@@ -100,7 +95,6 @@ export function useDataImport() {
         console.error('[Import] Error fetch categories:', catFetchError)
         throw new Error('Gagal mengambil data kategori yang sudah ada')
       }
-      console.log(`[Import] Kategori existing: ${existingCategories?.length || 0}`)
 
       const existingWalletMap = new Map((existingWallets || []).map(w => [w.name.toLowerCase().trim(), w]))
       const existingCategoryMap = new Map((existingCategories || []).map(c => [c.name.toLowerCase().trim(), c]))
@@ -116,7 +110,6 @@ export function useDataImport() {
       }
       // Insert all new wallets at once
       const newWalletsList = wallets.filter(w => !existingWalletMap.has(w.name.toLowerCase().trim()))
-      console.log(`[Import] Wallet baru yang akan dibuat: ${newWalletsList.length}`)
       if (newWalletsList.length > 0) {
         const walletInserts = newWalletsList.map(wallet => {
           const nameLower = wallet.name.toLowerCase()
@@ -144,7 +137,6 @@ export function useDataImport() {
           .insert(walletInserts)
           .select('id, name')
         if (walletError) throw walletError
-        console.log(`[Import] ${insertedWallets.length} wallet berhasil dibuat`)
         for (const w of insertedWallets) {
           walletIdMap.set(w.name, w.id)
         }
@@ -159,7 +151,6 @@ export function useDataImport() {
         }
       }
       const newCategoriesList = categories.filter(c => !existingCategoryMap.has(c.name.toLowerCase().trim()))
-      console.log(`[Import] Kategori baru yang akan dibuat: ${newCategoriesList.length}`)
       if (newCategoriesList.length > 0) {
         const categoryInserts = newCategoriesList.map(category => ({
           name: category.name,
@@ -173,13 +164,11 @@ export function useDataImport() {
           .insert(categoryInserts)
           .select('id, name')
         if (catError) throw catError
-        console.log(`[Import] ${insertedCategories.length} kategori berhasil dibuat`)
         for (const c of insertedCategories) {
           categoryIdMap.set(c.name, c.id)
         }
       }
 
-      console.log('[Import] Mengambil transaksi existing untuk cek duplikat...')
       let txQuery = supabase
         .from('transactions')
         .select('date, amount, description, wallet_id')
@@ -197,7 +186,6 @@ export function useDataImport() {
         console.error('[Import] Error fetch existing transactions:', existingTxError)
         throw new Error('Gagal mengambil data transaksi yang sudah ada')
       }
-      console.log(`[Import] Transaksi existing ditemukan: ${existingTxs?.length || 0}`)
 
       const existingTxKeys = new Set(
         (existingTxs || []).map((t) => `${t.date}|${t.amount}|${(t.description || '').toLowerCase().trim()}|${t.wallet_id}`)
@@ -253,10 +241,8 @@ export function useDataImport() {
       let importedCount = 0
       const importedIds = []
       const CHUNK = 100
-      console.log(`[Import] Mulai insert ${batch.length} transaksi dalam ${Math.ceil(batch.length / CHUNK)} batch...`)
       for (let i = 0; i < batch.length; i += CHUNK) {
         const chunk = batch.slice(i, i + CHUNK)
-        console.log(`[Import] Inserting batch ${Math.floor(i / CHUNK) + 1} (${chunk.length} rows)...`)
         const { data: inserted, error: txError } = await supabase
           .from('transactions')
           .insert(chunk)
@@ -265,12 +251,10 @@ export function useDataImport() {
           console.error(`[Import] Batch ${Math.floor(i / CHUNK) + 1} error:`, txError)
           errors.push(`Batch ${Math.floor(i / CHUNK) + 1}: ${txError.message}`)
         } else {
-          console.log(`[Import] Batch ${Math.floor(i / CHUNK) + 1} berhasil: ${inserted.length} transaksi`)
           importedCount += inserted.length
           importedIds.push(...inserted.map(r => r.id))
         }
       }
-      console.log(`[Import] Selesai. Imported: ${importedCount}, duplikat: ${skippedDuplicate}, invalid: ${skippedInvalid}, system: ${systemSkipped}`)
 
       return {
         totalCsv: rawData.length,

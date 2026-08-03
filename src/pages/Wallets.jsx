@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { motion, useReducedMotion } from 'framer-motion'
 import { Plus, Wallet, ArrowLeftRight } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { WalletCard } from '@/components/wallets/WalletCard'
@@ -12,6 +13,7 @@ import { formatCurrency } from '@/lib/utils'
 
 export default function Wallets() {
   const toast = useToast()
+  const reduceMotion = useReducedMotion()
   const { data: wallets, isLoading } = useWallets()
   const deleteMutation = useDeleteWallet()
 
@@ -93,15 +95,15 @@ export default function Wallets() {
       {isLoading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {[...Array(3)].map((_, i) => (
-            <div key={i} className="bg-white rounded-2xl border border-gray-200 p-5 animate-pulse">
+            <div key={i} className="bg-surface rounded-2xl border border-line p-5 animate-pulse">
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-12 h-12 bg-gray-100 rounded-xl" />
+                <div className="w-12 h-12 bg-surface-2 rounded-xl" />
                 <div>
-                  <div className="h-4 bg-gray-100 rounded w-24 mb-1" />
-                  <div className="h-3 bg-gray-100 rounded w-16" />
+                  <div className="h-4 bg-surface-2 rounded w-24 mb-1" />
+                  <div className="h-3 bg-surface-2 rounded w-16" />
                 </div>
               </div>
-              <div className="h-6 bg-gray-100 rounded w-32" />
+              <div className="h-6 bg-surface-2 rounded w-32" />
             </div>
           ))}
         </div>
@@ -117,14 +119,20 @@ export default function Wallets() {
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {wallets.map((wallet) => (
-            <WalletCard
+          {wallets.map((wallet, i) => (
+            <motion.div
               key={wallet.id}
-              wallet={wallet}
-              onEdit={handleEdit}
-              onDelete={setDeleteId}
-              onTransfer={handleTransfer}
-            />
+              initial={reduceMotion ? false : { opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.25, delay: Math.min(i * 0.04, 0.24), ease: 'easeOut' }}
+            >
+              <WalletCard
+                wallet={wallet}
+                onEdit={handleEdit}
+                onDelete={setDeleteId}
+                onTransfer={handleTransfer}
+              />
+            </motion.div>
           ))}
         </div>
       )}
