@@ -4,7 +4,6 @@ import {
   Cell,
   Tooltip,
   ResponsiveContainer,
-  Legend,
 } from 'recharts'
 import { formatCurrency } from '@/lib/utils'
 import { useCategorySpending } from '@/hooks/useTransactions'

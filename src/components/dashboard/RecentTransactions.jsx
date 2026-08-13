@@ -1,6 +1,5 @@
 import { Link } from 'react-router-dom'
 import { motion, useReducedMotion } from 'framer-motion'
-import { ArrowUpRight, ArrowDownRight, ArrowLeftRight } from 'lucide-react'
 import { formatCurrency, formatDateShort } from '@/lib/utils'
 import { useRecentTransactions } from '@/hooks/useTransactions'
 
@@ -18,15 +17,6 @@ function TransactionAmount({ type, amount }) {
       {formatCurrency(amount)}
     </span>
   )
-}
-
-function TypeIcon({ type }) {
-  const iconProps = { className: 'w-4 h-4' }
-  if (type === 'income')
-    return <ArrowUpRight {...iconProps} style={{ color: '#16A34A' }} />
-  if (type === 'expense')
-    return <ArrowDownRight {...iconProps} style={{ color: '#DC2626' }} />
-  return <ArrowLeftRight {...iconProps} style={{ color: 'var(--accent-ink)' }} />
 }
 
 export function RecentTransactions() {

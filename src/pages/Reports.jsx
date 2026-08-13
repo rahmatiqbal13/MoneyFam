@@ -399,7 +399,7 @@ function DayTransactionsModal({ date, onClose, onTransactionDeleted }) {
               </div>
               <h3 className="text-lg font-semibold text-ink">Hapus Transaksi?</h3>
               <p className="text-sm text-ink-2 mt-1">
-                Transaksi "{deletingTx.description || deletingTx.categories?.name || 'Tanpa deskripsi'}" sebesar {formatCurrency(deletingTx.amount)} akan dihapus permanen.
+                Transaksi &quot;{deletingTx.description || deletingTx.categories?.name || 'Tanpa deskripsi'}&quot; sebesar {formatCurrency(deletingTx.amount)} akan dihapus permanen.
               </p>
             </div>
             <div className="flex gap-2">
@@ -833,7 +833,7 @@ function MonthlyView({ year, month }) {
 
 // ── Period view (harian/mingguan/tahunan) ─────────────────────────────────────
 
-function PeriodView({ period, dateFrom, dateTo, periodLabel, year }) {
+function PeriodView({ period, dateFrom, dateTo, periodLabel: _periodLabel, year }) {
   const { data: stats, isLoading } = usePeriodStats(dateFrom, dateTo)
   const { data: catData, isLoading: catLoading, isError: catError } = usePeriodCategoryDetail(dateFrom, dateTo)
   const { data: yearlyData, isLoading: yearlyLoading } = useYearlyStats(year)

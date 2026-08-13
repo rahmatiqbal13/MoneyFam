@@ -250,13 +250,13 @@ export function useUpdateDebtPayment() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async ({ 
-      paymentId, 
-      debtId,
-      amount, 
-      paymentDate, 
+    mutationFn: async ({
+      paymentId,
+      debtId: _debtId,
+      amount,
+      paymentDate,
       paymentTime,
-      note 
+      note
     }) => {
       const { error } = await supabase.rpc('update_debt_payment', {
         p_payment_id: paymentId,
@@ -282,7 +282,7 @@ export function useDeleteDebtPayment() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async ({ paymentId, debtId }) => {
+    mutationFn: async ({ paymentId, debtId: _debtId }) => {
       const { error } = await supabase.rpc('delete_debt_payment', {
         p_payment_id: paymentId
       })

@@ -3,7 +3,7 @@ import { motion, useReducedMotion } from 'framer-motion'
 import {
   Plus, Pencil, Trash2, Target, CheckCircle2,
   Calendar, TrendingDown, TrendingUp, Minus, CreditCard,
-  History, Clock, Wallet
+  History, Wallet
 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -406,6 +406,13 @@ function SavingsPaymentHistory({ goalId }) {
   const deleteMutation = useDeleteSavingsPayment()
   const toast = useToast()
 
+  const { triggerDelete } = useUndoableDelete(
+    async (payment) => {
+      await deleteMutation.mutateAsync({ paymentId: payment.id, goalId: payment.goal_id })
+    },
+    { itemName: 'Pembayaran' }
+  )
+
   if (isLoading) {
     return <div className="text-center py-4 text-ink-3 text-sm">Memuat riwayat...</div>
   }
@@ -433,16 +440,6 @@ function SavingsPaymentHistory({ goalId }) {
       toast.error(err.message || 'Gagal memperbarui')
     }
   }
-
-  const { triggerDelete } = useUndoableDelete(
-    async (payment) => {
-      await deleteMutation.mutateAsync({
-        paymentId: payment.id,
-        goalId: payment.goal_id,
-      })
-    },
-    { itemName: 'Pembayaran' }
-  )
 
   const handleDelete = () => {
     triggerDelete(deletePayment)
@@ -966,6 +963,16 @@ function DebtPaymentHistory({ debtId }) {
   const deleteMutation = useDeleteDebtPayment()
   const toast = useToast()
 
+  const { triggerDelete } = useUndoableDelete(
+    async (payment) => {
+      await deleteMutation.mutateAsync({
+        paymentId: payment.id,
+        debtId: payment.debt_id,
+      })
+    },
+    { itemName: 'Pembayaran' }
+  )
+
   if (isLoading) {
     return <div className="text-center py-4 text-ink-3 text-sm">Memuat riwayat...</div>
   }
@@ -977,7 +984,7 @@ function DebtPaymentHistory({ debtId }) {
   const handleUpdate = async (e) => {
     e.preventDefault()
     const formData = new FormData(e.target)
-    
+
     try {
       await updateMutation.mutateAsync({
         paymentId: editPayment.id,
@@ -993,16 +1000,6 @@ function DebtPaymentHistory({ debtId }) {
       toast.error(err.message || 'Gagal memperbarui')
     }
   }
-
-  const { triggerDelete } = useUndoableDelete(
-    async (payment) => {
-      await deleteMutation.mutateAsync({
-        paymentId: payment.id,
-        debtId: payment.debt_id,
-      })
-    },
-    { itemName: 'Pembayaran' }
-  )
 
   const handleDelete = () => {
     triggerDelete(deletePayment)
@@ -1255,7 +1252,6 @@ function DebtCard({ debt, onEdit, onDelete, onPay, onMarkPaid }) {
 // ── Savings Goals Tab ─────────────────────────────────────────────────────────
 
 function SavingsGoalsTab() {
-  const toast = useToast()
   const reduceMotion = useReducedMotion()
   const { data: goals, isLoading } = useSavingsGoals()
   const deleteMutation = useDeleteSavingsGoal()

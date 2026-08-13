@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Modal, ModalBody, ModalFooter } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -41,6 +41,7 @@ export function TransactionModal({ isOpen, onClose, transaction = null }) {
   const [receiptFile, setReceiptFile] = useState(null)
   const [receiptPreview, setReceiptPreview] = useState(null)
   const [uploading, setUploading] = useState(false)
+  const abortControllerRef = useRef(null)
 
   const { data: categories } = useCategories()
   const { data: wallets } = useWallets()
@@ -126,6 +127,8 @@ export function TransactionModal({ isOpen, onClose, transaction = null }) {
   }
 
   const cancelUpload = () => {
+    abortControllerRef.current?.abort()
+    abortControllerRef.current = null
     setUploading(false)
     setReceiptFile(null)
     if (receiptPreview && receiptPreview.startsWith('blob:')) {
@@ -137,6 +140,7 @@ export function TransactionModal({ isOpen, onClose, transaction = null }) {
   const uploadReceipt = async () => {
     if (!receiptFile || !user) return null
 
+    abortControllerRef.current = new AbortController()
     setUploading(true)
     try {
       const fileExt = receiptFile.name.split('.').pop()
@@ -146,7 +150,8 @@ export function TransactionModal({ isOpen, onClose, transaction = null }) {
         .from('receipts')
         .upload(fileName, receiptFile, {
           cacheControl: '3600',
-          upsert: false
+          upsert: false,
+          signal: abortControllerRef.current.signal,
         })
 
       const timeoutPromise = new Promise((_, reject) =>
@@ -163,9 +168,12 @@ export function TransactionModal({ isOpen, onClose, transaction = null }) {
 
       return publicUrl
     } catch (error) {
-      toast.error('Gagal upload nota: ' + (error.message || 'Terjadi kesalahan saat upload'))
+      if (error.name !== 'AbortError') {
+        toast.error('Gagal upload nota: ' + (error.message || 'Terjadi kesalahan saat upload'))
+      }
       return null
     } finally {
+      abortControllerRef.current = null
       setUploading(false)
     }
   }

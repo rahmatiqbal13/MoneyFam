@@ -7,12 +7,10 @@ import { WalletModal } from '@/components/wallets/WalletModal'
 import { TransferModal } from '@/components/wallets/TransferModal'
 import { ConfirmModal } from '@/components/ui/Modal'
 import { useUndoableDelete } from '@/hooks/useUndoableDelete'
-import { useToast } from '@/components/ui/Toast'
 import { useWallets, useDeleteWallet } from '@/hooks/useWallets'
 import { formatCurrency } from '@/lib/utils'
 
 export default function Wallets() {
-  const toast = useToast()
   const reduceMotion = useReducedMotion()
   const { data: wallets, isLoading } = useWallets()
   const deleteMutation = useDeleteWallet()

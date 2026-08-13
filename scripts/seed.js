@@ -174,14 +174,12 @@ async function seed() {
     { family_id: family.id, user_id: null,     name: 'Tabungan Keluarga', type: 'savings', icon: '🏠', color: '#ec4899', initial_balance: 15000000, balance: 15000000 },
   ].filter((w) => !existingWalletNames.has(w.name))
 
-  let wallets = existingWallets || []
   if (walletRows.length) {
     const { data, error } = await supabase
       .from('wallets')
       .insert(walletRows)
       .select()
     if (error) throw new Error('Gagal buat wallets: ' + error.message)
-    wallets = [...wallets, ...data]
     console.log(`✅ ${data.length} wallet baru dibuat`)
   } else {
     console.log('♻️  Wallets sudah ada, dilewati')

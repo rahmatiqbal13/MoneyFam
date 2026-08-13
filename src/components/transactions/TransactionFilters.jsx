@@ -1,7 +1,5 @@
 import { Search, X, Filter } from 'lucide-react'
 import { Select } from '@/components/ui/Select'
-import { Input } from '@/components/ui/Input'
-import { Button } from '@/components/ui/Button'
 import { useTransactionStore } from '@/stores/transactionStore'
 import { useCategories } from '@/hooks/useCategories'
 import { useWallets } from '@/hooks/useWallets'

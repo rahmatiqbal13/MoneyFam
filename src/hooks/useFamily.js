@@ -69,9 +69,11 @@ export function useCreateFamily() {
       // Seed kategori default untuk keluarga baru (optional, don't fail if error)
       try {
         const { error: seedError } = await supabase.rpc('seed_default_categories', { p_family_id: familyId })
-        if (seedError) {
+        if (seedError) {
+          console.warn(seedError)
         }
-      } catch (seedErr) {
+      } catch (seedErr) {
+        console.warn(seedErr)
       }
 
       return { familyId, name: familyName.trim() }

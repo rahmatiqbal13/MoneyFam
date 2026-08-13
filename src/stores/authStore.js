@@ -16,7 +16,7 @@ export const useAuthStore = create((set, get) => ({
   initialize: async () => {
     // Singleton promise guard: prevent double registration in StrictMode
     if (get().initialized) return () => {}
-    set({ loading: true, initialized: true, initError: null })
+    set({ loading: true, initError: null })
 
     try {
       const { data: { session } } = await supabase.auth.getSession()
@@ -31,7 +31,7 @@ export const useAuthStore = create((set, get) => ({
       console.error('Auth init error:', err)
       set({ user: null, profile: null, family: null, initError: err.message })
     } finally {
-      set({ loading: false })
+      set({ loading: false, initialized: true })
     }
 
     // Setup auth state change listener

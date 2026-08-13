@@ -9,7 +9,7 @@ const QUERY_KEY = 'transactions'
 const PAGE_SIZE = 50
 
 // Helper to create budget warning notification
-async function checkAndCreateBudgetWarning(familyId, userId, categoryId, amount) {
+async function checkAndCreateBudgetWarning(familyId, userId, categoryId, _amount) {
   if (!categoryId || !userId) return
   
   const now = new Date()
@@ -904,9 +904,9 @@ export function useDeleteAllTransactions() {
     mutationFn: async () => {
       let error
       if (family?.id) {
-        ;({ error } = await supabase.rpc('delete_all_family_transactions', { p_family_id: family.id }))
+        ({ error } = await supabase.rpc('delete_all_family_transactions', { p_family_id: family.id }))
       } else {
-        ;({ error } = await supabase.rpc('delete_all_user_transactions', { p_user_id: user.id }))
+        ({ error } = await supabase.rpc('delete_all_user_transactions', { p_user_id: user.id }))
       }
       if (error) throw error
     },

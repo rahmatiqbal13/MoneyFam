@@ -33,7 +33,7 @@ export function parseCSV(csvContent) {
 function escapeCSVFormula(value) {
   if (typeof value !== 'string') return value
   // Prefix cells starting with formula characters
-  if (/^[=+\-@\t\r]/.test(value)) return `\'${value}`
+  if (/^[=+\-@\t\r]/.test(value)) return `'${value}`
   return value
 }
 
@@ -127,7 +127,7 @@ export function mapOlloType(olloType) {
  * @returns {string} Date string in YYYY-MM-DD format
  */
 export function parseOlloDate(olloDate) {
-  if (!olloDate) {
+  if (!olloDate) {
     return new Date().toISOString().split('T')[0]
   }
   
@@ -136,7 +136,7 @@ export function parseOlloDate(olloDate) {
   const datePart = olloDate.split(' ')[0]
   
   // Validate format YYYY-MM-DD
-  if (!datePart || !/^\d{4}-\d{2}-\d{2}$/.test(datePart)) {
+  if (!datePart || !/^\d{4}-\d{2}-\d{2}$/.test(datePart)) {
     return new Date().toISOString().split('T')[0]
   }
   

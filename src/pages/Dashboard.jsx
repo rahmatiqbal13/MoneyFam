@@ -1,4 +1,4 @@
-import { TrendingUp, TrendingDown, PiggyBank, Wallet, TrendingUp as InvestmentIcon, Settings } from 'lucide-react'
+import { TrendingUp, TrendingDown, PiggyBank, Wallet, Settings } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'

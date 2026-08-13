@@ -51,12 +51,13 @@ export function useUndoableDelete(deleteFn, options = {}) {
 
   // Safety: jika komponen unmount, eksekusi semua pending delete segera
   useEffect(() => {
+    const timers = timersRef.current
     return () => {
-      timersRef.current.forEach((timer, id) => {
+      timers.forEach((timer, id) => {
         clearTimeout(timer)
         deleteFn(id).catch(() => {})
       })
-      timersRef.current.clear()
+      timers.clear()
     }
   }, [deleteFn])
 

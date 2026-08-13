@@ -229,7 +229,7 @@ export default function Settings() {
     e.preventDefault()
     if (!newFamilyName.trim()) return
     try {
-      const result = await createFamilyMutation.mutateAsync(newFamilyName)
+      await createFamilyMutation.mutateAsync(newFamilyName)
 
       toast.success('Keluarga berhasil dibuat!')
       setNewFamilyName('')
