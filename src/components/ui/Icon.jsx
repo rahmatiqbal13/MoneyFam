@@ -19,8 +19,9 @@ const MAP = {
   book: BookOpen, crown: Crown,
 }
 
-export function Icon({ name, size = 20, strokeWidth = 1.75, className, style }) {
+export function Icon({ name, size = 20, stroke, strokeWidth, className, style }) {
   const C = MAP[name]
   if (!C) return null
-  return <C size={size} strokeWidth={strokeWidth} className={className} style={style} aria-hidden="true" />
+  const width = stroke ?? strokeWidth ?? 1.75
+  return <C size={size} strokeWidth={width} className={className} style={style} aria-hidden="true" />
 }
