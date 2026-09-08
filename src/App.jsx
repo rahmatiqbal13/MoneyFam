@@ -6,6 +6,7 @@ import { Layout } from '@/components/layout/Layout'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import PWAInstallPrompt from '@/components/PWAInstallPrompt'
 import { useAuthStore } from '@/stores/authStore'
+import { useThemeStore } from '@/stores/themeStore'
 
 // Pages — Login/Register/ForgotPassword/ResetPassword/Dashboard load eagerly
 // (first thing an unauthenticated or freshly-logged-in user sees). The rest
@@ -97,6 +98,11 @@ function AppInitializer({ children }) {
       }
     }
   }, [initialize])
+
+  const uiPrefs = useAuthStore((s) => s.profile?.ui_prefs)
+  useEffect(() => {
+    if (uiPrefs) useThemeStore.getState().hydrate(uiPrefs)
+  }, [uiPrefs])
 
   // Show loading while initializing auth
   if (!initialized) {
