@@ -1,83 +1,23 @@
 import { NavLink, useNavigate } from 'react-router-dom'
-import {
-  LayoutDashboard,
-  ArrowLeftRight,
-  Wallet,
-  PieChart,
-  BarChart3,
-  Settings,
-  LogOut,
-  X,
-  Tag,
-  PiggyBank,
-  TrendingUp,
-  Calculator,
-  Bell,
-  ChevronDown,
-} from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/stores/authStore'
 import { useUnreadNotificationsCount } from '@/hooks/useNotifications'
-
-const navItems = [
-  { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
-  { to: '/transactions', icon: ArrowLeftRight, label: 'Transaksi' },
-  { to: '/wallets', icon: Wallet, label: 'Kantong' },
-  { to: '/budget', icon: PieChart, label: 'Anggaran' },
-  { to: '/reports', icon: BarChart3, label: 'Laporan' },
-  { to: '/savings', icon: PiggyBank, label: 'Tabungan & Hutang' },
-  { to: '/investments', icon: TrendingUp, label: 'Investasi' },
-  { to: '/pension', icon: Calculator, label: 'Dana Pensiun' },
-  { to: '/categories', icon: Tag, label: 'Kategori' },
-  { to: '/notifications', icon: Bell, label: 'Notifikasi', showBadge: true },
-  { to: '/settings', icon: Settings, label: 'Pengaturan' },
-]
-
-function Logo({ size = 36 }) {
-  return (
-    <div
-      style={{
-        width: size,
-        height: size,
-        borderRadius: size * 0.32,
-        background: 'var(--accent)',
-        color: '#fff',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        boxShadow: 'inset 0 -2px 0 rgba(0,0,0,.15), inset 0 2px 0 rgba(255,255,255,.2)',
-        flexShrink: 0,
-      }}
-    >
-      <svg width={size * 0.62} height={size * 0.62} viewBox="0 0 24 24" fill="none">
-        <path
-          d="M4 18 L4 7 L9 13 L14 7 L14 18 M14 13 a4 4 0 1 0 6 0 a4 4 0 1 0 -6 0"
-          stroke="currentColor"
-          strokeWidth="2.4"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </svg>
-    </div>
-  )
-}
+import { useFamilyMembers } from '@/hooks/useFamily'
+import { NAV } from './navItems'
+import { Logo } from './Logo'
+import { Icon } from '@/components/ui/Icon'
+import { Avatar, AvatarStack } from '@/components/ui/Avatar'
 
 export function Sidebar({ isOpen, onClose }) {
   const navigate = useNavigate()
   const { user, profile, family, logout } = useAuthStore()
   const { data: unreadCount } = useUnreadNotificationsCount()
+  const members = useFamilyMembers().data || []
 
   const handleLogout = async () => {
     await logout()
     navigate('/login')
   }
-
-  const initials = (profile?.full_name || user?.email || 'U')
-    .split(' ')
-    .slice(0, 2)
-    .map((w) => w[0])
-    .join('')
-    .toUpperCase()
 
   return (
     <>
@@ -124,35 +64,36 @@ export function Sidebar({ isOpen, onClose }) {
             onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
             aria-label="Tutup sidebar"
           >
-            <X className="w-5 h-5" />
+            <Icon name="x" size={20} />
           </button>
         </div>
 
         {/* Family card */}
-        {family && (
-          <div
-            className="mx-4 mb-4 rounded-r-md px-3.5 py-3"
-            style={{
-              background: 'var(--surface-2)',
-              borderRadius: 'var(--r-sm)',
-            }}
-          >
-            <div className="flex items-center justify-between mb-1">
-              <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--ink-3)' }}>
-                Keluarga
-              </p>
-              <ChevronDown className="w-3.5 h-3.5" style={{ color: 'var(--ink-3)' }} />
-            </div>
-            <p className="text-sm font-bold truncate" style={{ color: 'var(--ink)' }}>
-              {family.name}
+        <div
+          className="mx-4 mb-4 px-3.5 py-3"
+          style={{
+            background: 'var(--surface-2)',
+            borderRadius: 'var(--r-sm)',
+          }}
+        >
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--ink-3)' }}>
+              Keluarga
             </p>
+            <Icon name="chevronD" size={16} style={{ color: 'var(--ink-3)' }} />
           </div>
-        )}
+          <p className="text-sm font-bold truncate" style={{ color: 'var(--ink)' }}>
+            {family?.name || 'Mode Personal'}
+          </p>
+          <div className="mt-2">
+            <AvatarStack members={members} size={28} />
+          </div>
+        </div>
 
         {/* Nav */}
         <nav className="flex-1 px-3 overflow-y-auto scrollbar-hide">
           <ul className="space-y-0.5">
-            {navItems.map((item) => (
+            {NAV.map((item) => (
               <li key={item.to}>
                 <NavLink
                   to={item.to}
@@ -179,9 +120,9 @@ export function Sidebar({ isOpen, onClose }) {
                     }
                   }}
                 >
-                  <item.icon className="w-5 h-5 flex-shrink-0" />
+                  <Icon name={item.icon} size={20} className="flex-shrink-0" />
                   <span className="flex-1">{item.label}</span>
-                  {item.showBadge && unreadCount > 0 && (
+                  {item.id === 'notifications' && unreadCount > 0 && (
                     <span
                       className="text-white text-xs font-bold px-1.5 py-0.5 rounded-full min-w-[1.25rem] text-center"
                       style={{ background: '#EF4444', fontSize: 10 }}
@@ -198,26 +139,13 @@ export function Sidebar({ isOpen, onClose }) {
         {/* User & logout */}
         <div className="px-4 py-4" style={{ borderTop: '1px solid var(--line)' }}>
           <div className="flex items-center gap-3">
-            <div
-              className="flex-shrink-0 flex items-center justify-center rounded-full"
-              style={{
-                width: 36,
-                height: 36,
-                background: 'var(--accent)',
-                color: '#fff',
-                fontWeight: 700,
-                fontSize: 13,
-                boxShadow: 'inset 0 -2px 0 rgba(0,0,0,.15)',
-              }}
-            >
-              {initials}
-            </div>
+            <Avatar member={profile} size={36} />
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold truncate" style={{ color: 'var(--ink)' }}>
                 {profile?.full_name || 'User'}
               </p>
               <p className="text-xs truncate" style={{ color: 'var(--ink-3)' }}>
-                {user?.email}
+                {profile?.email || user?.email}
               </p>
             </div>
             <button
@@ -235,7 +163,7 @@ export function Sidebar({ isOpen, onClose }) {
                 e.currentTarget.style.color = 'var(--ink-3)'
               }}
             >
-              <LogOut className="w-4 h-4" />
+              <Icon name="logout" size={16} />
             </button>
           </div>
         </div>
