@@ -7,7 +7,8 @@ import { SegmentedControl } from '@/components/ui/SegmentedControl'
 import { useToast } from '@/components/ui/Toast'
 import { useCategories } from '@/hooks/useCategories'
 import { useWallets } from '@/hooks/useWallets'
-import { useCreateTransaction, useUpdateTransaction } from '@/hooks/useTransactions'
+import { useCreateTransaction, useUpdateTransaction, useDeleteTransaction } from '@/hooks/useTransactions'
+import { useUndoableDelete } from '@/hooks/useUndoableDelete'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/stores/authStore'
 
@@ -48,6 +49,20 @@ export function TransactionModal({ isOpen, onClose, transaction = null }) {
   const { data: wallets } = useWallets()
   const createMutation = useCreateTransaction()
   const updateMutation = useUpdateTransaction()
+  const deleteMutation = useDeleteTransaction()
+
+  const { triggerDelete } = useUndoableDelete(
+    async (id) => {
+      await deleteMutation.mutateAsync(id)
+    },
+    { itemName: 'Transaksi' }
+  )
+
+  const handleDelete = () => {
+    if (!transaction?.id) return
+    triggerDelete(transaction.id)
+    onClose()
+  }
 
   const loading = createMutation.isPending || updateMutation.isPending || uploading
 
@@ -444,13 +459,26 @@ export function TransactionModal({ isOpen, onClose, transaction = null }) {
             )}
           </div>
         </ModalBody>
-        <ModalFooter>
-          <Button variant="secondary" type="button" onClick={onClose} disabled={loading}>
-            Batal
-          </Button>
-          <Button type="submit" loading={loading}>
-            {isEdit ? 'Simpan' : 'Tambah'}
-          </Button>
+        <ModalFooter className={isEdit ? 'justify-between' : undefined}>
+          {isEdit && (
+            <Button
+              variant="ghost"
+              type="button"
+              onClick={handleDelete}
+              disabled={loading}
+              style={{ color: 'var(--bad)' }}
+            >
+              Hapus
+            </Button>
+          )}
+          <div className="flex gap-2">
+            <Button variant="secondary" type="button" onClick={onClose} disabled={loading}>
+              Batal
+            </Button>
+            <Button type="submit" loading={loading}>
+              {isEdit ? 'Simpan' : 'Tambah'}
+            </Button>
+          </div>
         </ModalFooter>
       </form>
     </Modal>

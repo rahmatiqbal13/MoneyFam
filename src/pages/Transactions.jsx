@@ -4,9 +4,15 @@ import { StatTile } from '@/components/ui/StatTile'
 import { SegmentedControl } from '@/components/ui/SegmentedControl'
 import { Avatar } from '@/components/ui/Avatar'
 import { Icon } from '@/components/ui/Icon'
+import { Sheet } from '@/components/ui/Sheet'
+import { Input } from '@/components/ui/Input'
+import { Select } from '@/components/ui/Select'
+import { Button } from '@/components/ui/Button'
 import { TransactionModal } from '@/components/transactions/TransactionModal'
 import { useTransactions, useMonthlyStats, TRANSACTIONS_PAGE_SIZE } from '@/hooks/useTransactions'
 import { useFamilyMembers } from '@/hooks/useFamily'
+import { useCategories } from '@/hooks/useCategories'
+import { useWallets } from '@/hooks/useWallets'
 import { useTransactionStore } from '@/stores/transactionStore'
 import { idrShort, fmtRelative } from '@/lib/utils'
 
@@ -15,6 +21,8 @@ const TYPE_OPTIONS = [
   { id: 'income', label: 'Masuk' },
   { id: 'expense', label: 'Keluar' },
 ]
+
+const EMPTY_ADVANCED = { search: '', category_id: '', wallet_id: '', dateFrom: '', dateTo: '' }
 
 function TransactionRow({ tx, onClick }) {
   const isIncome = tx.type === 'income'
@@ -68,10 +76,14 @@ export default function Transactions() {
   const expense = stats?.expense || 0
 
   const { data: members = [] } = useFamilyMembers()
-  const [memberId, setMemberId] = useState('all')
+  const { data: categories = [] } = useCategories()
+  const { data: wallets = [] } = useWallets()
 
   const [modalOpen, setModalOpen] = useState(false)
   const [editingTx, setEditingTx] = useState(null)
+
+  const [filterOpen, setFilterOpen] = useState(false)
+  const [draft, setDraft] = useState(EMPTY_ADVANCED)
 
   const handleEdit = (tx) => {
     setEditingTx(tx)
@@ -86,11 +98,36 @@ export default function Transactions() {
     setEditingTx(null)
   }
 
-  const shown = memberId === 'all' ? transactions : transactions.filter((t) => t.user_id === memberId)
+  const openFilter = () => {
+    setDraft({
+      search: filters.search || '',
+      category_id: filters.category_id || '',
+      wallet_id: filters.wallet_id || '',
+      dateFrom: filters.dateFrom || '',
+      dateTo: filters.dateTo || '',
+    })
+    setFilterOpen(true)
+  }
+  const applyFilter = () => {
+    setFilters(draft)
+    setFilterOpen(false)
+  }
+  const resetFilter = () => {
+    setDraft(EMPTY_ADVANCED)
+    setFilters(EMPTY_ADVANCED)
+    setFilterOpen(false)
+  }
+
+  const memberId = filters.user_id || 'all'
+  const setMemberId = (id) => setFilters({ user_id: id === 'all' ? '' : id })
+
+  const advancedActive =
+    !!filters.search || !!filters.category_id || !!filters.wallet_id || !!filters.dateFrom || !!filters.dateTo
+  const hasActiveFilter = !!filters.type || memberId !== 'all' || advancedActive
 
   const groups = []
   const groupIndex = {}
-  shown.forEach((t) => {
+  transactions.forEach((t) => {
     const key = fmtRelative(t.date)
     if (groupIndex[key] === undefined) {
       groupIndex[key] = groups.length
@@ -98,8 +135,6 @@ export default function Transactions() {
     }
     groups[groupIndex[key]][1].push(t)
   })
-
-  const hasActiveFilter = !!filters.type || memberId !== 'all'
 
   return (
     <div className="space-y-4 max-w-5xl mx-auto pb-24 lg:pb-8">
@@ -120,12 +155,35 @@ export default function Transactions() {
       {/* Filters */}
       <Card padding={16}>
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <SegmentedControl
-            size="sm"
-            value={filters.type || 'all'}
-            options={TYPE_OPTIONS}
-            onChange={(id) => setFilters({ type: id === 'all' ? undefined : id })}
-          />
+          <div className="flex flex-wrap items-center gap-2">
+            <SegmentedControl
+              size="sm"
+              value={filters.type || 'all'}
+              options={TYPE_OPTIONS}
+              onChange={(id) => setFilters({ type: id === 'all' ? '' : id })}
+            />
+            <button
+              type="button"
+              onClick={openFilter}
+              className="relative inline-flex items-center gap-1.5"
+              style={{
+                padding: '8px 14px', borderRadius: 999, fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                border: '1px solid ' + (advancedActive ? 'var(--ink)' : 'var(--line)'),
+                background: 'transparent', color: 'var(--ink-2)',
+              }}
+            >
+              <Icon name="filter" size={15} />
+              Filter
+              {advancedActive && (
+                <span
+                  style={{
+                    position: 'absolute', top: -3, right: -3, width: 9, height: 9,
+                    borderRadius: '50%', background: 'var(--accent)', border: '2px solid var(--surface)',
+                  }}
+                />
+              )}
+            </button>
+          </div>
           {members.length > 0 && (
             <div className="flex items-center gap-2 flex-wrap">
               <button
@@ -174,7 +232,7 @@ export default function Transactions() {
             </div>
           ))}
         </div>
-      ) : shown.length === 0 ? (
+      ) : transactions.length === 0 ? (
         <Card padding={0}>
           <div className="py-16 text-center">
             <p className="text-sm" style={{ color: 'var(--ink-3)' }}>
@@ -183,7 +241,7 @@ export default function Transactions() {
             {hasActiveFilter && (
               <button
                 type="button"
-                onClick={() => { resetFilters(); setMemberId('all') }}
+                onClick={() => resetFilters()}
                 className="mt-2 text-sm font-semibold hover:underline"
                 style={{ color: 'var(--accent-ink)' }}
               >
@@ -280,6 +338,66 @@ export default function Transactions() {
       >
         <Icon name="plus" size={18} stroke={2.4} /> Catat Transaksi
       </button>
+
+      <Sheet open={filterOpen} onClose={() => setFilterOpen(false)} title="Filter Transaksi">
+        <div className="space-y-4">
+          <Input
+            label="Cari deskripsi"
+            type="text"
+            placeholder="Makan siang, belanja..."
+            value={draft.search}
+            onChange={(e) => setDraft({ ...draft, search: e.target.value })}
+          />
+          <Select
+            label="Kategori"
+            value={draft.category_id}
+            onChange={(e) => setDraft({ ...draft, category_id: e.target.value })}
+          >
+            <option value="">Semua kategori</option>
+            {categories.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.icon} {c.name}
+              </option>
+            ))}
+          </Select>
+          <Select
+            label="Kantong"
+            value={draft.wallet_id}
+            onChange={(e) => setDraft({ ...draft, wallet_id: e.target.value })}
+          >
+            <option value="">Semua kantong</option>
+            {wallets.map((w) => (
+              <option key={w.id} value={w.id}>
+                {w.icon} {w.name}
+              </option>
+            ))}
+          </Select>
+          <div className="flex gap-2">
+            <Input
+              label="Dari"
+              type="date"
+              className="flex-1"
+              value={draft.dateFrom}
+              onChange={(e) => setDraft({ ...draft, dateFrom: e.target.value })}
+            />
+            <Input
+              label="Sampai"
+              type="date"
+              className="flex-1"
+              value={draft.dateTo}
+              onChange={(e) => setDraft({ ...draft, dateTo: e.target.value })}
+            />
+          </div>
+          <div className="flex gap-2 pt-2">
+            <Button variant="secondary" type="button" className="flex-1" onClick={resetFilter}>
+              Reset
+            </Button>
+            <Button type="button" className="flex-1" onClick={applyFilter}>
+              Terapkan
+            </Button>
+          </div>
+        </div>
+      </Sheet>
 
       <TransactionModal isOpen={modalOpen} onClose={handleClose} transaction={editingTx} />
     </div>

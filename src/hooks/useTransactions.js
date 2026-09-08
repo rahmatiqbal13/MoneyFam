@@ -216,6 +216,7 @@ export function useTransactions(filters = {}, page = 0) {
       if (filters.type) query = query.eq('type', filters.type)
       if (filters.category_id) query = query.eq('category_id', filters.category_id)
       if (filters.wallet_id) query = query.eq('wallet_id', filters.wallet_id)
+      if (filters.user_id) query = query.eq('user_id', filters.user_id)
       if (filters.dateFrom) query = query.gte('date', filters.dateFrom)
       if (filters.dateTo) query = query.lte('date', filters.dateTo)
       if (filters.search) {
