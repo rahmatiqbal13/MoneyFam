@@ -1,6 +1,8 @@
-import { Menu, Bell } from 'lucide-react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useUnreadNotificationsCount } from '@/hooks/useNotifications'
+import { useAuthStore } from '@/stores/authStore'
+import { formatMonthYear } from '@/lib/utils'
+import { Icon } from '@/components/ui/Icon'
 
 const pageMeta = {
   '/':             { title: 'Dashboard',          subtitle: 'Ringkasan keuangan keluarga' },
@@ -19,8 +21,16 @@ const pageMeta = {
 export function Header({ onMenuClick }) {
   const location = useLocation()
   const navigate = useNavigate()
-  const meta = pageMeta[location.pathname] || { title: 'MoneyFam', subtitle: '' }
+  const { family } = useAuthStore()
   const { data: unreadCount } = useUnreadNotificationsCount()
+
+  const meta = pageMeta[location.pathname] || { title: 'MoneyFam', subtitle: '' }
+  let subtitle = meta.subtitle
+  if (location.pathname === '/') {
+    subtitle = `Halo, ${family?.name || 'Keluarga'} 👋`
+  } else if (location.pathname === '/transactions' || location.pathname === '/budget') {
+    subtitle = formatMonthYear(new Date().toISOString())
+  }
 
   return (
     <header
@@ -41,12 +51,12 @@ export function Header({ onMenuClick }) {
           onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
           aria-label="Buka menu"
         >
-          <Menu className="w-5 h-5" />
+          <Icon name="menu" size={20} />
         </button>
         <div className="min-w-0">
-          {meta.subtitle && (
+          {subtitle && (
             <p className="text-xs font-semibold mb-0.5" style={{ color: 'var(--ink-3)' }}>
-              {meta.subtitle}
+              {subtitle}
             </p>
           )}
           <h1
@@ -67,7 +77,7 @@ export function Header({ onMenuClick }) {
           onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
           aria-label="Notifikasi"
         >
-          <Bell className="w-5 h-5" />
+          <Icon name="bell" size={20} />
           {unreadCount > 0 && (
             <span
               className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full"

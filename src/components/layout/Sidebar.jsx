@@ -8,7 +8,7 @@ import { Logo } from './Logo'
 import { Icon } from '@/components/ui/Icon'
 import { Avatar, AvatarStack } from '@/components/ui/Avatar'
 
-export function Sidebar({ isOpen, onClose }) {
+export function Sidebar() {
   const navigate = useNavigate()
   const { user, profile, family, logout } = useAuthStore()
   const { data: unreadCount } = useUnreadNotificationsCount()
@@ -20,53 +20,28 @@ export function Sidebar({ isOpen, onClose }) {
   }
 
   return (
-    <>
-      {/* Mobile overlay */}
-      {isOpen && (
-        <div
-          className="fixed inset-0 z-40 lg:hidden"
-          style={{ background: 'rgba(42,36,24,.45)' }}
-          onClick={onClose}
-        />
-      )}
-
-      {/* Sidebar */}
-      <aside
-        className={cn(
-          'fixed top-0 left-0 h-full z-50 flex flex-col transition-transform duration-300',
-          'lg:translate-x-0 lg:static lg:z-auto',
-          isOpen ? 'translate-x-0' : '-translate-x-full'
-        )}
-        style={{
-          width: 264,
-          background: 'var(--surface)',
-          borderRight: '1px solid var(--line)',
-        }}
-      >
-        {/* Brand */}
-        <div className="flex items-center justify-between px-5 py-5">
-          <div className="flex items-center gap-2.5">
-            <Logo size={40} />
-            <div>
-              <div className="font-display font-semibold text-xl leading-tight" style={{ color: 'var(--ink)' }}>
-                MoneyFam
-              </div>
-              <div className="text-xs mt-0.5" style={{ color: 'var(--ink-3)' }}>
-                Keuangan Keluarga
-              </div>
+    <aside
+      className="hidden lg:flex flex-col flex-shrink-0 static h-full"
+      style={{
+        width: 264,
+        background: 'var(--surface)',
+        borderRight: '1px solid var(--line)',
+      }}
+    >
+      {/* Brand */}
+      <div className="flex items-center px-5 py-5">
+        <div className="flex items-center gap-2.5">
+          <Logo size={40} />
+          <div>
+            <div className="font-display font-semibold text-xl leading-tight" style={{ color: 'var(--ink)' }}>
+              MoneyFam
+            </div>
+            <div className="text-xs mt-0.5" style={{ color: 'var(--ink-3)' }}>
+              Keuangan Keluarga
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className="lg:hidden p-1.5 rounded-lg transition-colors"
-            style={{ color: 'var(--ink-3)' }}
-            onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--surface-2)')}
-            onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
-            aria-label="Tutup sidebar"
-          >
-            <Icon name="x" size={20} />
-          </button>
         </div>
+      </div>
 
         {/* Family card */}
         <div
@@ -98,7 +73,6 @@ export function Sidebar({ isOpen, onClose }) {
                 <NavLink
                   to={item.to}
                   end={item.to === '/'}
-                  onClick={onClose}
                   className={({ isActive }) =>
                     cn(
                       'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all duration-150',
@@ -168,6 +142,5 @@ export function Sidebar({ isOpen, onClose }) {
           </div>
         </div>
       </aside>
-    </>
   )
 }
