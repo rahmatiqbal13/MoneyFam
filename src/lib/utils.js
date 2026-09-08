@@ -131,3 +131,24 @@ export function formatDistanceToNow(dateString) {
     return ''
   }
 }
+
+export function idrShort(n) {
+  const v = Math.abs(n || 0)
+  const sign = n < 0 ? '-' : ''
+  if (v >= 1_000_000_000) return `${sign}Rp ${(v / 1_000_000_000).toFixed(1).replace('.', ',')} M`
+  if (v >= 1_000_000) return `${sign}Rp ${(v / 1_000_000).toFixed(1).replace('.', ',')} jt`
+  if (v >= 1_000) return `${sign}Rp ${Math.round(v / 1_000)} rb`
+  return `${sign}Rp ${Math.round(v)}`
+}
+
+export function fmtRelative(dateString) {
+  if (!dateString) return '-'
+  const dt = new Date(dateString)
+  const now = new Date()
+  const days = Math.round((now.setHours(0, 0, 0, 0) - new Date(dt).setHours(0, 0, 0, 0)) / 86_400_000)
+  if (days <= 0) return 'Hari ini'
+  if (days === 1) return 'Kemarin'
+  if (days < 7) return `${days} hari lalu`
+  if (days < 30) return `${Math.floor(days / 7)} minggu lalu`
+  return formatDate(dateString)
+}
