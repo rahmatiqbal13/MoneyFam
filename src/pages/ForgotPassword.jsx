@@ -1,9 +1,11 @@
 import { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
-import { DollarSign, ArrowLeft, MailCheck } from 'lucide-react'
+import { ArrowLeft, MailCheck } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
+import { Card } from '@/components/ui/Card'
+import { Logo } from '@/components/layout/Logo'
 import { useToast } from '@/components/ui/Toast'
 
 const RESEND_COOLDOWN = 60
@@ -69,98 +71,87 @@ export default function ForgotPassword() {
 
   return (
     <div
-      className="min-h-screen flex items-center justify-center p-4"
+      className="min-h-dvh flex items-center justify-center p-4"
       style={{ background: 'var(--bg)' }}
     >
-      <div className="w-full max-w-md">
-        <div className="flex flex-col items-center mb-8">
-          <div
-            className="w-14 h-14 flex items-center justify-center mb-3"
-            style={{
-              background: 'var(--accent)',
-              borderRadius: 18,
-              boxShadow: 'inset 0 -2px 0 rgba(0,0,0,.15)',
-              color: '#fff',
-            }}
-          >
-            <DollarSign className="w-8 h-8" />
+      <Card className="w-full max-w-[400px]" style={{ padding: 30 }}>
+        {/* Brand */}
+        <div className="flex flex-col items-center text-center mb-6">
+          <div className="flex items-center gap-2.5 mb-4">
+            <Logo size={40} />
+            <span className="font-display font-semibold text-2xl" style={{ color: 'var(--ink)' }}>
+              MoneyFam
+            </span>
           </div>
-          <h1 className="font-display font-semibold text-2xl" style={{ color: 'var(--ink)' }}>
-            MoneyFam
-          </h1>
-          <p className="text-sm mt-1" style={{ color: 'var(--ink-3)' }}>Keuangan Keluarga</p>
-        </div>
-
-        <div
-          className="p-6"
-          style={{
-            background: 'var(--surface)',
-            border: '1px solid var(--line)',
-            borderRadius: 'var(--r-xl)',
-            boxShadow: 'var(--shadow-md)',
-          }}
-        >
-          {!sent ? (
+          {!sent && (
             <>
-              <h2 className="text-lg font-semibold mb-1" style={{ color: 'var(--ink)' }}>
-                Lupa password?
-              </h2>
-              <p className="text-sm mb-5" style={{ color: 'var(--ink-3)' }}>
-                Masukkan email akun Anda. Kami akan mengirimkan link untuk mengatur ulang password.
+              <h1 className="font-display font-semibold text-xl" style={{ color: 'var(--ink)' }}>
+                Lupa Password
+              </h1>
+              <p className="text-sm mt-1" style={{ color: 'var(--ink-3)' }}>
+                Kami akan mengirimkan link untuk mengatur ulang password.
               </p>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <Input
-                  label="Email"
-                  type="email"
-                  placeholder="nama@email.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  error={error}
-                  required
-                  autoComplete="email"
-                  autoFocus
-                />
-                <Button type="submit" className="w-full" loading={loading}>
-                  Kirim Link Reset
-                </Button>
-              </form>
             </>
-          ) : (
-            <div className="flex flex-col items-center text-center gap-3 py-2">
-              <div
-                className="w-14 h-14 flex items-center justify-center"
-                style={{ background: 'var(--surface-2)', borderRadius: '50%', color: 'var(--accent-ink)' }}
-              >
-                <MailCheck className="w-7 h-7" />
-              </div>
-              <h2 className="text-lg font-semibold" style={{ color: 'var(--ink)' }}>
-                Periksa email Anda
-              </h2>
-              <p className="text-sm" style={{ color: 'var(--ink-3)' }}>
-                Jika <span className="font-medium">{email}</span> terdaftar, kami sudah mengirimkan link untuk mengatur ulang password. Link berlaku sementara — periksa juga folder spam.
-              </p>
-              <Button
-                variant="secondary"
-                className="w-full mt-2"
-                disabled={cooldown > 0}
-                onClick={handleSubmit}
-                loading={loading}
-              >
-                {cooldown > 0 ? `Kirim ulang (${cooldown}s)` : 'Kirim ulang'}
-              </Button>
-            </div>
           )}
-
-          <Link
-            to="/login"
-            className="flex items-center justify-center gap-1.5 text-sm font-semibold mt-4 hover:underline"
-            style={{ color: 'var(--accent-ink)' }}
-          >
-            <ArrowLeft className="w-3.5 h-3.5" />
-            Kembali ke halaman masuk
-          </Link>
         </div>
-      </div>
+
+        {!sent ? (
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <Input
+              label="Email"
+              type="email"
+              placeholder="nama@email.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              error={error}
+              required
+              autoComplete="email"
+              autoFocus
+            />
+            <Button type="submit" variant="primary" size="lg" className="w-full" loading={loading}>
+              Kirim Link Reset
+            </Button>
+          </form>
+        ) : (
+          <div className="flex flex-col items-center text-center gap-3 py-2">
+            <div
+              className="w-14 h-14 flex items-center justify-center"
+              style={{
+                background: 'color-mix(in srgb, var(--good) 15%, transparent)',
+                borderRadius: '50%',
+                color: 'var(--good)',
+              }}
+            >
+              <MailCheck className="w-7 h-7" />
+            </div>
+            <h2 className="font-display text-lg font-semibold" style={{ color: 'var(--ink)' }}>
+              Periksa email Anda
+            </h2>
+            <p className="text-sm" style={{ color: 'var(--ink-3)' }}>
+              Jika <span className="font-medium">{email}</span> terdaftar, kami sudah mengirimkan link untuk mengatur ulang password. Link berlaku sementara — periksa juga folder spam.
+            </p>
+            <Button
+              variant="secondary"
+              size="lg"
+              className="w-full mt-2"
+              disabled={cooldown > 0}
+              onClick={handleSubmit}
+              loading={loading}
+            >
+              {cooldown > 0 ? `Kirim ulang (${cooldown}s)` : 'Kirim ulang'}
+            </Button>
+          </div>
+        )}
+
+        <Link
+          to="/login"
+          className="flex items-center justify-center gap-1.5 text-sm font-semibold mt-5 hover:underline"
+          style={{ color: 'var(--accent-ink)' }}
+        >
+          <ArrowLeft className="w-3.5 h-3.5" />
+          Kembali ke Masuk
+        </Link>
+      </Card>
     </div>
   )
 }
