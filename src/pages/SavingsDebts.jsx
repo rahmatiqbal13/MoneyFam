@@ -2,18 +2,24 @@ import { useState, useEffect } from 'react'
 import { motion, useReducedMotion } from 'framer-motion'
 import {
   Plus, Pencil, Trash2, Target, CheckCircle2,
-  Calendar, TrendingDown, TrendingUp, Minus, CreditCard,
-  History, Wallet
+  Minus, History, Wallet
 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
-import { Card, CardContent } from '@/components/ui/Card'
+import { Card } from '@/components/ui/Card'
 import { Modal, ModalBody, ConfirmModal } from '@/components/ui/Modal'
 import { Badge } from '@/components/ui/Badge'
+import { HeroCard } from '@/components/ui/HeroCard'
+import { Ring } from '@/components/ui/Ring'
+import { Progress } from '@/components/ui/Progress'
+import { StatTile } from '@/components/ui/StatTile'
+import { Pill } from '@/components/ui/Pill'
+import { SegmentedControl } from '@/components/ui/SegmentedControl'
+import { Icon } from '@/components/ui/Icon'
 import { useUndoableDelete } from '@/hooks/useUndoableDelete'
 import { useToast } from '@/components/ui/Toast'
-import { formatCurrency, formatDate } from '@/lib/utils'
+import { formatCurrency, formatDate, idrShort } from '@/lib/utils'
 import {
   useSavingsGoals,
   useCreateSavingsGoal,
@@ -562,104 +568,75 @@ function SavingsPaymentHistory({ goalId }) {
 // ── Savings Goal Card ─────────────────────────────────────────────────────────
 
 function SavingsGoalCard({ goal, onEdit, onDelete, onAddFund }) {
-  const pct = progressPct(goal.current_amount, goal.target_amount)
+  const pct = Math.round(progressPct(goal.current_amount, goal.target_amount))
   const days = daysUntil(goal.target_date)
   const isOverdue = days !== null && days < 0 && !goal.is_completed
   const [showHistory, setShowHistory] = useState(false)
+  const color = goal.color || 'var(--accent)'
+  const remaining = Math.max(0, (Number(goal.target_amount) || 0) - (Number(goal.current_amount) || 0))
 
   return (
-    <Card className="hover:shadow-md transition-shadow">
-      <CardContent className="pt-5">
-        <div className="flex items-start justify-between mb-4">
-          <div className="flex items-center gap-3">
-            <div
-              className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl flex-shrink-0"
-              style={{ backgroundColor: `${goal.color}20` }}
-            >
-              {goal.icon}
-            </div>
-            <div>
-              <p className="font-semibold text-ink">{goal.name}</p>
+    <Card padding={20}>
+      <div className="flex items-start gap-4">
+        <Ring value={pct} size={72} stroke={7} color={color} track="var(--surface-2)">
+          <span style={{ fontSize: 28 }}>{goal.icon}</span>
+        </Ring>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <p className="font-semibold truncate" style={{ color: 'var(--ink)' }}>{goal.name}</p>
               {goal.is_completed ? (
                 <Badge variant="green" className="mt-0.5">
                   <CheckCircle2 className="w-3 h-3 mr-1" />
                   Tercapai!
                 </Badge>
-              ) : goal.target_date ? (
-                <p className={`text-xs mt-0.5 ${isOverdue ? 'text-red-500 font-medium' : 'text-ink-3'}`}>
-                  <Calendar className="w-3 h-3 inline mr-1" />
-                  {isOverdue
-                    ? `Terlewat ${Math.abs(days)} hari`
-                    : days === 0
-                    ? 'Hari ini!'
-                    : `${days} hari lagi`}
+              ) : (
+                <p className="text-xs mt-0.5" style={{ color: isOverdue ? 'var(--bad)' : 'var(--ink-3)' }}>
+                  {goal.target_date
+                    ? (isOverdue ? `Terlewat ${Math.abs(days)} hari` : `Target ${formatDate(goal.target_date)}`)
+                    : 'Tanpa tenggat'}
                 </p>
-              ) : null}
+              )}
             </div>
+            <span className="font-display tabular-nums flex-shrink-0" style={{ fontSize: 18, color }}>{pct}%</span>
           </div>
-          <div className="flex gap-1">
-            <button
-              onClick={() => onEdit(goal)}
-              className="p-1.5 rounded-lg text-ink-3 hover:text-ink-2 hover:bg-surface-2 transition-colors"
-              aria-label="Edit target tabungan"
-            >
-              <Pencil className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => onDelete(goal.id)}
-              className="p-1.5 rounded-lg text-ink-3 hover:text-red-500 hover:bg-red-50 transition-colors"
-              aria-label="Hapus target tabungan"
-            >
-              <Trash2 className="w-4 h-4" />
-            </button>
+          <div className="tabular-nums mt-2" style={{ fontSize: 13, fontWeight: 700, color: 'var(--ink)' }}>
+            {formatCurrency(goal.current_amount)}{' '}
+            <span style={{ color: 'var(--ink-3)', fontWeight: 500 }}>/ {idrShort(goal.target_amount)}</span>
+          </div>
+          <div className="mt-2">
+            <Progress value={goal.current_amount} max={goal.target_amount || 1} color={color} height={6} />
           </div>
         </div>
+      </div>
 
-        {/* Progress */}
-        <div className="space-y-2 mb-4">
-          <div className="flex justify-between text-sm">
-            <span className="font-semibold text-ink">{formatCurrency(goal.current_amount)}</span>
-            <span className="text-ink-3">{formatCurrency(goal.target_amount)}</span>
-          </div>
-          <div className="w-full bg-surface-2 rounded-full h-2.5">
-            <div
-              className="h-2.5 rounded-full transition-all"
-              style={{ width: `${pct}%`, backgroundColor: goal.color || '#10b981' }}
-            />
-          </div>
-          <div className="flex justify-between text-xs text-ink-3">
-            <span>{pct.toFixed(1)}% terkumpul</span>
-            <span>Sisa {formatCurrency(Math.max(0, goal.target_amount - goal.current_amount))}</span>
-          </div>
-        </div>
+      <div className="flex justify-between text-xs mt-3" style={{ color: 'var(--ink-3)' }}>
+        <span>{pct}% terkumpul</span>
+        <span>Sisa {idrShort(remaining)}</span>
+      </div>
 
-        {/* Actions */}
-        <div className="flex gap-2">
-          {!goal.is_completed && (
-            <Button
-              size="sm"
-              variant="secondary"
-              className="flex-1"
-              onClick={() => onAddFund(goal)}
-            >
-              <Plus className="w-4 h-4" />
-              Update Dana
-            </Button>
-          )}
-          <Button
-            size="sm"
-            variant="outline"
-            className="flex-1"
-            onClick={() => setShowHistory(!showHistory)}
-          >
-            <History className="w-4 h-4" />
-            {showHistory ? 'Sembunyikan' : 'Riwayat'}
+      {/* Actions */}
+      <div className="flex flex-wrap gap-2 mt-3 pt-3" style={{ borderTop: '1px solid var(--line)' }}>
+        {!goal.is_completed && (
+          <Button size="sm" variant="soft" className="flex-1" onClick={() => onAddFund(goal)}>
+            <Icon name="plus" size={14} stroke={2.2} />
+            Setor
           </Button>
-        </div>
+        )}
+        <Button size="sm" variant="secondary" className="flex-1" onClick={() => setShowHistory(!showHistory)}>
+          <History className="w-4 h-4" />
+          {showHistory ? 'Tutup' : 'Riwayat'}
+        </Button>
+        <Button size="sm" variant="ghost" onClick={() => onEdit(goal)} aria-label="Edit target tabungan">
+          <Icon name="pencil" size={16} />
+        </Button>
+        <Button size="sm" variant="ghost" onClick={() => onDelete(goal.id)} aria-label="Hapus target tabungan">
+          <Icon name="trash" size={16} />
+        </Button>
+      </div>
 
-        {/* Payment History */}
-        {showHistory && <SavingsPaymentHistory goalId={goal.id} />}
-      </CardContent>
+      {/* Payment History */}
+      {showHistory && <SavingsPaymentHistory goalId={goal.id} />}
     </Card>
   )
 }
@@ -1124,127 +1101,95 @@ function DebtPaymentHistory({ debtId }) {
 function DebtCard({ debt, onEdit, onDelete, onPay, onMarkPaid }) {
   const isDebt = debt.type === 'debt'
   const paid = debt.is_paid
-  const pct = debt.amount > 0
-    ? Math.min(100, ((debt.amount - debt.remaining_amount) / debt.amount) * 100)
-    : 0
+  const amount = Number(debt.amount) || 0
+  const remaining = Number(debt.remaining_amount) || 0
+  const paidAmount = Math.max(0, amount - remaining)
+  const pct = amount > 0 ? Math.min(100, Math.round((paidAmount / amount) * 100)) : 0
   const days = daysUntil(debt.due_date)
   const isOverdue = days !== null && days < 0 && !paid
   const [showHistory, setShowHistory] = useState(false)
+  const color = isDebt ? 'var(--bad)' : 'var(--good)'
 
   return (
-    <Card className={`hover:shadow-md transition-shadow ${paid ? 'opacity-70' : ''}`}>
-      <CardContent className="pt-5">
-        <div className="flex items-start justify-between mb-4">
-          <div className="flex items-center gap-3">
-            <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${
-              isDebt ? 'bg-red-50' : 'bg-emerald-50'
-            }`}>
-              {isDebt
-                ? <TrendingDown className="w-6 h-6 text-red-500" />
-                : <TrendingUp className="w-6 h-6 text-emerald-500" />
-              }
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <p className="font-semibold text-ink">{debt.name}</p>
-                <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${
-                  isDebt
-                    ? 'bg-red-100 text-red-600'
-                    : 'bg-emerald-100 text-emerald-600'
-                }`}>
-                  {isDebt ? 'Hutang' : 'Piutang'}
-                </span>
-              </div>
-              {paid ? (
-                <span className="text-xs text-emerald-600 font-medium flex items-center gap-1 mt-0.5">
-                  <CheckCircle2 className="w-3 h-3" /> Lunas
-                </span>
-              ) : debt.due_date ? (
-                <p className={`text-xs mt-0.5 ${isOverdue ? 'text-red-500 font-medium' : 'text-ink-3'}`}>
-                  <Calendar className="w-3 h-3 inline mr-1" />
-                  {isOverdue
-                    ? `Jatuh tempo terlewat ${Math.abs(days)} hari`
-                    : days === 0
-                    ? 'Jatuh tempo hari ini!'
-                    : `Jatuh tempo ${formatDate(debt.due_date)}`}
-                </p>
-              ) : null}
-            </div>
-          </div>
-          <div className="flex gap-1">
-            <button
-              onClick={() => onEdit(debt)}
-              className="p-1.5 rounded-lg text-ink-3 hover:text-ink-2 hover:bg-surface-2 transition-colors"
-              aria-label="Edit hutang/piutang"
-            >
-              <Pencil className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => onDelete(debt.id)}
-              className="p-1.5 rounded-lg text-ink-3 hover:text-red-500 hover:bg-red-50 transition-colors"
-              aria-label="Hapus hutang/piutang"
-            >
-              <Trash2 className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-
-        {/* Progress */}
-        <div className="space-y-2 mb-4">
-          <div className="flex justify-between text-sm">
-            <span className="text-ink-2 text-xs">Sisa</span>
-            <span className={`font-bold ${isDebt ? 'text-red-500' : 'text-emerald-600'}`}>
-              {formatCurrency(debt.remaining_amount)}
-            </span>
-          </div>
-          <div className="w-full bg-surface-2 rounded-full h-2">
-            <div
-              className={`h-2 rounded-full transition-all ${isDebt ? 'bg-red-400' : 'bg-emerald-400'}`}
-              style={{ width: `${pct}%` }}
-            />
-          </div>
-          <div className="flex justify-between text-xs text-ink-3">
-            <span>{pct.toFixed(0)}% sudah dibayar</span>
-            <span>dari {formatCurrency(debt.amount)}</span>
-          </div>
-        </div>
-
-        {debt.description && (
-          <p className="text-xs text-ink-3 mb-3 truncate">{debt.description}</p>
-        )}
-
-        {/* Actions */}
-        <div className="flex gap-2">
-          {!paid && (
-            <Button size="sm" variant="secondary" className="flex-1" onClick={() => onPay(debt)}>
-              <CreditCard className="w-4 h-4" />
-              Catat Bayar
-            </Button>
-          )}
-          {!paid && (
-            <Button
-              size="sm"
-              className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white"
-              onClick={() => onMarkPaid(debt)}
-            >
-              <CheckCircle2 className="w-4 h-4" />
-              Lunas
-            </Button>
-          )}
-          <Button
-            size="sm"
-            variant="outline"
-            className="flex-1"
-            onClick={() => setShowHistory(!showHistory)}
+    <Card padding={20} style={paid ? { opacity: 0.7 } : undefined}>
+      <div className="flex items-start justify-between gap-2 mb-3">
+        <div className="flex items-center gap-3 min-w-0">
+          <div
+            className="flex items-center justify-center flex-shrink-0"
+            style={{ width: 46, height: 46, borderRadius: 14, background: 'var(--surface-2)', color }}
           >
-            <History className="w-4 h-4" />
-            {showHistory ? 'Sembunyikan' : 'Riwayat'}
-          </Button>
+            <Icon name="coin" size={22} />
+          </div>
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <p className="font-semibold truncate" style={{ color: 'var(--ink)' }}>{debt.name}</p>
+              <Pill tone={isDebt ? 'bad' : 'good'} size="sm">{isDebt ? 'Hutang' : 'Piutang'}</Pill>
+            </div>
+            {paid ? (
+              <span className="text-xs font-medium flex items-center gap-1 mt-0.5" style={{ color: 'var(--good)' }}>
+                <CheckCircle2 className="w-3 h-3" /> Lunas
+              </span>
+            ) : debt.description ? (
+              <p className="text-xs mt-0.5 truncate" style={{ color: 'var(--ink-3)' }}>{debt.description}</p>
+            ) : null}
+          </div>
         </div>
+        {!paid && debt.due_date && (
+          <Pill tone="warn" icon={<Icon name="calendar" size={11} />}>{formatDate(debt.due_date)}</Pill>
+        )}
+      </div>
 
-        {/* Payment History */}
-        {showHistory && <DebtPaymentHistory debtId={debt.id} />}
-      </CardContent>
+      <Progress value={paidAmount} max={amount || 1} color={color} height={8} />
+
+      <div className="flex justify-between items-center mt-2.5">
+        <div>
+          <div className="text-xs" style={{ color: 'var(--ink-3)' }}>Sisa</div>
+          <div className="tabular-nums font-bold" style={{ fontSize: 15, color }}>{formatCurrency(remaining)}</div>
+        </div>
+        <div className="text-center">
+          <div className="text-xs" style={{ color: 'var(--ink-3)' }}>Terbayar</div>
+          <div className="tabular-nums font-bold" style={{ fontSize: 15, color }}>{pct}%</div>
+        </div>
+        <div className="text-right">
+          <div className="text-xs" style={{ color: 'var(--ink-3)' }}>Total</div>
+          <div className="tabular-nums font-bold" style={{ fontSize: 15, color: 'var(--ink)' }}>{idrShort(amount)}</div>
+        </div>
+      </div>
+
+      {isOverdue && (
+        <p className="text-xs mt-2 font-medium" style={{ color: 'var(--bad)' }}>
+          Jatuh tempo terlewat {Math.abs(days)} hari
+        </p>
+      )}
+
+      {/* Actions */}
+      <div className="flex flex-wrap gap-2 mt-3 pt-3" style={{ borderTop: '1px solid var(--line)' }}>
+        {!paid && (
+          <Button size="sm" variant="soft" className="flex-1" onClick={() => onPay(debt)}>
+            <Icon name="coin" size={14} />
+            Catat Bayar
+          </Button>
+        )}
+        {!paid && (
+          <Button size="sm" variant="primary" className="flex-1" onClick={() => onMarkPaid(debt)}>
+            <CheckCircle2 className="w-4 h-4" />
+            Lunas
+          </Button>
+        )}
+        <Button size="sm" variant="secondary" onClick={() => setShowHistory(!showHistory)}>
+          <History className="w-4 h-4" />
+          {showHistory ? 'Tutup' : 'Riwayat'}
+        </Button>
+        <Button size="sm" variant="ghost" onClick={() => onEdit(debt)} aria-label="Edit hutang/piutang">
+          <Icon name="pencil" size={16} />
+        </Button>
+        <Button size="sm" variant="ghost" onClick={() => onDelete(debt.id)} aria-label="Hapus hutang/piutang">
+          <Icon name="trash" size={16} />
+        </Button>
+      </div>
+
+      {/* Payment History */}
+      {showHistory && <DebtPaymentHistory debtId={debt.id} />}
     </Card>
   )
 }
@@ -1282,25 +1227,32 @@ function SavingsGoalsTab() {
     setDeleteId(null)
   }
 
+  const totalPct = totalTarget > 0 ? Math.round((totalSaved / totalTarget) * 100) : 0
+
   return (
     <div className="space-y-4">
-      {/* Summary strip */}
-      {goals?.length > 0 && (
-        <div className="bg-surface border border-line rounded-xl p-4 grid grid-cols-3 gap-4">
-          <div>
-            <p className="text-xs text-ink-3">Total Target</p>
-            <p className="text-sm font-bold text-ink">{formatCurrency(totalTarget)}</p>
-          </div>
-          <div>
-            <p className="text-xs text-ink-3">Terkumpul</p>
-            <p className="text-sm font-bold text-emerald-600">{formatCurrency(totalSaved)}</p>
-          </div>
-          <div>
-            <p className="text-xs text-ink-3">Sisa</p>
-            <p className="text-sm font-bold text-ink">{formatCurrency(Math.max(0, totalTarget - totalSaved))}</p>
+      {/* Hero */}
+      <HeroCard
+        label="Total Terkumpul"
+        value={formatCurrency(totalSaved)}
+        gradientFrom="#0EA5A4"
+        gradientTo="#0A6B6A"
+      >
+        <div className="mt-3" style={{ maxWidth: 360 }}>
+          <Progress value={totalSaved} max={totalTarget || 1} color="#fff" track="rgba(255,255,255,.2)" height={8} />
+          <div className="mt-2" style={{ fontSize: 12, opacity: 0.85 }}>
+            {totalPct}% menuju total target {idrShort(totalTarget)}
           </div>
         </div>
-      )}
+      </HeroCard>
+
+      {/* Heading */}
+      <div className="flex items-center justify-between">
+        <h3 className="font-bold" style={{ fontSize: 16, color: 'var(--ink)' }}>Tujuan Keluarga</h3>
+        <Button size="sm" variant="soft" onClick={() => setGoalModal({ open: true, goal: null })}>
+          <Icon name="plus" size={14} stroke={2.2} /> Tujuan Baru
+        </Button>
+      </div>
 
       {/* Filter tabs */}
       <div className="flex gap-1 bg-surface-2 rounded-lg p-1 w-fit">
@@ -1571,27 +1523,19 @@ function DebtsTab() {
     <div className="space-y-4">
       {/* Summary */}
       {debts?.length > 0 && (
-        <div className="bg-surface border border-line rounded-xl p-4 grid grid-cols-2 gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 bg-red-50 rounded-lg flex items-center justify-center">
-              <TrendingDown className="w-5 h-5 text-red-500" />
-            </div>
-            <div>
-              <p className="text-xs text-ink-3">Total Hutang</p>
-              <p className="text-sm font-bold text-red-500">{formatCurrency(totalDebt)}</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 bg-emerald-50 rounded-lg flex items-center justify-center">
-              <TrendingUp className="w-5 h-5 text-emerald-500" />
-            </div>
-            <div>
-              <p className="text-xs text-ink-3">Total Piutang</p>
-              <p className="text-sm font-bold text-emerald-600">{formatCurrency(totalReceivable)}</p>
-            </div>
-          </div>
+        <div className="grid grid-cols-2 gap-3">
+          <StatTile label="Sisa Hutang" value={formatCurrency(totalDebt)} accent />
+          <StatTile label="Piutang" value={formatCurrency(totalReceivable)} />
         </div>
       )}
+
+      {/* Heading */}
+      <div className="flex items-center justify-between">
+        <h3 className="font-bold" style={{ fontSize: 16, color: 'var(--ink)' }}>Hutang &amp; Piutang</h3>
+        <Button size="sm" variant="soft" onClick={() => setDebtModal({ open: true, debt: null })}>
+          <Icon name="plus" size={14} stroke={2.2} /> Tambah
+        </Button>
+      </div>
 
       {/* Filter */}
       <div className="flex gap-1 bg-surface-2 rounded-lg p-1 w-fit flex-wrap">
@@ -1622,7 +1566,7 @@ function DebtsTab() {
         </div>
       ) : !filtered.length ? (
         <div className="py-16 text-center">
-          <CreditCard className="w-12 h-12 text-ink-3 mx-auto mb-3" />
+          <Icon name="coin" size={48} className="mx-auto mb-3" style={{ color: 'var(--ink-3)' }} />
           <p className="text-ink-3 font-medium">Tidak ada data</p>
         </div>
       ) : (
@@ -1683,57 +1627,20 @@ function DebtsTab() {
 export default function SavingsDebts() {
   const [activeTab, setActiveTab] = useState('savings')
 
-  const [goalModalOpen, setGoalModalOpen] = useState(false)
-  const [debtModalOpen, setDebtModalOpen] = useState(false)
-
   return (
     <div className="space-y-5 max-w-5xl mx-auto">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        {/* Tabs */}
-        <div className="flex gap-1 bg-surface-2 rounded-xl p-1">
-          {[
-            { key: 'savings', label: '🎯  Target Tabungan' },
-            { key: 'debts', label: '💳  Hutang & Piutang' },
-          ].map(({ key, label }) => (
-            <button
-              key={key}
-              onClick={() => setActiveTab(key)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                activeTab === key
-                  ? 'bg-surface shadow-sm text-ink'
-                  : 'text-ink-2 hover:text-ink'
-              }`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-
-        {/* Add button */}
-        <Button
-          size="sm"
-          onClick={() => activeTab === 'savings' ? setGoalModalOpen(true) : setDebtModalOpen(true)}
-        >
-          <Plus className="w-4 h-4" />
-          Tambah
-        </Button>
-      </div>
+      <SegmentedControl
+        size="md"
+        value={activeTab}
+        onChange={setActiveTab}
+        options={[
+          { id: 'savings', label: 'Tabungan & Tujuan', icon: 'target' },
+          { id: 'debts', label: 'Hutang & Cicilan', icon: 'coin' },
+        ]}
+      />
 
       {/* Tab content */}
       {activeTab === 'savings' ? <SavingsGoalsTab key="savings" /> : <DebtsTab key="debts" />}
-
-      {/* Global modals for header button */}
-      <SavingsGoalModal
-        isOpen={goalModalOpen}
-        onClose={() => setGoalModalOpen(false)}
-        goal={null}
-      />
-      <DebtModal
-        isOpen={debtModalOpen}
-        onClose={() => setDebtModalOpen(false)}
-        debt={null}
-      />
     </div>
   )
 }
