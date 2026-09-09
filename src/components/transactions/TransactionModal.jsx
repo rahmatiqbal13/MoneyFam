@@ -8,7 +8,6 @@ import { useToast } from '@/components/ui/Toast'
 import { useCategories } from '@/hooks/useCategories'
 import { useWallets } from '@/hooks/useWallets'
 import { useCreateTransaction, useUpdateTransaction, useDeleteTransaction } from '@/hooks/useTransactions'
-import { useUndoableDelete } from '@/hooks/useUndoableDelete'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/stores/authStore'
 
@@ -43,6 +42,7 @@ export function TransactionModal({ isOpen, onClose, transaction = null }) {
   const [receiptFile, setReceiptFile] = useState(null)
   const [receiptPreview, setReceiptPreview] = useState(null)
   const [uploading, setUploading] = useState(false)
+  const [confirmingDelete, setConfirmingDelete] = useState(false)
   const abortControllerRef = useRef(null)
 
   const { data: categories } = useCategories()
@@ -51,17 +51,15 @@ export function TransactionModal({ isOpen, onClose, transaction = null }) {
   const updateMutation = useUpdateTransaction()
   const deleteMutation = useDeleteTransaction()
 
-  const { triggerDelete } = useUndoableDelete(
-    async (id) => {
-      await deleteMutation.mutateAsync(id)
-    },
-    { itemName: 'Transaksi' }
-  )
-
-  const handleDelete = () => {
+  const handleConfirmDelete = () => {
     if (!transaction?.id) return
-    triggerDelete(transaction.id)
-    onClose()
+    deleteMutation.mutate(transaction.id, {
+      onSuccess: () => {
+        toast.success('Transaksi dihapus')
+        onClose()
+      },
+      onError: (e) => toast.error(e.message || 'Gagal menghapus transaksi'),
+    })
   }
 
   const loading = createMutation.isPending || updateMutation.isPending || uploading
@@ -80,6 +78,7 @@ export function TransactionModal({ isOpen, onClose, transaction = null }) {
       setReceiptFile(null)
       setReceiptPreview(null)
       setErrors({})
+      setConfirmingDelete(false)
     }
   }, [isOpen])
 
@@ -106,6 +105,7 @@ export function TransactionModal({ isOpen, onClose, transaction = null }) {
         setReceiptPreview(null)
       }
       setErrors({})
+      setConfirmingDelete(false)
     }
   }, [isOpen, transaction])
 
@@ -459,27 +459,54 @@ export function TransactionModal({ isOpen, onClose, transaction = null }) {
             )}
           </div>
         </ModalBody>
-        <ModalFooter className={isEdit ? 'justify-between' : undefined}>
-          {isEdit && (
-            <Button
-              variant="ghost"
-              type="button"
-              onClick={handleDelete}
-              disabled={loading}
-              style={{ color: 'var(--bad)' }}
-            >
-              Hapus
-            </Button>
-          )}
-          <div className="flex gap-2">
-            <Button variant="secondary" type="button" onClick={onClose} disabled={loading}>
-              Batal
-            </Button>
-            <Button type="submit" loading={loading}>
-              {isEdit ? 'Simpan' : 'Tambah'}
-            </Button>
-          </div>
-        </ModalFooter>
+        {isEdit && confirmingDelete ? (
+          <ModalFooter className="justify-between">
+            <span className="text-sm" style={{ color: 'var(--ink-2)' }}>
+              Hapus transaksi ini?
+            </span>
+            <div className="flex gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                type="button"
+                onClick={() => setConfirmingDelete(false)}
+              >
+                Batal
+              </Button>
+              <Button
+                variant="danger"
+                size="sm"
+                type="button"
+                onClick={handleConfirmDelete}
+                loading={deleteMutation.isPending}
+              >
+                Ya, hapus
+              </Button>
+            </div>
+          </ModalFooter>
+        ) : (
+          <ModalFooter className={isEdit ? 'justify-between' : undefined}>
+            {isEdit && (
+              <Button
+                variant="ghost"
+                type="button"
+                onClick={() => setConfirmingDelete(true)}
+                disabled={loading}
+                style={{ color: 'var(--bad)' }}
+              >
+                Hapus
+              </Button>
+            )}
+            <div className="flex gap-2">
+              <Button variant="secondary" type="button" onClick={onClose} disabled={loading}>
+                Batal
+              </Button>
+              <Button type="submit" loading={loading}>
+                {isEdit ? 'Simpan' : 'Tambah'}
+              </Button>
+            </div>
+          </ModalFooter>
+        )}
       </form>
     </Modal>
   )
