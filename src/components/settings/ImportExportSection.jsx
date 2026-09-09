@@ -78,21 +78,21 @@ export function ImportExportSection() {
     <Card>
       <CardHeader>
         <div className="flex items-center gap-2">
-          <FileText className="w-4 h-4 text-gray-500" />
+          <FileText className="w-4 h-4" style={{ color: 'var(--ink-3)' }} />
           <CardTitle>Import & Export Data</CardTitle>
         </div>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
           {/* Import Section */}
-          <div className="p-4 bg-gray-50 rounded-xl border border-gray-200">
+          <div className="p-4 rounded-xl" style={{ background: 'var(--surface-2)', border: '1px solid var(--line)' }}>
             <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0">
-                <Upload className="w-5 h-5 text-blue-600" />
+              <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: '#3B82F622' }}>
+                <Upload className="w-5 h-5" style={{ color: '#3B82F6' }} />
               </div>
               <div className="flex-1">
-                <h4 className="font-medium text-gray-900">Import dari Ollo</h4>
-                <p className="text-sm text-gray-500 mt-1">
+                <h4 className="font-medium" style={{ color: 'var(--ink)' }}>Import dari Ollo</h4>
+                <p className="text-sm mt-1" style={{ color: 'var(--ink-3)' }}>
                   Impor transaksi dari file CSV Ollo. Dompet dan kategori akan dibuat otomatis jika belum ada.
                 </p>
                 
@@ -121,9 +121,9 @@ export function ImportExportSection() {
             
             {/* Import Result */}
             {importResult && (
-              <div className="mt-4 p-3 bg-white rounded-lg border border-gray-200">
+              <div className="mt-4 p-3 rounded-lg" style={{ background: 'var(--surface)', border: '1px solid var(--line)' }}>
                 <div className="flex items-center justify-between mb-2">
-                  <h5 className="font-medium text-sm text-gray-900">Hasil Import</h5>
+                  <h5 className="font-medium text-sm" style={{ color: 'var(--ink)' }}>Hasil Import</h5>
                   <button
                     onClick={clearResult}
                     className="text-gray-400 hover:text-gray-600"
@@ -230,14 +230,14 @@ export function ImportExportSection() {
           </div>
           
           {/* Export Section */}
-          <div className="p-4 bg-gray-50 rounded-xl border border-gray-200">
+          <div className="p-4 rounded-xl" style={{ background: 'var(--surface-2)', border: '1px solid var(--line)' }}>
             <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center flex-shrink-0">
-                <Download className="w-5 h-5 text-green-600" />
+              <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: '#16A34A22' }}>
+                <Download className="w-5 h-5" style={{ color: '#16A34A' }} />
               </div>
               <div className="flex-1">
-                <h4 className="font-medium text-gray-900">Export ke CSV</h4>
-                <p className="text-sm text-gray-500 mt-1">
+                <h4 className="font-medium" style={{ color: 'var(--ink)' }}>Export ke CSV</h4>
+                <p className="text-sm mt-1" style={{ color: 'var(--ink-3)' }}>
                   Export semua transaksi ke format CSV yang kompatibel dengan Ollo.
                 </p>
                 
@@ -258,9 +258,9 @@ export function ImportExportSection() {
           </div>
           
           {/* Format Info */}
-          <div className="text-xs text-gray-400">
+          <div className="text-xs" style={{ color: 'var(--ink-3)' }}>
             <p>Format CSV yang didukung:</p>
-            <p className="mt-1 font-mono bg-gray-100 px-2 py-1 rounded inline-block">
+            <p className="mt-1 font-mono px-2 py-1 rounded inline-block" style={{ background: 'var(--surface-2)' }}>
               Date, Title, Type, Wallet, Destination Wallet, Category, SubCategory, Amount, Currency, Note
             </p>
           </div>

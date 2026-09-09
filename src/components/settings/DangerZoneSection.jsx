@@ -46,18 +46,18 @@ export function DangerZoneSection() {
 
   return (
     <>
-      <Card className="border-red-200">
-        <CardHeader>
+      <Card style={{ border: '1px solid #FCA5A5' }}>
+        <CardHeader style={{ borderColor: 'var(--line)' }}>
           <div className="flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4 text-red-500" />
-            <CardTitle className="text-red-600">Zona Berbahaya</CardTitle>
+            <AlertTriangle className="w-4 h-4" style={{ color: 'var(--bad)' }} />
+            <CardTitle style={{ color: 'var(--bad)' }}>Zona Berbahaya</CardTitle>
           </div>
         </CardHeader>
         <CardContent>
           <div className="flex items-start justify-between gap-4">
             <div>
-              <p className="text-sm font-medium text-gray-800">Hapus Semua Transaksi</p>
-              <p className="text-xs text-gray-400 mt-0.5">
+              <p className="text-sm font-medium" style={{ color: 'var(--ink)' }}>Hapus Semua Transaksi</p>
+              <p className="text-xs mt-0.5" style={{ color: 'var(--ink-3)' }}>
                 Menghapus seluruh data pemasukan, pengeluaran, dan transfer. Saldo kantong akan direset ke saldo awal. Tindakan ini tidak dapat dibatalkan.
               </p>
             </div>
