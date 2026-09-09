@@ -1,4 +1,4 @@
-export function StatTile({ label, value, pill, accent = false, className, style }) {
+export function StatTile({ label, value, sub, pill, accent = false, className, style }) {
   return (
     <div
       className={className}
@@ -14,6 +14,9 @@ export function StatTile({ label, value, pill, accent = false, className, style 
         {pill}
       </div>
       <div className="font-display tabular-nums" style={{ fontSize: 22, marginTop: 6, fontWeight: 600 }}>{value}</div>
+      {sub && (
+        <div style={{ fontSize: 12, marginTop: 6, color: accent ? 'rgba(255,255,255,.85)' : 'var(--ink-3)' }}>{sub}</div>
+      )}
     </div>
   )
 }
