@@ -9,6 +9,7 @@ export function SegmentedControl({ value, onChange, options, size = 'sm', classN
           return (
             <button
               key={o.id}
+              type="button"
               onClick={() => onChange(o.id)}
               style={{
                 display: 'inline-flex', alignItems: 'center', gap: 6,
@@ -32,6 +33,7 @@ export function SegmentedControl({ value, onChange, options, size = 'sm', classN
         return (
           <button
             key={o.id}
+            type="button"
             onClick={() => onChange(o.id)}
             style={{
               display: 'inline-flex', alignItems: 'center', gap: 8,

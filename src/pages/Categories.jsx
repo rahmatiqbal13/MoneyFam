@@ -22,13 +22,11 @@ const CATEGORY_COLORS = [
 const TYPE_OPTIONS = [
   { id: 'expense', label: 'Pengeluaran' },
   { id: 'income', label: 'Pemasukan' },
-  { id: 'transfer', label: 'Transfer' },
 ]
 
 const SECTIONS = [
   { kind: 'expense', label: 'Pengeluaran' },
   { kind: 'income', label: 'Pemasukan' },
-  { kind: 'transfer', label: 'Transfer' },
 ]
 
 function getDefaultForm() {
