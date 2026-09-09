@@ -6,18 +6,18 @@ const ToastContext = createContext(null)
 
 const toastStyles = {
   success: {
-    border: '1px solid #A7F3D0',
-    background: '#ECFDF5',
+    border: '1px solid color-mix(in srgb, #16A34A 35%, var(--surface))',
+    background: 'color-mix(in srgb, #16A34A 14%, var(--surface))',
     iconColor: '#16A34A',
   },
   error: {
-    border: '1px solid #FECACA',
-    background: '#FEF2F2',
+    border: '1px solid color-mix(in srgb, #DC2626 35%, var(--surface))',
+    background: 'color-mix(in srgb, #DC2626 14%, var(--surface))',
     iconColor: '#DC2626',
   },
   warning: {
-    border: '1px solid #FDE68A',
-    background: '#FFFBEB',
+    border: '1px solid color-mix(in srgb, #D97706 35%, var(--surface))',
+    background: 'color-mix(in srgb, #D97706 14%, var(--surface))',
     iconColor: '#D97706',
   },
   info: {

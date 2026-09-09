@@ -710,7 +710,7 @@ function BudgetVsActual({ year, month }) {
                 <span className="text-sm text-ink-2 truncate">{b.categories?.name}</span>
               </div>
               <div className="text-right flex-shrink-0 ml-2 tabular-nums">
-                <span className="text-sm font-semibold" style={{ color: over ? '#DC2626' : 'var(--ink)' }}>
+                <span className="text-sm font-semibold" style={{ color: over ? 'var(--bad)' : 'var(--ink)' }}>
                   {formatCurrency(b.spent)}
                 </span>
                 <span className="text-xs text-ink-3 ml-1">/ {formatCurrency(b.amount)}</span>
