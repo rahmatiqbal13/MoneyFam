@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react'
 import {
-  ChevronLeft, ChevronRight, TrendingUp, TrendingDown, PiggyBank,
-  Percent, ArrowUpRight, ArrowDownRight, Users, Flame, X, Receipt, Edit2, Trash2
+  ChevronLeft, ChevronRight, ArrowUpRight, ArrowDownRight, Users, Flame,
+  X, Receipt, Edit2, Trash2,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/stores/authStore'
@@ -10,7 +10,15 @@ import {
   Tooltip, Legend,
 } from 'recharts'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card'
-import { formatCurrency, formatDate, getBudgetProgressColor } from '@/lib/utils'
+import { Button } from '@/components/ui/Button'
+import { SegmentedControl } from '@/components/ui/SegmentedControl'
+import { StatTile } from '@/components/ui/StatTile'
+import { Progress } from '@/components/ui/Progress'
+import { Avatar } from '@/components/ui/Avatar'
+import { Icon } from '@/components/ui/Icon'
+import { useToast } from '@/components/ui/Toast'
+import { formatCurrency, formatDate, getBudgetStatus, idrShort } from '@/lib/utils'
+import { memberColor } from '@/lib/memberColor'
 import {
   useMonthlyStats,
   useMonthlyTrend,
@@ -22,8 +30,32 @@ import {
   usePeriodCategoryDetail,
   useYearlyStats,
 } from '@/hooks/useTransactions'
+import { useDataExport } from '@/hooks/useDataImportExport'
 import { useQueryClient } from '@tanstack/react-query'
 import { useBudgets } from '@/hooks/useBudget'
+
+// ── Token helpers (recharts needs concrete colors) ───────────────────────────
+
+function tok(name, fallback) {
+  if (typeof window === 'undefined') return fallback
+  const v = getComputedStyle(document.documentElement).getPropertyValue(name)
+  return (v || '').trim() || fallback
+}
+
+// rgba built from the live --accent token so the heatmap tints follow the theme
+function accentAlpha(a) {
+  const hex = tok('--accent', '#0EA5A4').trim()
+  const m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex)
+  if (!m) return hex
+  const [r, g, b] = [1, 2, 3].map((i) => parseInt(m[i], 16))
+  return `rgba(${r}, ${g}, ${b}, ${a})`
+}
+
+function heatBg(ratio) {
+  if (!ratio || ratio <= 0) return 'var(--surface-2)'
+  const step = ratio < 0.2 ? 0.16 : ratio < 0.4 ? 0.32 : ratio < 0.6 ? 0.5 : ratio < 0.8 ? 0.7 : 0.92
+  return accentAlpha(step)
+}
 
 // ── Date helpers ─────────────────────────────────────────────────────────────
 
@@ -53,28 +85,58 @@ function monthLabel(year, month) {
   )
 }
 
-// ── Shared tooltip ────────────────────────────────────────────────────────────
+// ── Shared chart pieces ──────────────────────────────────────────────────────
 
 function ChartTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null
   return (
-    <div className="bg-surface border border-line rounded-xl shadow-lg p-3 text-sm">
-      <p className="font-semibold text-ink mb-2">{label}</p>
+    <div
+      className="text-sm"
+      style={{
+        background: 'var(--surface)',
+        border: '1px solid var(--line)',
+        borderRadius: 'var(--r-sm)',
+        boxShadow: 'var(--shadow-md)',
+        padding: 12,
+      }}
+    >
+      <p className="font-semibold mb-2" style={{ color: 'var(--ink)' }}>{label}</p>
       {payload.map((p) => (
         <div key={p.dataKey} className="flex items-center gap-2">
-          <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: p.color }} />
-          <span className="text-ink-2">{p.name}:</span>
-          <span className="font-medium text-ink">{formatCurrency(p.value)}</span>
+          <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: p.color || 'var(--ink-3)' }} />
+          <span style={{ color: 'var(--ink-2)' }}>{p.name}:</span>
+          <span className="font-medium tabular-nums" style={{ color: 'var(--ink)' }}>{formatCurrency(p.value)}</span>
         </div>
       ))}
     </div>
   )
 }
 
+function CashFlowChart({ data, barSize = 18 }) {
+  const incomeColor = tok('--accent', '#0EA5A4')   // income → accent
+  const expenseColor = tok('--ink-3', '#918878')   // expense → muted ink
+  const axis = tok('--ink-3', '#918878')
+  const grid = tok('--line', '#ECE2CB')
+  const cursor = tok('--surface-2', '#F7F1E4')
+  return (
+    <ResponsiveContainer width="100%" height={220}>
+      <BarChart data={data} barSize={barSize} barGap={4}>
+        <CartesianGrid strokeDasharray="3 3" stroke={grid} vertical={false} />
+        <XAxis dataKey="label" tick={{ fontSize: 11, fill: axis }} axisLine={false} tickLine={false} />
+        <YAxis tickFormatter={formatYAxis} tick={{ fontSize: 11, fill: axis }} axisLine={false} tickLine={false} width={42} />
+        <Tooltip content={<ChartTooltip />} cursor={{ fill: cursor }} />
+        <Legend iconType="circle" iconSize={8} formatter={(v) => <span className="text-xs text-ink-2">{v}</span>} />
+        <Bar dataKey="income" name="Pemasukan" fill={incomeColor} radius={[4, 4, 0, 0]} />
+        <Bar dataKey="expense" name="Pengeluaran" fill={expenseColor} radius={[4, 4, 0, 0]} />
+      </BarChart>
+    </ResponsiveContainer>
+  )
+}
+
 function Spinner() {
   return (
     <div className="flex items-center justify-center py-8">
-      <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+      <div className="w-6 h-6 border-2 rounded-full animate-spin" style={{ borderColor: 'var(--accent)', borderTopColor: 'transparent' }} />
     </div>
   )
 }
@@ -83,34 +145,17 @@ function Spinner() {
 
 function SummaryCards({ stats, isLoading }) {
   const savingRate = stats?.income > 0 ? Math.round((stats.savings / stats.income) * 100) : 0
-  const cards = [
-    { label: 'Pemasukan', value: stats?.income ?? 0, icon: TrendingUp, iconBg: 'bg-emerald-50', iconColor: 'text-emerald-500', valueColor: 'text-emerald-600' },
-    { label: 'Pengeluaran', value: stats?.expense ?? 0, icon: TrendingDown, iconBg: 'bg-red-50', iconColor: 'text-red-500', valueColor: 'text-red-600' },
-    { label: 'Tabungan', value: Math.max(0, stats?.savings ?? 0), icon: PiggyBank, iconBg: 'bg-blue-50', iconColor: 'text-blue-500', valueColor: 'text-blue-600' },
-    { label: 'Saving Rate', value: savingRate, icon: Percent, iconBg: 'bg-amber-50', iconColor: 'text-amber-500', valueColor: savingRate >= 20 ? 'text-emerald-600' : savingRate >= 10 ? 'text-amber-600' : 'text-red-500', isPercent: true },
-  ]
-
+  const fmt = (v) => (isLoading ? '…' : idrShort(v))
   return (
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-      {cards.map((c) => {
-        const Icon = c.icon
-        return (
-          <div key={c.label} className="bg-surface rounded-xl border border-line p-4">
-            <div className="flex items-center justify-between mb-3">
-              <p className="text-xs text-ink-2">{c.label}</p>
-              <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${c.iconBg}`}>
-                <Icon className={`w-4 h-4 ${c.iconColor}`} />
-              </div>
-            </div>
-            {isLoading
-              ? <div className="h-6 bg-surface-2 rounded animate-pulse w-24" />
-              : <p className={`text-lg font-bold ${c.valueColor}`}>
-                  {c.isPercent ? `${c.value}%` : formatCurrency(c.value)}
-                </p>
-            }
-          </div>
-        )
-      })}
+      <StatTile label="Pemasukan" value={fmt(stats?.income ?? 0)} />
+      <StatTile label="Pengeluaran" value={fmt(stats?.expense ?? 0)} />
+      <StatTile label="Tabungan" value={fmt(Math.max(0, stats?.savings ?? 0))} />
+      <StatTile
+        label="Saving Rate"
+        value={isLoading ? '…' : `${savingRate}%`}
+        accent={!isLoading && savingRate >= 20}
+      />
     </div>
   )
 }
@@ -170,10 +215,10 @@ function DayTransactionsModal({ date, onClose, onTransactionDeleted }) {
   const handleEdit = async (e) => {
     e.preventDefault()
     if (!editingTx) return
-    
+
     setIsSubmitting(true)
     const formData = new FormData(e.target)
-    
+
     try {
       const { error } = await supabase
         .from('transactions')
@@ -183,12 +228,12 @@ function DayTransactionsModal({ date, onClose, onTransactionDeleted }) {
           updated_at: new Date().toISOString()
         })
         .eq('id', editingTx.id)
-      
+
       if (error) throw error
-      
+
       // Refresh transactions
-      setTransactions(prev => prev.map(tx => 
-        tx.id === editingTx.id 
+      setTransactions(prev => prev.map(tx =>
+        tx.id === editingTx.id
           ? { ...tx, description: formData.get('description'), amount: Number(formData.get('amount')) }
           : tx
       ))
@@ -202,19 +247,19 @@ function DayTransactionsModal({ date, onClose, onTransactionDeleted }) {
 
   const handleDelete = async () => {
     if (!deletingTx) return
-    
+
     setIsSubmitting(true)
     try {
       const { error } = await supabase
         .from('transactions')
         .delete()
         .eq('id', deletingTx.id)
-      
+
       if (error) throw error
-      
+
       setTransactions(prev => prev.filter(tx => tx.id !== deletingTx.id))
       setDeletingTx(null)
-      
+
       // Notify parent to refresh heatmap
       if (onTransactionDeleted) {
         onTransactionDeleted()
@@ -238,9 +283,12 @@ function DayTransactionsModal({ date, onClose, onTransactionDeleted }) {
   return (
     <>
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-        <div className="bg-surface rounded-2xl shadow-xl w-full max-w-lg max-h-[80vh] overflow-hidden">
+        <div
+          className="w-full max-w-lg max-h-[80vh] overflow-hidden"
+          style={{ background: 'var(--surface)', borderRadius: 'var(--r-lg)', boxShadow: 'var(--shadow-lg)' }}
+        >
           {/* Header */}
-          <div className="flex items-center justify-between p-4 border-b border-line">
+          <div className="flex items-center justify-between p-4" style={{ borderBottom: '1px solid var(--line)' }}>
             <div>
               <h3 className="text-lg font-semibold text-ink">
                 {new Date(date).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
@@ -249,32 +297,27 @@ function DayTransactionsModal({ date, onClose, onTransactionDeleted }) {
                 {transactions.length} transaksi
               </p>
             </div>
-            <button 
-              onClick={onClose}
-              className="p-2 hover:bg-surface-2 rounded-lg transition-colors"
-            >
-              <X className="w-5 h-5 text-ink-2" />
-            </button>
+            <Button variant="ghost" size="icon" onClick={onClose} aria-label="Tutup">
+              <X className="w-5 h-5" />
+            </Button>
           </div>
 
           {/* Summary */}
           <div className="grid grid-cols-2 gap-4 p-4 bg-surface-2">
             <div className="text-center">
-              <p className="text-xs text-ink-2 mb-1">Pemasukan</p>
-              <p className="text-lg font-bold text-emerald-600">{formatCurrency(totalIncome)}</p>
+              <p className="text-xs text-ink-3 mb-1">Pemasukan</p>
+              <p className="text-lg font-bold tabular-nums" style={{ color: 'var(--accent)' }}>{formatCurrency(totalIncome)}</p>
             </div>
             <div className="text-center">
-              <p className="text-xs text-ink-2 mb-1">Pengeluaran</p>
-              <p className="text-lg font-bold text-red-500">{formatCurrency(totalExpense)}</p>
+              <p className="text-xs text-ink-3 mb-1">Pengeluaran</p>
+              <p className="text-lg font-bold tabular-nums text-ink">{formatCurrency(totalExpense)}</p>
             </div>
           </div>
 
           {/* Transactions List */}
           <div className="overflow-y-auto max-h-[50vh] p-4">
             {isLoading ? (
-              <div className="flex items-center justify-center py-8">
-                <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-              </div>
+              <Spinner />
             ) : transactions.length === 0 ? (
               <div className="text-center py-8">
                 <Receipt className="w-12 h-12 text-ink-3 mx-auto mb-3" />
@@ -283,11 +326,11 @@ function DayTransactionsModal({ date, onClose, onTransactionDeleted }) {
             ) : (
               <div className="space-y-2">
                 {transactions.map((tx) => (
-                  <div 
-                    key={tx.id} 
+                  <div
+                    key={tx.id}
                     className="flex items-center gap-3 p-3 bg-surface-2 rounded-xl group"
                   >
-                    <div 
+                    <div
                       className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
                       style={{ backgroundColor: (tx.categories?.color || '#6b7280') + '20' }}
                     >
@@ -302,24 +345,25 @@ function DayTransactionsModal({ date, onClose, onTransactionDeleted }) {
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className={`text-sm font-semibold flex-shrink-0 ${
-                        tx.type === 'income' ? 'text-emerald-600' : tx.type === 'expense' ? 'text-red-500' : 'text-blue-600'
-                      }`}>
-                        {tx.type === 'income' ? '+' : tx.type === 'expense' ? '-' : ''}
+                      <span
+                        className="text-sm font-semibold flex-shrink-0 tabular-nums"
+                        style={{ color: tx.type === 'income' ? 'var(--accent)' : 'var(--ink)' }}
+                      >
+                        {tx.type === 'income' ? '+' : tx.type === 'expense' ? '−' : ''}
                         {formatCurrency(tx.amount)}
                       </span>
                       {/* Edit & Delete Buttons */}
                       <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button
                           onClick={() => setEditingTx(tx)}
-                          className="p-1.5 rounded-lg text-ink-3 hover:text-blue-500 hover:bg-blue-50 transition-colors"
+                          className="p-1.5 rounded-lg text-ink-3 hover:text-ink hover:bg-surface transition-colors"
                           title="Edit"
                         >
                           <Edit2 className="w-3.5 h-3.5" />
                         </button>
                         <button
                           onClick={() => setDeletingTx(tx)}
-                          className="p-1.5 rounded-lg text-ink-3 hover:text-red-500 hover:bg-red-50 transition-colors"
+                          className="p-1.5 rounded-lg text-ink-3 transition-colors hover:bg-surface"
                           title="Hapus"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -337,15 +381,15 @@ function DayTransactionsModal({ date, onClose, onTransactionDeleted }) {
       {/* Edit Modal */}
       {editingTx && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-surface rounded-2xl shadow-xl w-full max-w-md">
-            <div className="flex items-center justify-between p-4 border-b border-line">
+          <div
+            className="w-full max-w-md"
+            style={{ background: 'var(--surface)', borderRadius: 'var(--r-lg)', boxShadow: 'var(--shadow-lg)' }}
+          >
+            <div className="flex items-center justify-between p-4" style={{ borderBottom: '1px solid var(--line)' }}>
               <h3 className="text-lg font-semibold text-ink">Edit Transaksi</h3>
-              <button 
-                onClick={() => setEditingTx(null)}
-                className="p-2 hover:bg-surface-2 rounded-lg transition-colors"
-              >
-                <X className="w-5 h-5 text-ink-2" />
-              </button>
+              <Button variant="ghost" size="icon" onClick={() => setEditingTx(null)} aria-label="Tutup">
+                <X className="w-5 h-5" />
+              </Button>
             </div>
             <form onSubmit={handleEdit} className="p-4 space-y-4">
               <div>
@@ -369,20 +413,12 @@ function DayTransactionsModal({ date, onClose, onTransactionDeleted }) {
                 />
               </div>
               <div className="flex gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setEditingTx(null)}
-                  className="flex-1 px-4 py-2 rounded-lg border border-line-2 text-ink-2 hover:bg-surface-2 transition-colors"
-                >
+                <Button type="button" variant="secondary" className="flex-1" onClick={() => setEditingTx(null)}>
                   Batal
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="flex-1 px-4 py-2 rounded-lg bg-primary text-white hover:bg-primary/90 transition-colors disabled:opacity-50"
-                >
+                </Button>
+                <Button type="submit" className="flex-1" loading={isSubmitting}>
                   {isSubmitting ? 'Menyimpan...' : 'Simpan'}
-                </button>
+                </Button>
               </div>
             </form>
           </div>
@@ -392,10 +428,13 @@ function DayTransactionsModal({ date, onClose, onTransactionDeleted }) {
       {/* Delete Confirmation Modal */}
       {deletingTx && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-surface rounded-2xl shadow-xl w-full max-w-sm p-6">
+          <div
+            className="w-full max-w-sm p-6"
+            style={{ background: 'var(--surface)', borderRadius: 'var(--r-lg)', boxShadow: 'var(--shadow-lg)' }}
+          >
             <div className="text-center mb-4">
-              <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                <Trash2 className="w-6 h-6 text-red-500" />
+              <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3" style={{ background: '#FEE2E2' }}>
+                <Trash2 className="w-6 h-6" style={{ color: '#DC2626' }} />
               </div>
               <h3 className="text-lg font-semibold text-ink">Hapus Transaksi?</h3>
               <p className="text-sm text-ink-2 mt-1">
@@ -403,20 +442,12 @@ function DayTransactionsModal({ date, onClose, onTransactionDeleted }) {
               </p>
             </div>
             <div className="flex gap-2">
-              <button
-                onClick={() => setDeletingTx(null)}
-                disabled={isSubmitting}
-                className="flex-1 px-4 py-2 rounded-lg border border-line-2 text-ink-2 hover:bg-surface-2 transition-colors disabled:opacity-50"
-              >
+              <Button variant="secondary" className="flex-1" disabled={isSubmitting} onClick={() => setDeletingTx(null)}>
                 Batal
-              </button>
-              <button
-                onClick={handleDelete}
-                disabled={isSubmitting}
-                className="flex-1 px-4 py-2 rounded-lg bg-red-500 text-white hover:bg-red-600 transition-colors disabled:opacity-50"
-              >
+              </Button>
+              <Button variant="danger" className="flex-1" loading={isSubmitting} onClick={handleDelete}>
                 {isSubmitting ? 'Menghapus...' : 'Hapus'}
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -452,16 +483,6 @@ function SpendingHeatmap({ year, month }) {
     if (!dailySpending) return 1
     return Math.max(1, ...Object.values(dailySpending))
   }, [dailySpending])
-
-  function getColor(amount) {
-    if (!amount) return 'bg-gray-100'
-    const ratio = amount / maxSpending
-    if (ratio < 0.2) return 'bg-emerald-200'
-    if (ratio < 0.4) return 'bg-yellow-200'
-    if (ratio < 0.6) return 'bg-orange-200'
-    if (ratio < 0.8) return 'bg-orange-400'
-    return 'bg-red-500'
-  }
 
   function getTooltipText(dayNum) {
     const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`
@@ -508,11 +529,12 @@ function SpendingHeatmap({ year, month }) {
                 key={dayNum}
                 title={`${dayNum} — ${getTooltipText(dayNum)}`}
                 onClick={() => setSelectedDate(dateStr)}
-                className={`aspect-square rounded-md flex items-center justify-center transition-all hover:scale-110 hover:shadow-md ${getColor(amount)} ${
+                style={{ background: heatBg(amount / maxSpending) }}
+                className={`aspect-square rounded-md flex items-center justify-center transition-all hover:scale-110 hover:shadow-md ${
                   isToday ? 'ring-2 ring-primary ring-offset-1' : ''
                 } ${amount > 0 ? 'cursor-pointer' : 'cursor-default'}`}
               >
-                <span className={`text-xs font-medium ${amount > 0 ? 'text-gray-700' : 'text-gray-400'}`}>
+                <span className={`text-xs font-medium ${amount > 0 ? 'text-ink' : 'text-ink-3'}`}>
                   {dayNum}
                 </span>
               </button>
@@ -522,22 +544,13 @@ function SpendingHeatmap({ year, month }) {
 
         {/* Legend */}
         <div className="flex items-center gap-1.5 mt-3 flex-wrap">
-          <span className="text-xs text-ink-3">Pengeluaran:</span>
+          <span className="text-xs text-ink-3">Rendah</span>
           <div className="flex items-center gap-1">
-            {[
-              { color: 'bg-gray-100', label: 'Nol' },
-              { color: 'bg-emerald-200', label: 'Rendah' },
-              { color: 'bg-yellow-200', label: '' },
-              { color: 'bg-orange-200', label: '' },
-              { color: 'bg-orange-400', label: '' },
-              { color: 'bg-red-500', label: 'Tinggi' },
-            ].map(({ color, label }, i) => (
-              <div key={i} className="flex items-center gap-0.5">
-                <div className={`w-4 h-4 rounded ${color}`} />
-                {label && <span className="text-xs text-ink-3">{label}</span>}
-              </div>
+            {[0.1, 0.3, 0.5, 0.7, 0.9].map((r) => (
+              <div key={r} className="w-4 h-4 rounded" style={{ background: heatBg(r) }} />
             ))}
           </div>
+          <span className="text-xs text-ink-3">Tinggi</span>
         </div>
 
         {/* Helper text */}
@@ -548,9 +561,9 @@ function SpendingHeatmap({ year, month }) {
 
       {/* Modal */}
       {selectedDate && (
-        <DayTransactionsModal 
-          date={selectedDate} 
-          onClose={() => setSelectedDate(null)} 
+        <DayTransactionsModal
+          date={selectedDate}
+          onClose={() => setSelectedDate(null)}
           onTransactionDeleted={handleTransactionChanged}
         />
       )}
@@ -579,71 +592,101 @@ function FutureProjection({ year, month, stats }) {
   const isOnTrack = projectedSavings >= 0
 
   return (
-    <div className={`rounded-xl border p-4 ${isOnTrack ? 'bg-emerald-50 border-emerald-200' : 'bg-amber-50 border-amber-200'}`}>
-      <div className="flex items-center gap-2 mb-3">
-        <Flame className={`w-4 h-4 ${isOnTrack ? 'text-emerald-600' : 'text-amber-600'}`} />
-        <p className="text-sm font-semibold text-ink">Proyeksi Akhir Bulan</p>
-        <span className="text-xs text-ink-3">({daysLeft} hari lagi)</span>
-      </div>
-      <div className="grid grid-cols-3 gap-3">
-        <div>
-          <p className="text-xs text-ink-3">Rata-rata Pengeluaran/Hari</p>
-          <p className="text-sm font-bold text-ink">{formatCurrency(Math.round(dailyAvgExpense))}</p>
+    <Card style={{ background: isOnTrack ? 'var(--accent-soft)' : '#FEF3C7', border: 'none' }}>
+      <CardContent>
+        <div className="flex items-center gap-2 mb-3">
+          <Flame className="w-4 h-4" style={{ color: isOnTrack ? 'var(--accent-ink)' : '#B45309' }} />
+          <p className="text-sm font-semibold text-ink">Proyeksi Akhir Bulan</p>
+          <span className="text-xs text-ink-3">({daysLeft} hari lagi)</span>
         </div>
-        <div>
-          <p className="text-xs text-ink-3">Proyeksi Total Pengeluaran</p>
-          <p className="text-sm font-bold text-red-600">{formatCurrency(Math.round(projectedExpense))}</p>
+        <div className="grid grid-cols-3 gap-3">
+          <div>
+            <p className="text-xs text-ink-3">Rata-rata Pengeluaran/Hari</p>
+            <p className="text-sm font-bold text-ink tabular-nums">{formatCurrency(Math.round(dailyAvgExpense))}</p>
+          </div>
+          <div>
+            <p className="text-xs text-ink-3">Proyeksi Total Pengeluaran</p>
+            <p className="text-sm font-bold text-ink tabular-nums">{formatCurrency(Math.round(projectedExpense))}</p>
+          </div>
+          <div>
+            <p className="text-xs text-ink-3">Proyeksi Sisa Bulan</p>
+            <p className="text-sm font-bold tabular-nums" style={{ color: isOnTrack ? 'var(--accent-ink)' : '#B45309' }}>
+              {projectedSavings >= 0 ? '+' : ''}{formatCurrency(Math.round(projectedSavings))}
+            </p>
+          </div>
         </div>
-        <div>
-          <p className="text-xs text-ink-3">Proyeksi Sisa Bulan</p>
-          <p className={`text-sm font-bold ${isOnTrack ? 'text-emerald-600' : 'text-red-600'}`}>
-            {projectedSavings >= 0 ? '+' : ''}{formatCurrency(Math.round(projectedSavings))}
-          </p>
-        </div>
-      </div>
-      <p className="text-xs text-ink-2 mt-2">
-        {isOnTrack
-          ? `Jika pola ini berlanjut, kamu masih akan surplus ${formatCurrency(Math.round(projectedSavings))} akhir bulan. 🎉`
-          : `Pengeluaran diprediksi melebihi pemasukan. Pertimbangkan mengurangi pengeluaran ${Math.abs(Math.round(daysLeft > 0 ? (projectedExpense - stats.income) / daysLeft : 0)).toLocaleString('id-ID')}/hari.`
-        }
-      </p>
-    </div>
+        <p className="text-xs text-ink-2 mt-2">
+          {isOnTrack
+            ? `Jika pola ini berlanjut, kamu masih akan surplus ${formatCurrency(Math.round(projectedSavings))} akhir bulan. 🎉`
+            : `Pengeluaran diprediksi melebihi pemasukan. Pertimbangkan mengurangi pengeluaran ${Math.abs(Math.round(daysLeft > 0 ? (projectedExpense - stats.income) / daysLeft : 0)).toLocaleString('id-ID')}/hari.`
+          }
+        </p>
+      </CardContent>
+    </Card>
   )
 }
 
-// ── Category Breakdown ────────────────────────────────────────────────────────
+// ── Category Breakdown (donut + legend) ──────────────────────────────────────
 
 function CategoryBreakdown({ data, isLoading, isError }) {
   if (isLoading) return <Spinner />
-  if (isError) return <p className="text-sm text-red-500 text-center py-6">Gagal memuat data</p>
+  if (isError) return <p className="text-sm text-center py-6" style={{ color: '#DC2626' }}>Gagal memuat data</p>
   if (!data?.length) return <p className="text-sm text-ink-3 text-center py-8">Belum ada pengeluaran</p>
 
+  const total = data[0]?.total || data.reduce((s, c) => s + c.amount, 0)
+  const R = 70
+  const C = 2 * Math.PI * R
+  let acc = 0
+  const segs = data.map((cat) => {
+    const start = acc / (total || 1)
+    acc += cat.amount
+    return { cat, start, end: acc / (total || 1) }
+  })
+
   return (
-    <div className="space-y-3">
-      {data.slice(0, 8).map((cat) => (
-        <div key={cat.id}>
-          <div className="flex items-center justify-between mb-1">
-            <div className="flex items-center gap-2 min-w-0">
-              <span className="text-base">{cat.icon}</span>
-              <span className="text-sm text-ink-2 truncate">{cat.name}</span>
-              <span className="text-xs text-ink-3 flex-shrink-0">({cat.count}×)</span>
-            </div>
-            <div className="text-right flex-shrink-0 ml-2">
-              <span className="text-sm font-semibold text-ink">{formatCurrency(cat.amount)}</span>
-              <span className="text-xs text-ink-3 ml-1.5">{cat.pct.toFixed(1)}%</span>
-            </div>
-          </div>
-          <div className="w-full bg-surface-2 rounded-full h-1.5">
-            <div className="h-1.5 rounded-full transition-all" style={{ width: `${cat.pct}%`, backgroundColor: cat.color || '#10b981' }} />
-          </div>
+    <div className="flex flex-wrap gap-5 items-center">
+      <div className="relative w-[180px] h-[180px] flex-shrink-0 mx-auto">
+        <svg width="180" height="180" viewBox="0 0 180 180">
+          {segs.map(({ cat, start, end }, i) => {
+            const dash = (end - start) * C
+            const offset = start * C
+            return (
+              <circle
+                key={cat.id ?? i}
+                cx="90" cy="90" r={R} fill="none"
+                stroke={cat.color || '#6b7280'} strokeWidth="26"
+                strokeDasharray={`${dash} ${C - dash}`}
+                strokeDashoffset={-offset}
+                transform="rotate(-90 90 90)"
+              />
+            )
+          })}
+          <circle cx="90" cy="90" r="44" style={{ fill: 'var(--surface)' }} />
+        </svg>
+        <div className="absolute inset-0 flex flex-col items-center justify-center">
+          <span className="text-[10px] font-semibold text-ink-3 tracking-wide">TOTAL</span>
+          <span className="font-display tabular-nums text-lg text-ink">{idrShort(total)}</span>
         </div>
-      ))}
-      {data.length > 8 && <p className="text-xs text-ink-3 text-center pt-1">+{data.length - 8} kategori lainnya</p>}
+      </div>
+      <div className="flex-1 min-w-[180px] space-y-2">
+        {data.slice(0, 8).map((cat) => (
+          <div key={cat.id} className="flex items-center gap-2">
+            <span className="w-2.5 h-2.5 rounded-[3px] flex-shrink-0" style={{ background: cat.color || '#6b7280' }} />
+            <span className="text-base">{cat.icon}</span>
+            <span className="flex-1 text-[13px] font-medium text-ink-2 truncate">{cat.name}</span>
+            <span className="text-[13px] font-semibold text-ink tabular-nums">{formatCurrency(cat.amount)}</span>
+            <span className="text-xs text-ink-3 tabular-nums w-9 text-right">{cat.pct.toFixed(0)}%</span>
+          </div>
+        ))}
+        {data.length > 8 && <p className="text-xs text-ink-3 text-center pt-1">+{data.length - 8} kategori lainnya</p>}
+      </div>
     </div>
   )
 }
 
 // ── Budget vs Actual ──────────────────────────────────────────────────────────
+
+const BUDGET_STATUS_COLOR = { over: '#DC2626', warning: '#D97706', good: 'var(--accent)', none: 'var(--ink-3)' }
 
 function BudgetVsActual({ year, month }) {
   const ym = `${year}-${String(month).padStart(2, '0')}`
@@ -654,9 +697,8 @@ function BudgetVsActual({ year, month }) {
   return (
     <div className="space-y-3">
       {budgets.map((b) => {
-        const pct = b.amount > 0 ? Math.min((b.spent / b.amount) * 100, 100) : 0
         const over = b.spent > b.amount
-        const barColor = getBudgetProgressColor(b.spent, b.amount)
+        const status = getBudgetStatus(b.spent, b.amount)
         return (
           <div key={b.id}>
             <div className="flex items-center justify-between mb-1">
@@ -664,17 +706,15 @@ function BudgetVsActual({ year, month }) {
                 <span className="text-base">{b.categories?.icon}</span>
                 <span className="text-sm text-ink-2 truncate">{b.categories?.name}</span>
               </div>
-              <div className="text-right flex-shrink-0 ml-2">
-                <span className={`text-sm font-semibold ${over ? 'text-red-500' : 'text-ink'}`}>
+              <div className="text-right flex-shrink-0 ml-2 tabular-nums">
+                <span className="text-sm font-semibold" style={{ color: over ? '#DC2626' : 'var(--ink)' }}>
                   {formatCurrency(b.spent)}
                 </span>
                 <span className="text-xs text-ink-3 ml-1">/ {formatCurrency(b.amount)}</span>
               </div>
             </div>
-            <div className="w-full bg-surface-2 rounded-full h-1.5">
-              <div className={`h-1.5 rounded-full transition-all ${barColor}`} style={{ width: `${pct}%` }} />
-            </div>
-            {over && <p className="text-xs text-red-400 mt-0.5">Lebih {formatCurrency(b.spent - b.amount)}</p>}
+            <Progress value={b.spent} max={b.amount || 1} color={BUDGET_STATUS_COLOR[status]} height={6} />
+            {over && <p className="text-xs mt-0.5" style={{ color: '#DC2626' }}>Lebih {formatCurrency(b.spent - b.amount)}</p>}
           </div>
         )
       })}
@@ -687,20 +727,20 @@ function BudgetVsActual({ year, month }) {
 function TopTransactions({ year, month }) {
   const { data, isLoading, isError, error } = useTopTransactions(year, month, 5)
   if (isLoading) return <Spinner />
-  if (isError) return <p className="text-sm text-red-500 text-center py-6">{error?.message}</p>
+  if (isError) return <p className="text-sm text-center py-6" style={{ color: '#DC2626' }}>{error?.message}</p>
   if (!data?.length) return <p className="text-sm text-ink-3 text-center py-8">Belum ada pengeluaran bulan ini</p>
 
   return (
     <div className="space-y-2">
       {data.map((tx, i) => (
-        <div key={tx.id} className="flex items-center gap-3 py-2.5 border-b border-line last:border-0">
-          <span className="w-6 h-6 rounded-full bg-surface-2 text-ink-2 text-xs flex items-center justify-center font-bold flex-shrink-0">{i + 1}</span>
+        <div key={tx.id} className="flex items-center gap-3 py-2.5" style={{ borderBottom: i < data.length - 1 ? '1px solid var(--line)' : 'none' }}>
+          <span className="w-6 h-6 rounded-full bg-surface-2 text-ink-2 text-xs flex items-center justify-center font-bold flex-shrink-0 tabular-nums">{i + 1}</span>
           <span className="text-lg flex-shrink-0">{tx.categories?.icon || '📦'}</span>
           <div className="min-w-0 flex-1">
             <p className="text-sm font-medium text-ink truncate">{tx.description || tx.categories?.name || 'Transaksi'}</p>
             <p className="text-xs text-ink-3">{tx.categories?.name} · {formatDate(tx.date)}</p>
           </div>
-          <p className="text-sm font-semibold text-red-500 flex-shrink-0">-{formatCurrency(tx.amount)}</p>
+          <p className="text-sm font-semibold text-ink flex-shrink-0 tabular-nums">−{formatCurrency(tx.amount)}</p>
         </div>
       ))}
     </div>
@@ -723,33 +763,34 @@ function MemberBreakdown({ year, month }) {
         </div>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {data.map((member) => (
-            <div key={member.id} className="bg-surface-2 rounded-xl p-4">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-9 h-9 rounded-full bg-primary flex items-center justify-center text-white font-bold text-sm">
-                  {member.name[0].toUpperCase()}
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-ink">{member.name}</p>
-                  <p className="text-xs text-ink-3 capitalize">{member.role === 'owner' ? 'Pemilik' : 'Anggota'}</p>
+        <div className="space-y-4">
+          {data.map((member) => {
+            const m = { id: member.id, full_name: member.name }
+            const color = memberColor(m)
+            return (
+              <div key={member.id} className="flex items-center gap-3">
+                <Avatar member={m} size={36} />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between mb-1.5 gap-2">
+                    <span className="text-[13px] font-semibold text-ink truncate">
+                      {member.name}
+                      <span className="text-ink-3 font-normal"> · {member.role === 'owner' ? 'Pemilik' : 'Anggota'}</span>
+                    </span>
+                    <span className="text-[13px] font-bold text-ink flex-shrink-0 tabular-nums">{idrShort(member.expense)}</span>
+                  </div>
+                  <Progress value={member.expense} max={maxExpense} color={color} height={7} />
+                  <div className="flex items-center gap-4 mt-1.5 text-xs">
+                    <span className="flex items-center gap-1" style={{ color: 'var(--accent-ink)' }}>
+                      <ArrowUpRight className="w-3.5 h-3.5" />{idrShort(member.income)}
+                    </span>
+                    <span className="flex items-center gap-1 text-ink-3">
+                      <ArrowDownRight className="w-3.5 h-3.5" />{idrShort(member.expense)}
+                    </span>
+                  </div>
                 </div>
               </div>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="flex items-center gap-1 text-emerald-600"><ArrowUpRight className="w-3.5 h-3.5" />Pemasukan</span>
-                  <span className="font-medium text-ink">{formatCurrency(member.income)}</span>
-                </div>
-                <div className="flex items-center justify-between text-sm">
-                  <span className="flex items-center gap-1 text-red-500"><ArrowDownRight className="w-3.5 h-3.5" />Pengeluaran</span>
-                  <span className="font-medium text-ink">{formatCurrency(member.expense)}</span>
-                </div>
-                <div className="w-full bg-surface-2 rounded-full h-1.5 mt-1">
-                  <div className="h-1.5 rounded-full bg-red-400" style={{ width: `${(member.expense / maxExpense) * 100}%` }} />
-                </div>
-              </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       </CardContent>
     </Card>
@@ -772,21 +813,9 @@ function MonthlyView({ year, month }) {
 
       {/* Trend Chart */}
       <Card>
-        <CardHeader><CardTitle>Tren 6 Bulan Terakhir</CardTitle></CardHeader>
+        <CardHeader><CardTitle>Arus Kas 6 Bulan</CardTitle></CardHeader>
         <CardContent>
-          {trendLoading ? <Spinner /> : (
-            <ResponsiveContainer width="100%" height={220}>
-              <BarChart data={trendData} barSize={18} barGap={4}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
-                <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#9ca3af' }} axisLine={false} tickLine={false} />
-                <YAxis tickFormatter={formatYAxis} tick={{ fontSize: 11, fill: '#9ca3af' }} axisLine={false} tickLine={false} width={42} />
-                <Tooltip content={<ChartTooltip />} />
-                <Legend iconType="circle" iconSize={8} formatter={(v) => <span className="text-xs text-ink-2">{v}</span>} />
-                <Bar dataKey="income" name="Pemasukan" fill="#10b981" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="expense" name="Pengeluaran" fill="#ef4444" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          )}
+          {trendLoading ? <Spinner /> : <CashFlowChart data={trendData} />}
         </CardContent>
       </Card>
 
@@ -810,7 +839,7 @@ function MonthlyView({ year, month }) {
       <Card>
         <CardHeader>
           <div className="flex items-center gap-2">
-            <Flame className="w-4 h-4 text-orange-400" />
+            <Flame className="w-4 h-4" style={{ color: 'var(--accent)' }} />
             <CardTitle>Kalender Pengeluaran Harian</CardTitle>
           </div>
         </CardHeader>
@@ -831,14 +860,14 @@ function MonthlyView({ year, month }) {
   )
 }
 
-// ── Period view (harian/mingguan/tahunan) ─────────────────────────────────────
+// ── Period view (mingguan / tahunan) ─────────────────────────────────────────
 
-function PeriodView({ period, dateFrom, dateTo, periodLabel: _periodLabel, year }) {
+function PeriodView({ period, dateFrom, dateTo, year }) {
   const { data: stats, isLoading } = usePeriodStats(dateFrom, dateTo)
   const { data: catData, isLoading: catLoading, isError: catError } = usePeriodCategoryDetail(dateFrom, dateTo)
   const { data: yearlyData, isLoading: yearlyLoading } = useYearlyStats(year)
 
-  if (period === 'tahunan') {
+  if (period === 'year') {
     const totalIncome = (yearlyData || []).reduce((s, m) => s + (m.income || 0), 0)
     const totalExpense = (yearlyData || []).reduce((s, m) => s + (m.expense || 0), 0)
     const yearStats = { income: totalIncome, expense: totalExpense, savings: totalIncome - totalExpense }
@@ -847,21 +876,9 @@ function PeriodView({ period, dateFrom, dateTo, periodLabel: _periodLabel, year 
       <div className="space-y-5">
         <SummaryCards stats={yearStats} isLoading={yearlyLoading} />
         <Card>
-          <CardHeader><CardTitle>Pemasukan vs Pengeluaran {year}</CardTitle></CardHeader>
+          <CardHeader><CardTitle>Arus Kas {year}</CardTitle></CardHeader>
           <CardContent>
-            {yearlyLoading ? <Spinner /> : (
-              <ResponsiveContainer width="100%" height={220}>
-                <BarChart data={yearlyData} barSize={14} barGap={4}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
-                  <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#9ca3af' }} axisLine={false} tickLine={false} />
-                  <YAxis tickFormatter={formatYAxis} tick={{ fontSize: 11, fill: '#9ca3af' }} axisLine={false} tickLine={false} width={42} />
-                  <Tooltip content={<ChartTooltip />} />
-                  <Legend iconType="circle" iconSize={8} formatter={(v) => <span className="text-xs text-ink-2">{v}</span>} />
-                  <Bar dataKey="income" name="Pemasukan" fill="#10b981" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="expense" name="Pengeluaran" fill="#ef4444" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            )}
+            {yearlyLoading ? <Spinner /> : <CashFlowChart data={yearlyData} barSize={14} />}
           </CardContent>
         </Card>
         <Card>
@@ -889,29 +906,32 @@ function PeriodView({ period, dateFrom, dateTo, periodLabel: _periodLabel, year 
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
-const PERIODS = [
-  { key: 'harian', label: 'Harian' },
-  { key: 'mingguan', label: 'Mingguan' },
-  { key: 'bulanan', label: 'Bulanan' },
-  { key: 'tahunan', label: 'Tahunan' },
+const PERIOD_OPTIONS = [
+  { id: 'week', label: 'Minggu' },
+  { id: 'month', label: 'Bulan' },
+  { id: 'year', label: 'Tahun' },
 ]
 
 export default function Reports() {
-  const [period, setPeriod] = useState('bulanan')
+  const [period, setPeriod] = useState('month')
   const [year, setYear] = useState(() => new Date().getFullYear())
   const [month, setMonth] = useState(() => new Date().getMonth() + 1)
   const [currentDate, setCurrentDate] = useState(() => new Date())
+
+  const exportMutation = useDataExport()
+  const toast = useToast()
+
+  const handleExport = () => {
+    exportMutation.mutate(undefined, {
+      onSuccess: (r) => toast.success(`Berhasil mengekspor ${r?.total ?? 0} transaksi`),
+      onError: (e) => toast.error(e?.message || 'Gagal mengekspor data'),
+    })
+  }
 
   const navigateMonth = (dir) => {
     const d = new Date(year, month - 1 + dir, 1)
     setYear(d.getFullYear())
     setMonth(d.getMonth() + 1)
-  }
-
-  const navigateDay = (dir) => {
-    const d = new Date(currentDate)
-    d.setDate(d.getDate() + dir)
-    setCurrentDate(d)
   }
 
   const navigateWeek = (dir) => {
@@ -924,42 +944,35 @@ export default function Reports() {
 
   const isCurrentPeriod = useMemo(() => {
     const now = new Date()
-    if (period === 'bulanan') return year === now.getFullYear() && month === now.getMonth() + 1
-    if (period === 'harian') return currentDate.toDateString() === now.toDateString()
-    if (period === 'mingguan') {
+    if (period === 'month') return year === now.getFullYear() && month === now.getMonth() + 1
+    if (period === 'week') {
       const w1 = getWeekRange(currentDate)
       const w2 = getWeekRange(now)
       return w1.from === w2.from
     }
-    if (period === 'tahunan') return year === now.getFullYear()
+    if (period === 'year') return year === now.getFullYear()
     return false
   }, [period, year, month, currentDate])
 
   // Compute date range for current period
   const { dateFrom, dateTo, displayLabel } = useMemo(() => {
-    if (period === 'harian') {
-      const d = currentDate.toISOString().split('T')[0]
-      const label = new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }).format(currentDate)
-      return { dateFrom: d, dateTo: d, displayLabel: label }
-    }
-    if (period === 'mingguan') {
+    if (period === 'week') {
       const range = getWeekRange(currentDate)
       return { dateFrom: range.from, dateTo: range.to, displayLabel: range.label }
     }
-    if (period === 'bulanan') {
+    if (period === 'month') {
       return { dateFrom: null, dateTo: null, displayLabel: monthLabel(year, month) }
     }
-    if (period === 'tahunan') {
+    if (period === 'year') {
       return { dateFrom: `${year}-01-01`, dateTo: `${year}-12-31`, displayLabel: String(year) }
     }
     return { dateFrom: null, dateTo: null, displayLabel: '' }
   }, [period, year, month, currentDate])
 
   const handleNav = (dir) => {
-    if (period === 'harian') navigateDay(dir)
-    else if (period === 'mingguan') navigateWeek(dir)
-    else if (period === 'bulanan') navigateMonth(dir)
-    else if (period === 'tahunan') navigateYear(dir)
+    if (period === 'week') navigateWeek(dir)
+    else if (period === 'month') navigateMonth(dir)
+    else if (period === 'year') navigateYear(dir)
   }
 
   const goToNow = () => {
@@ -971,56 +984,37 @@ export default function Reports() {
 
   return (
     <div className="space-y-5 max-w-5xl mx-auto">
-      {/* Period tabs */}
-      <div className="flex items-center gap-3 flex-wrap">
-        <div className="flex gap-1 bg-surface-2 rounded-xl p-1">
-          {PERIODS.map((p) => (
-            <button
-              key={p.key}
-              onClick={() => setPeriod(p.key)}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                period === p.key ? 'bg-surface shadow-sm text-ink' : 'text-ink-2 hover:text-ink'
-              }`}
-            >
-              {p.label}
-            </button>
-          ))}
-        </div>
+      {/* Period selector + export */}
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <SegmentedControl size="sm" value={period} onChange={setPeriod} options={PERIOD_OPTIONS} />
+        <Button variant="ghost" size="sm" onClick={handleExport} loading={exportMutation.isPending}>
+          <Icon name="download" size={14} /> Ekspor
+        </Button>
       </div>
 
       {/* Navigation */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <button onClick={() => handleNav(-1)} className="p-1.5 rounded-lg hover:bg-surface-2 transition-colors">
-            <ChevronLeft className="w-5 h-5 text-ink-2" />
-          </button>
+          <Button variant="ghost" size="icon" onClick={() => handleNav(-1)} aria-label="Sebelumnya">
+            <ChevronLeft className="w-5 h-5" />
+          </Button>
           <h2 className="text-base font-semibold text-ink min-w-44 text-center">{displayLabel}</h2>
-          <button
-            onClick={() => handleNav(1)}
-            disabled={isCurrentPeriod}
-            className="p-1.5 rounded-lg hover:bg-surface-2 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-          >
-            <ChevronRight className="w-5 h-5 text-ink-2" />
-          </button>
+          <Button variant="ghost" size="icon" onClick={() => handleNav(1)} disabled={isCurrentPeriod} aria-label="Berikutnya">
+            <ChevronRight className="w-5 h-5" />
+          </Button>
         </div>
         {!isCurrentPeriod && (
-          <button onClick={goToNow} className="text-xs text-primary font-medium hover:underline">
+          <Button variant="ghost" size="sm" onClick={goToNow} style={{ color: 'var(--accent)' }}>
             Kembali ke sekarang
-          </button>
+          </Button>
         )}
       </div>
 
       {/* Content */}
-      {period === 'bulanan' ? (
+      {period === 'month' ? (
         <MonthlyView year={year} month={month} />
       ) : (
-        <PeriodView
-          period={period}
-          dateFrom={dateFrom}
-          dateTo={dateTo}
-          periodLabel={displayLabel}
-          year={year}
-        />
+        <PeriodView period={period} dateFrom={dateFrom} dateTo={dateTo} year={year} />
       )}
     </div>
   )
