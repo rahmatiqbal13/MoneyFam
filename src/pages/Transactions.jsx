@@ -14,7 +14,12 @@ import { useFamilyMembers } from '@/hooks/useFamily'
 import { useCategories } from '@/hooks/useCategories'
 import { useWallets } from '@/hooks/useWallets'
 import { useTransactionStore } from '@/stores/transactionStore'
-import { idrShort, formatCurrency, fmtRelative } from '@/lib/utils'
+import { idrShort, formatCurrency, fmtRelative, formatDate } from '@/lib/utils'
+
+const dayLabel = (d) => {
+  const n = Math.round((new Date().setHours(0, 0, 0, 0) - new Date(d).setHours(0, 0, 0, 0)) / 86400000)
+  return n < 7 ? fmtRelative(d) : formatDate(d)
+}
 
 const TYPE_OPTIONS = [
   { id: 'all', label: 'Semua' },
@@ -257,7 +262,7 @@ export default function Transactions() {
                   className="flex items-baseline justify-between"
                   style={{ padding: '12px 8px 8px', fontSize: 11.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.06em', color: 'var(--ink-3)' }}
                 >
-                  <span>{fmtRelative(day)}</span>
+                  <span>{dayLabel(day)}</span>
                   {daySum > 0 && (
                     <span className="font-mono tabular-nums" style={{ color: 'var(--bad)' }}>
                       −{idrShort(daySum)}

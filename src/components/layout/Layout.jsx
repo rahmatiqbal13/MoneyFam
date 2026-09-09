@@ -32,7 +32,7 @@ export function Layout() {
         <main className="flex-1 overflow-y-auto">
           <div
             className="p-4 lg:p-6 max-w-[1180px] mx-auto"
-            style={narrow ? { paddingBottom: 110 } : undefined}
+            style={narrow ? { paddingBottom: 110 } : { paddingBottom: 96 }}
           >
             <Suspense fallback={<PageLoader />}>
               <Outlet />

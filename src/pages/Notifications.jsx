@@ -95,7 +95,7 @@ export default function Notifications() {
             { id: 'all', label: 'Semua' },
             { id: 'unread', label: `Belum dibaca${unreadCount ? ` · ${unreadCount}` : ''}` },
           ]}
-          onChange={setFilter}
+          onChange={(f) => { setFilter(f); setPage(0) }}
         />
         <Button
           variant="ghost"

@@ -3,7 +3,10 @@ import { supabase } from '@/lib/supabase'
 import { applyTheme } from '@/lib/theme'
 import { useAuthStore } from '@/stores/authStore'
 
-const LS_KEY = 'mf_theme'
+const LS_KEY = 'mf_theme_v2'
+
+// One-time cleanup of the superseded key (it always pinned a teal accent).
+try { localStorage.removeItem('mf_theme') } catch { /* private mode */ }
 
 function readLS() {
   try { return JSON.parse(localStorage.getItem(LS_KEY) || '{}') } catch { return {} }
@@ -53,7 +56,7 @@ export const useThemeStore = create((set, get) => ({
     const next = {
       variant: prefs.variant || get().variant,
       dark: typeof prefs.dark === 'boolean' ? prefs.dark : get().dark,
-      accent: prefs.accent || null,
+      accent: (prefs.accent && prefs.accent.toLowerCase() !== '#0ea5a4') ? prefs.accent : null,
     }
     set(next)
     applyTheme(next)
