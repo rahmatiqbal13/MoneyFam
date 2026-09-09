@@ -464,7 +464,7 @@ function SavingsPaymentHistory({ goalId }) {
             <div key={payment.id} className="flex items-center justify-between p-2 bg-surface-2 rounded-lg text-sm">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <span className={`font-medium ${payment.type === 'deposit' ? 'text-emerald-600' : 'text-red-500'}`}>
+                  <span className="font-medium" style={{ color: payment.type === 'deposit' ? 'var(--good)' : 'var(--bad)' }}>
                     {payment.type === 'deposit' ? '+' : '-'}{formatCurrency(payment.amount)}
                   </span>
                   <span className="text-xs text-ink-3">
@@ -1524,7 +1524,7 @@ function DebtsTab() {
       {/* Summary */}
       {debts?.length > 0 && (
         <div className="grid grid-cols-2 gap-3">
-          <StatTile label="Sisa Hutang" value={formatCurrency(totalDebt)} accent />
+          <StatTile label="Sisa Hutang" value={formatCurrency(totalDebt)} />
           <StatTile label="Piutang" value={formatCurrency(totalReceivable)} />
         </div>
       )}

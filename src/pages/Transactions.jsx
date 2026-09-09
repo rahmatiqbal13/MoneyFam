@@ -26,6 +26,7 @@ const EMPTY_ADVANCED = { search: '', category_id: '', wallet_id: '', dateFrom: '
 
 function TransactionRow({ tx, onClick }) {
   const isIncome = tx.type === 'income'
+  const isTransfer = tx.type === 'transfer'
   const color = tx.categories?.color || '#6b7280'
   const icon = tx.categories?.icon || (isIncome ? '💰' : tx.type === 'transfer' ? '🔄' : '💸')
   const meta = [tx.creator_name, tx.wallets?.name, fmtRelative(tx.date)].filter(Boolean).join(' · ')
@@ -55,9 +56,9 @@ function TransactionRow({ tx, onClick }) {
       </div>
       <span
         className="text-sm font-bold font-mono tabular-nums whitespace-nowrap"
-        style={{ color: isIncome ? 'var(--good)' : 'var(--ink)' }}
+        style={{ color: isTransfer ? 'var(--ink-2)' : isIncome ? 'var(--good)' : 'var(--ink)' }}
       >
-        {isIncome ? '+' : '−'} {idrShort(tx.amount)}
+        {isTransfer ? '' : isIncome ? '+ ' : '− '}{idrShort(tx.amount)}
       </span>
     </button>
   )

@@ -47,7 +47,7 @@ export function Button({
         }
       case 'danger':
         return {
-          background: '#DC2626',
+          background: 'var(--bad)',
           color: '#fff',
           borderRadius: 'var(--r-sm)',
           ...style,

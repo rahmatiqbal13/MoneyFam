@@ -30,7 +30,11 @@
           var t = JSON.parse(localStorage.getItem('mf_theme') || '{}')
           var r = document.documentElement
           r.setAttribute('data-variant', t.variant || 'hangat')
-          r.setAttribute('data-dark', t.dark ? 'true' : 'false')
+          var dark = t.dark
+          if (dark === undefined) {
+            dark = !!(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)
+          }
+          r.setAttribute('data-dark', dark ? 'true' : 'false')
           if (t.accent) {
             r.style.setProperty('--accent', t.accent)
             r.style.setProperty('--accent-soft', t.accent + '22')

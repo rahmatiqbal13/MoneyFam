@@ -193,7 +193,7 @@ export default function Register() {
 
           <div className="flex flex-col gap-1">
             <label className="text-sm font-medium" style={{ color: 'var(--ink-2)' }}>
-              Password <span style={{ color: '#DC2626' }}>*</span>
+              Password <span style={{ color: 'var(--bad)' }}>*</span>
             </label>
             <div className="relative">
               <input
@@ -207,7 +207,7 @@ export default function Register() {
                   borderRadius: 'var(--r-sm)',
                   background: 'var(--surface)',
                   color: 'var(--ink)',
-                  borderColor: errors.password ? '#DC2626' : 'var(--line-2)',
+                  borderColor: errors.password ? 'var(--bad)' : 'var(--line-2)',
                 }}
               />
               <button
@@ -219,7 +219,7 @@ export default function Register() {
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
-            {errors.password && <p className="text-xs" style={{ color: '#DC2626' }}>{errors.password}</p>}
+            {errors.password && <p className="text-xs" style={{ color: 'var(--bad)' }}>{errors.password}</p>}
           </div>
 
           <Input

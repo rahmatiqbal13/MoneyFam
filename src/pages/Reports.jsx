@@ -433,8 +433,8 @@ function DayTransactionsModal({ date, onClose, onTransactionDeleted }) {
             style={{ background: 'var(--surface)', borderRadius: 'var(--r-lg)', boxShadow: 'var(--shadow-lg)' }}
           >
             <div className="text-center mb-4">
-              <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3" style={{ background: '#FEE2E2' }}>
-                <Trash2 className="w-6 h-6" style={{ color: '#DC2626' }} />
+              <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3" style={{ background: 'color-mix(in srgb, var(--bad) 14%, var(--surface))' }}>
+                <Trash2 className="w-6 h-6" style={{ color: 'var(--bad)' }} />
               </div>
               <h3 className="text-lg font-semibold text-ink">Hapus Transaksi?</h3>
               <p className="text-sm text-ink-2 mt-1">
@@ -529,10 +529,13 @@ function SpendingHeatmap({ year, month }) {
                 key={dayNum}
                 title={`${dayNum} — ${getTooltipText(dayNum)}`}
                 onClick={() => setSelectedDate(dateStr)}
-                style={{ background: heatBg(amount / maxSpending) }}
+                style={{
+                  background: heatBg(amount / maxSpending),
+                  ...(isToday ? { boxShadow: '0 0 0 2px var(--accent)' } : {}),
+                }}
                 className={`aspect-square rounded-md flex items-center justify-center transition-all hover:scale-110 hover:shadow-md ${
-                  isToday ? 'ring-2 ring-primary ring-offset-1' : ''
-                } ${amount > 0 ? 'cursor-pointer' : 'cursor-default'}`}
+                  amount > 0 ? 'cursor-pointer' : 'cursor-default'
+                }`}
               >
                 <span className={`text-xs font-medium ${amount > 0 ? 'text-ink' : 'text-ink-3'}`}>
                   {dayNum}
@@ -592,10 +595,10 @@ function FutureProjection({ year, month, stats }) {
   const isOnTrack = projectedSavings >= 0
 
   return (
-    <Card style={{ background: isOnTrack ? 'var(--accent-soft)' : '#FEF3C7', border: 'none' }}>
+    <Card style={{ background: isOnTrack ? 'var(--accent-soft)' : 'color-mix(in srgb, var(--warn) 16%, var(--surface))', border: 'none' }}>
       <CardContent>
         <div className="flex items-center gap-2 mb-3">
-          <Flame className="w-4 h-4" style={{ color: isOnTrack ? 'var(--accent-ink)' : '#B45309' }} />
+          <Flame className="w-4 h-4" style={{ color: isOnTrack ? 'var(--accent-ink)' : 'var(--warn)' }} />
           <p className="text-sm font-semibold text-ink">Proyeksi Akhir Bulan</p>
           <span className="text-xs text-ink-3">({daysLeft} hari lagi)</span>
         </div>
@@ -610,7 +613,7 @@ function FutureProjection({ year, month, stats }) {
           </div>
           <div>
             <p className="text-xs text-ink-3">Proyeksi Sisa Bulan</p>
-            <p className="text-sm font-bold tabular-nums" style={{ color: isOnTrack ? 'var(--accent-ink)' : '#B45309' }}>
+            <p className="text-sm font-bold tabular-nums" style={{ color: isOnTrack ? 'var(--accent-ink)' : 'var(--warn)' }}>
               {projectedSavings >= 0 ? '+' : ''}{formatCurrency(Math.round(projectedSavings))}
             </p>
           </div>
@@ -630,7 +633,7 @@ function FutureProjection({ year, month, stats }) {
 
 function CategoryBreakdown({ data, isLoading, isError }) {
   if (isLoading) return <Spinner />
-  if (isError) return <p className="text-sm text-center py-6" style={{ color: '#DC2626' }}>Gagal memuat data</p>
+  if (isError) return <p className="text-sm text-center py-6" style={{ color: 'var(--bad)' }}>Gagal memuat data</p>
   if (!data?.length) return <p className="text-sm text-ink-3 text-center py-8">Belum ada pengeluaran</p>
 
   const total = data[0]?.total || data.reduce((s, c) => s + c.amount, 0)
@@ -686,7 +689,7 @@ function CategoryBreakdown({ data, isLoading, isError }) {
 
 // ── Budget vs Actual ──────────────────────────────────────────────────────────
 
-const BUDGET_STATUS_COLOR = { over: '#DC2626', warning: '#D97706', good: 'var(--accent)', none: 'var(--ink-3)' }
+const BUDGET_STATUS_COLOR = { over: 'var(--bad)', warning: 'var(--warn)', good: 'var(--accent)', none: 'var(--ink-3)' }
 
 function BudgetVsActual({ year, month }) {
   const ym = `${year}-${String(month).padStart(2, '0')}`
@@ -714,7 +717,7 @@ function BudgetVsActual({ year, month }) {
               </div>
             </div>
             <Progress value={b.spent} max={b.amount || 1} color={BUDGET_STATUS_COLOR[status]} height={6} />
-            {over && <p className="text-xs mt-0.5" style={{ color: '#DC2626' }}>Lebih {formatCurrency(b.spent - b.amount)}</p>}
+            {over && <p className="text-xs mt-0.5" style={{ color: 'var(--bad)' }}>Lebih {formatCurrency(b.spent - b.amount)}</p>}
           </div>
         )
       })}
@@ -727,7 +730,7 @@ function BudgetVsActual({ year, month }) {
 function TopTransactions({ year, month }) {
   const { data, isLoading, isError, error } = useTopTransactions(year, month, 5)
   if (isLoading) return <Spinner />
-  if (isError) return <p className="text-sm text-center py-6" style={{ color: '#DC2626' }}>{error?.message}</p>
+  if (isError) return <p className="text-sm text-center py-6" style={{ color: 'var(--bad)' }}>{error?.message}</p>
   if (!data?.length) return <p className="text-sm text-ink-3 text-center py-8">Belum ada pengeluaran bulan ini</p>
 
   return (

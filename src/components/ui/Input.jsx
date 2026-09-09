@@ -8,7 +8,7 @@ const baseInputStyle = {
 }
 
 const errorInputStyle = {
-  borderColor: '#DC2626',
+  borderColor: 'var(--bad)',
 }
 
 export const Input = forwardRef(function Input(
@@ -20,7 +20,7 @@ export const Input = forwardRef(function Input(
       {label && (
         <label className="text-sm font-medium" style={{ color: 'var(--ink-2)' }}>
           {label}
-          {required && <span className="ml-1" style={{ color: '#DC2626' }}>*</span>}
+          {required && <span className="ml-1" style={{ color: 'var(--bad)' }}>*</span>}
         </label>
       )}
       <input
@@ -42,7 +42,7 @@ export const Input = forwardRef(function Input(
       {helpText && !error && (
         <p className="text-xs" style={{ color: 'var(--ink-3)' }}>{helpText}</p>
       )}
-      {error && <p className="text-xs" style={{ color: '#DC2626' }}>{error}</p>}
+      {error && <p className="text-xs" style={{ color: 'var(--bad)' }}>{error}</p>}
     </div>
   )
 })
@@ -56,7 +56,7 @@ export const Textarea = forwardRef(function Textarea(
       {label && (
         <label className="text-sm font-medium" style={{ color: 'var(--ink-2)' }}>
           {label}
-          {required && <span className="ml-1" style={{ color: '#DC2626' }}>*</span>}
+          {required && <span className="ml-1" style={{ color: 'var(--bad)' }}>*</span>}
         </label>
       )}
       <textarea
@@ -79,7 +79,7 @@ export const Textarea = forwardRef(function Textarea(
       {helpText && !error && (
         <p className="text-xs" style={{ color: 'var(--ink-3)' }}>{helpText}</p>
       )}
-      {error && <p className="text-xs" style={{ color: '#DC2626' }}>{error}</p>}
+      {error && <p className="text-xs" style={{ color: 'var(--bad)' }}>{error}</p>}
     </div>
   )
 })

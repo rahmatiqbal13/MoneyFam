@@ -47,6 +47,7 @@ export const useThemeStore = create((set, get) => ({
 
   hydrate(prefs) {
     if (!prefs || typeof prefs !== 'object') return
+    clearTimeout(syncTimer)
     const next = {
       variant: prefs.variant || get().variant,
       dark: typeof prefs.dark === 'boolean' ? prefs.dark : get().dark,

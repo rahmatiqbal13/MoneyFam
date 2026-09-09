@@ -73,7 +73,13 @@ export default function Notifications() {
   }
 
   const handleOpenNotification = (n) => {
-    if (!n.is_read) markAsRead.mutate(n.id)
+    if (!n.is_read) {
+      try {
+        markAsRead.mutate(n.id)
+      } catch {
+        toast.error('Gagal menandai notifikasi')
+      }
+    }
     const target = getTypeConfig(n.type).to
     if (target) navigate(target)
   }

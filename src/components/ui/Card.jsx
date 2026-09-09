@@ -34,13 +34,13 @@ export function Card({
   style,
   tone = 'surface',
   padding,
-  radius = 'lg',
+  radius,
   onClick,
   ...props
 }) {
   return (
     <div
-      className={cn('rounded-r-lg', className)}
+      className={cn(radius ? '' : 'rounded-r-lg', className)}
       style={{
         ...toneStyle(tone),
         borderRadius: RADIUS_MAP[radius] || RADIUS_MAP.lg,

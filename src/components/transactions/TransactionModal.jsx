@@ -293,7 +293,7 @@ export function TransactionModal({ isOpen, onClose, transaction = null }) {
           {/* Date and Time */}
           <div className="flex flex-col gap-1">
             <label className="text-sm font-medium" style={{ color: 'var(--ink-2)' }}>
-              Tanggal & Waktu <span style={{ color: '#DC2626' }}>*</span>
+              Tanggal & Waktu <span style={{ color: 'var(--bad)' }}>*</span>
             </label>
             <div className="flex gap-2">
               <Input
@@ -309,7 +309,7 @@ export function TransactionModal({ isOpen, onClose, transaction = null }) {
                 onChange={update('time')}
               />
             </div>
-            {errors.date && <p className="text-xs" style={{ color: '#DC2626' }}>{errors.date}</p>}
+            {errors.date && <p className="text-xs" style={{ color: 'var(--bad)' }}>{errors.date}</p>}
           </div>
 
           {/* Description */}

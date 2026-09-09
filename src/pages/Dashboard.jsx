@@ -55,6 +55,16 @@ function toISODate(d) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
+const WALLET_TYPE_LABEL = {
+  cash: 'Tunai',
+  bank: 'Bank',
+  ewallet: 'E-wallet',
+  savings: 'Tabungan',
+  investment: 'Investasi',
+  credit: 'Kartu Kredit',
+  other: 'Lainnya',
+}
+
 function WalletCardMini({ wallet }) {
   const color = wallet.color || 'var(--accent)'
   return (
@@ -73,7 +83,7 @@ function WalletCardMini({ wallet }) {
       >
         {wallet.icon || '👛'}
       </div>
-      <div className="text-xs" style={{ color: 'var(--ink-3)' }}>{wallet.type}</div>
+      <div className="text-xs" style={{ color: 'var(--ink-3)' }}>{WALLET_TYPE_LABEL[wallet.type] || wallet.type}</div>
       <div className="text-sm font-semibold mb-2" style={{ color: 'var(--ink)' }}>{wallet.name}</div>
       <div className="font-display tabular-nums" style={{ fontSize: 20, color: 'var(--ink)' }}>
         {idrShort(Number(wallet.balance || 0))}
@@ -135,11 +145,11 @@ export default function Dashboard() {
 
       {/* Notice: no profile */}
       {!profile && (
-        <div className="rounded-xl p-4 flex items-start gap-3" style={{ background: '#FFFBEB', border: '1px solid #FDE68A' }}>
+        <div className="rounded-xl p-4 flex items-start gap-3" style={{ background: 'color-mix(in srgb, var(--warn) 14%, var(--surface))', border: '1px solid color-mix(in srgb, var(--warn) 32%, var(--surface))' }}>
           <span className="text-base mt-0.5">⚠️</span>
           <div className="flex-1">
-            <p className="text-sm font-semibold" style={{ color: '#92400E' }}>Profil belum dibuat</p>
-            <p className="text-xs mt-0.5" style={{ color: '#B45309' }}>
+            <p className="text-sm font-semibold" style={{ color: 'var(--warn)' }}>Profil belum dibuat</p>
+            <p className="text-xs mt-0.5" style={{ color: 'var(--warn)' }}>
               Lengkapi profil Anda di halaman Pengaturan.
             </p>
           </div>
