@@ -13,7 +13,9 @@ const EMPTY_FILTERS = {
 export const useTransactionStore = create((set) => ({
   filters: { ...EMPTY_FILTERS },
   page: 0,
+  pageSize: 20,
   setFilters: (filters) => set((state) => ({ filters: { ...state.filters, ...filters }, page: 0 })),
   setPage: (page) => set({ page }),
+  setPageSize: (pageSize) => set({ pageSize, page: 0 }),
   resetFilters: () => set({ filters: { ...EMPTY_FILTERS }, page: 0 }),
 }))

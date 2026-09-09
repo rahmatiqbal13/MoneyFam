@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
 import { Button } from '@/components/ui/Button'
 import { TransactionModal } from '@/components/transactions/TransactionModal'
-import { useTransactions, useMonthlyStats, TRANSACTIONS_PAGE_SIZE } from '@/hooks/useTransactions'
+import { useTransactions, useMonthlyStats, TRANSACTIONS_PAGE_SIZE_OPTIONS } from '@/hooks/useTransactions'
 import { useFamilyMembers } from '@/hooks/useFamily'
 import { useCategories } from '@/hooks/useCategories'
 import { useWallets } from '@/hooks/useWallets'
@@ -70,11 +70,13 @@ function TransactionRow({ tx, onClick }) {
 }
 
 export default function Transactions() {
-  const { filters, page, setFilters, resetFilters, setPage } = useTransactionStore()
-  const { data: txData, isLoading } = useTransactions(filters, page)
+  const { filters, page, pageSize, setFilters, resetFilters, setPage, setPageSize } = useTransactionStore()
+  const { data: txData, isLoading } = useTransactions(filters, page, pageSize)
   const transactions = txData?.data || []
   const totalCount = txData?.count || 0
-  const totalPages = Math.ceil(totalCount / TRANSACTIONS_PAGE_SIZE)
+  const totalPages = Math.ceil(totalCount / pageSize)
+  const rangeStart = totalCount === 0 ? 0 : page * pageSize + 1
+  const rangeEnd = Math.min(totalCount, (page + 1) * pageSize)
 
   const now = new Date()
   const { data: stats } = useMonthlyStats(now.getFullYear(), now.getMonth() + 1)
@@ -281,48 +283,69 @@ export default function Transactions() {
       )}
 
       {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between pt-2">
-          <p className="text-xs" style={{ color: 'var(--ink-3)' }}>
-            Halaman {page + 1} dari {totalPages}
-          </p>
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => setPage(page - 1)}
-              disabled={page === 0}
-              className="p-1.5 rounded-lg disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-              style={{ color: 'var(--ink-2)' }}
-              aria-label="Halaman sebelumnya"
+      {!isLoading && totalCount > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
+          <div className="flex items-center gap-2">
+            <span className="text-xs" style={{ color: 'var(--ink-3)' }}>Tampilkan</span>
+            <select
+              value={pageSize}
+              onChange={(e) => setPageSize(Number(e.target.value))}
+              aria-label="Jumlah data per halaman"
+              className="text-xs font-medium rounded-lg px-2 py-1.5 outline-none"
+              style={{
+                background: 'var(--surface-2)',
+                color: 'var(--ink-2)',
+                border: '1px solid var(--line)',
+              }}
             >
-              <Icon name="chevronL" size={16} />
-            </button>
-            {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
-              const pageNum = totalPages <= 5 ? i : Math.max(0, Math.min(page - 2, totalPages - 5)) + i
-              const active = pageNum === page
-              return (
-                <button
-                  key={pageNum}
-                  onClick={() => setPage(pageNum)}
-                  className="w-7 h-7 rounded-lg text-xs font-medium transition-colors"
-                  style={{
-                    background: active ? 'var(--accent)' : 'transparent',
-                    color: active ? '#fff' : 'var(--ink-2)',
-                  }}
-                >
-                  {pageNum + 1}
-                </button>
-              )
-            })}
-            <button
-              onClick={() => setPage(page + 1)}
-              disabled={page >= totalPages - 1}
-              className="p-1.5 rounded-lg disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-              style={{ color: 'var(--ink-2)' }}
-              aria-label="Halaman berikutnya"
-            >
-              <Icon name="chevronR" size={16} />
-            </button>
+              {TRANSACTIONS_PAGE_SIZE_OPTIONS.map((n) => (
+                <option key={n} value={n}>{n}</option>
+              ))}
+            </select>
+            <span className="text-xs whitespace-nowrap" style={{ color: 'var(--ink-3)' }}>
+              {rangeStart}–{rangeEnd} dari {totalCount}
+            </span>
           </div>
+
+          {totalPages > 1 && (
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setPage(page - 1)}
+                disabled={page === 0}
+                className="p-1.5 rounded-lg disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                style={{ color: 'var(--ink-2)' }}
+                aria-label="Halaman sebelumnya"
+              >
+                <Icon name="chevronL" size={16} />
+              </button>
+              {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+                const pageNum = totalPages <= 5 ? i : Math.max(0, Math.min(page - 2, totalPages - 5)) + i
+                const active = pageNum === page
+                return (
+                  <button
+                    key={pageNum}
+                    onClick={() => setPage(pageNum)}
+                    className="w-7 h-7 rounded-lg text-xs font-medium transition-colors"
+                    style={{
+                      background: active ? 'var(--accent)' : 'transparent',
+                      color: active ? '#fff' : 'var(--ink-2)',
+                    }}
+                  >
+                    {pageNum + 1}
+                  </button>
+                )
+              })}
+              <button
+                onClick={() => setPage(page + 1)}
+                disabled={page >= totalPages - 1}
+                className="p-1.5 rounded-lg disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                style={{ color: 'var(--ink-2)' }}
+                aria-label="Halaman berikutnya"
+              >
+                <Icon name="chevronR" size={16} />
+              </button>
+            </div>
+          )}
         </div>
       )}
 

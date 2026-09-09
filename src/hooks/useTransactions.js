@@ -6,7 +6,15 @@ import { shouldSendNotification } from './useNotifications'
 import { formatCurrency } from '@/lib/utils'
 
 const QUERY_KEY = 'transactions'
-const PAGE_SIZE = 50
+const PAGE_SIZE = 50 // batas maksimal per halaman
+
+// Pilihan jumlah data per halaman untuk daftar transaksi
+export const TRANSACTIONS_PAGE_SIZE_OPTIONS = [10, 20, 30, 50]
+
+const clampPageSize = (size) => {
+  const n = Number(size)
+  return Number.isFinite(n) && n > 0 ? Math.min(n, PAGE_SIZE) : 20
+}
 
 // Helper to create budget warning notification
 async function checkAndCreateBudgetWarning(familyId, userId, categoryId, _amount) {
@@ -185,16 +193,17 @@ export function useActivityReminders() {
   }, [user?.id, family?.id])
 }
 
-export function useTransactions(filters = {}, page = 0) {
+export function useTransactions(filters = {}, page = 0, pageSize = 20) {
   const family = useAuthStore((s) => s.family)
   const user = useAuthStore((s) => s.user)
+  const size = clampPageSize(pageSize)
 
   return useQuery({
-    queryKey: [QUERY_KEY, family?.id, user?.id, filters, page],
+    queryKey: [QUERY_KEY, family?.id, user?.id, filters, page, size],
     queryFn: async () => {
       if (!user?.id) return { data: [], count: 0 }
-      const from = page * PAGE_SIZE
-      const to = from + PAGE_SIZE - 1
+      const from = page * size
+      const to = from + size - 1
 
       let query = supabase
         .from('transactions')
@@ -250,8 +259,6 @@ export function useTransactions(filters = {}, page = 0) {
     staleTime: 1000 * 30,
   })
 }
-
-export { PAGE_SIZE as TRANSACTIONS_PAGE_SIZE }
 
 export function useRecentTransactions(limit = 5) {
   const family = useAuthStore((s) => s.family)
