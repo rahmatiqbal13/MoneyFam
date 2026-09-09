@@ -28,7 +28,7 @@ export function Header({ onMenuClick }) {
   let subtitle = meta.subtitle
   if (location.pathname === '/') {
     subtitle = `Halo, ${family?.name || 'Keluarga'} 👋`
-  } else if (location.pathname === '/transactions' || location.pathname === '/budget') {
+  } else if (location.pathname === '/transactions') {
     subtitle = formatMonthYear(new Date().toISOString())
   }
 

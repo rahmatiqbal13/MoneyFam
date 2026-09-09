@@ -14,7 +14,7 @@ import { useFamilyMembers } from '@/hooks/useFamily'
 import { useCategories } from '@/hooks/useCategories'
 import { useWallets } from '@/hooks/useWallets'
 import { useTransactionStore } from '@/stores/transactionStore'
-import { idrShort, fmtRelative } from '@/lib/utils'
+import { idrShort, formatCurrency, fmtRelative } from '@/lib/utils'
 
 const TYPE_OPTIONS = [
   { id: 'all', label: 'Semua' },
@@ -58,7 +58,7 @@ function TransactionRow({ tx, onClick }) {
         className="text-sm font-bold font-mono tabular-nums whitespace-nowrap"
         style={{ color: isTransfer ? 'var(--ink-2)' : isIncome ? 'var(--good)' : 'var(--ink)' }}
       >
-        {isTransfer ? '' : isIncome ? '+ ' : '− '}{idrShort(tx.amount)}
+        {isTransfer ? '' : isIncome ? '+ ' : '− '}{formatCurrency(tx.amount)}
       </span>
     </button>
   )
@@ -88,10 +88,6 @@ export default function Transactions() {
 
   const handleEdit = (tx) => {
     setEditingTx(tx)
-    setModalOpen(true)
-  }
-  const handleAdd = () => {
-    setEditingTx(null)
     setModalOpen(true)
   }
   const handleClose = () => {
@@ -129,7 +125,7 @@ export default function Transactions() {
   const groups = []
   const groupIndex = {}
   transactions.forEach((t) => {
-    const key = fmtRelative(t.date)
+    const key = t.date
     if (groupIndex[key] === undefined) {
       groupIndex[key] = groups.length
       groups.push([key, []])
@@ -261,7 +257,7 @@ export default function Transactions() {
                   className="flex items-baseline justify-between"
                   style={{ padding: '12px 8px 8px', fontSize: 11.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.06em', color: 'var(--ink-3)' }}
                 >
-                  <span>{day}</span>
+                  <span>{fmtRelative(day)}</span>
                   {daySum > 0 && (
                     <span className="font-mono tabular-nums" style={{ color: 'var(--bad)' }}>
                       −{idrShort(daySum)}
@@ -324,21 +320,6 @@ export default function Transactions() {
           </div>
         </div>
       )}
-
-      {/* Desktop add affordance */}
-      <button
-        type="button"
-        onClick={handleAdd}
-        className="hidden lg:flex items-center gap-2"
-        style={{
-          position: 'fixed', bottom: 32, right: 32, zIndex: 30,
-          padding: '14px 22px', borderRadius: 999,
-          background: 'var(--accent)', color: '#fff', border: 'none',
-          fontWeight: 700, fontSize: 14, cursor: 'pointer', boxShadow: 'var(--shadow-lg)',
-        }}
-      >
-        <Icon name="plus" size={18} stroke={2.4} /> Catat Transaksi
-      </button>
 
       <Sheet open={filterOpen} onClose={() => setFilterOpen(false)} title="Filter Transaksi">
         <div className="space-y-4">

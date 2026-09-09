@@ -25,5 +25,10 @@ export function applyTheme({ variant, dark, accent }) {
     root.style.setProperty('--accent', accent)
     root.style.setProperty('--accent-soft', accent + '22')
     root.style.setProperty('--accent-ink', shadeColor(accent, -22))
+  } else {
+    // Fall back to the variant stylesheet's accent (html[data-variant=…] rules).
+    root.style.removeProperty('--accent')
+    root.style.removeProperty('--accent-soft')
+    root.style.removeProperty('--accent-ink')
   }
 }

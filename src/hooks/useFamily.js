@@ -93,12 +93,22 @@ export function useFamilyMembers() {
     queryKey: [QUERY_KEY, family?.id],
     queryFn: async () => {
       if (!family?.id) return []
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, full_name, email, role, created_at, avatar_color, emoji')
-        .eq('family_id', family.id)
-        .order('role', { ascending: false })  // owner (o) > member (m) → owner tampil duluan
-        .order('created_at', { ascending: true })
+      const cols = 'id, full_name, email, role, created_at'
+      const runQuery = (select) =>
+        supabase
+          .from('profiles')
+          .select(select)
+          .eq('family_id', family.id)
+          .order('role', { ascending: false })  // owner (o) > member (m) → owner tampil duluan
+          .order('created_at', { ascending: true })
+
+      let { data, error } = await runQuery(`${cols}, avatar_color, emoji`)
+      // Migrasi avatar_color/emoji mungkin belum diterapkan → fallback tanpa kolom itu.
+      if (error && (error.code === '42703' || /column|schema cache/i.test(error.message || ''))) {
+        const fallback = await runQuery(cols)
+        data = fallback.data
+        error = fallback.error
+      }
       if (error) throw error
       return data || []
     },

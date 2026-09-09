@@ -605,12 +605,23 @@ export function useMemberSpending(year, month) {
         txQuery = txQuery.eq('user_id', user.id)
       }
 
-      const [txResult, profileResult] = await Promise.all([
+      const fetchProfiles = (cols) => {
+        const q = supabase.from('profiles').select(cols)
+        return family?.id ? q.eq('family_id', family.id) : q.eq('id', user.id)
+      }
+
+      let [txResult, profileResult] = await Promise.all([
         txQuery,
-        family?.id 
-          ? supabase.from('profiles').select('id, full_name, role').eq('family_id', family.id)
-          : supabase.from('profiles').select('id, full_name, role').eq('id', user.id),
+        fetchProfiles('id, full_name, role, avatar_color, emoji'),
       ])
+
+      // Migrasi avatar_color/emoji mungkin belum diterapkan → fallback tanpa kolom itu.
+      if (
+        profileResult.error &&
+        (profileResult.error.code === '42703' || /column|schema cache/i.test(profileResult.error.message || ''))
+      ) {
+        profileResult = await fetchProfiles('id, full_name, role')
+      }
 
       if (txResult.error) throw txResult.error
 
@@ -625,6 +636,8 @@ export function useMemberSpending(year, month) {
             id: t.user_id,
             name: profile?.full_name || 'Anggota',
             role: profile?.role || 'member',
+            avatar_color: profile?.avatar_color || null,
+            emoji: profile?.emoji || null,
             income: 0,
             expense: 0,
           }

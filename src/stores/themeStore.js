@@ -12,13 +12,15 @@ function writeLS(state) {
   try { localStorage.setItem(LS_KEY, JSON.stringify(state)) } catch { /* private mode */ }
 }
 
+function prefersDark() {
+  return (typeof window !== 'undefined' && window.matchMedia?.('(prefers-color-scheme: dark)').matches) || false
+}
+
 const stored = readLS()
 const initial = {
   variant: stored.variant || 'hangat',
-  dark: typeof stored.dark === 'boolean'
-    ? stored.dark
-    : (typeof window !== 'undefined' && window.matchMedia?.('(prefers-color-scheme: dark)').matches) || false,
-  accent: stored.accent || '#0EA5A4',
+  dark: typeof stored.dark === 'boolean' ? stored.dark : prefersDark(),
+  accent: stored.accent || null,
 }
 
 let syncTimer
@@ -41,7 +43,7 @@ export const useThemeStore = create((set, get) => ({
     writeLS(next)
     syncToProfile(next)
   },
-  setVariant(variant) { get()._commit({ variant }) },
+  setVariant(variant) { get()._commit({ variant, accent: null }) },
   setDark(dark) { get()._commit({ dark }) },
   setAccent(accent) { get()._commit({ accent }) },
 
@@ -51,11 +53,21 @@ export const useThemeStore = create((set, get) => ({
     const next = {
       variant: prefs.variant || get().variant,
       dark: typeof prefs.dark === 'boolean' ? prefs.dark : get().dark,
-      accent: prefs.accent || get().accent,
+      accent: prefs.accent || null,
     }
     set(next)
     applyTheme(next)
     writeLS(next)
+  },
+
+  // Wipe theme back to defaults — used when the signed-in user changes so a
+  // shared browser doesn't leak one person's theme into the next session.
+  reset() {
+    clearTimeout(syncTimer)
+    const next = { variant: 'hangat', dark: prefersDark(), accent: null }
+    set(next)
+    applyTheme(next)
+    try { localStorage.removeItem(LS_KEY) } catch { /* private mode */ }
   },
 }))
 

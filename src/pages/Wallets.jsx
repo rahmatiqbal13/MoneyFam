@@ -47,7 +47,7 @@ function ActivityRow({ tx }) {
         className="text-sm font-bold font-mono tabular-nums whitespace-nowrap"
         style={{ color: isIncome ? 'var(--good)' : 'var(--ink)' }}
       >
-        {isIncome ? '+' : '−'} {idrShort(tx.amount)}
+        {isIncome ? '+' : '−'} {formatCurrency(tx.amount)}
       </span>
     </div>
   )

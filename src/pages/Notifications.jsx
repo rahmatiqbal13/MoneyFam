@@ -220,8 +220,14 @@ export default function Notifications() {
         )}
       </Card>
 
-      {/* Pagination */}
-      {totalPages > 1 && (
+      {/* Pagination — hidden while filtering unread (client-side filter only
+          sees the current page, so paging would be misleading). */}
+      {filter === 'unread' && unreadCount > visible.length && (
+        <p style={{ fontSize: 12, color: 'var(--ink-3)' }}>
+          Sebagian notifikasi belum dibaca ada di halaman lain.
+        </p>
+      )}
+      {filter !== 'unread' && totalPages > 1 && (
         <div className="flex items-center justify-between pt-1">
           <p style={{ fontSize: 12, color: 'var(--ink-3)' }}>
             Halaman {page + 1} dari {totalPages}

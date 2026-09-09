@@ -6,6 +6,7 @@ import { Header } from './Header'
 import { BottomNav } from './BottomNav'
 import { MobileDrawer } from './MobileDrawer'
 import { TransactionModal } from '@/components/transactions/TransactionModal'
+import { Icon } from '@/components/ui/Icon'
 
 function PageLoader() {
   return (
@@ -45,6 +46,22 @@ export function Layout() {
           <BottomNav onAddTransaction={() => setTransactionModalOpen(true)} />
           <MobileDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
         </>
+      )}
+
+      {!narrow && (
+        <button
+          type="button"
+          onClick={() => setTransactionModalOpen(true)}
+          style={{
+            position: 'fixed', bottom: 32, right: 32, zIndex: 30,
+            display: 'flex', alignItems: 'center', gap: 8,
+            padding: '14px 22px', borderRadius: 999,
+            background: 'var(--accent)', color: '#fff', border: 'none',
+            fontWeight: 700, fontSize: 14, cursor: 'pointer', boxShadow: 'var(--shadow-lg)',
+          }}
+        >
+          <Icon name="plus" size={18} stroke={2.4} /> Catat Transaksi
+        </button>
       )}
 
       <TransactionModal

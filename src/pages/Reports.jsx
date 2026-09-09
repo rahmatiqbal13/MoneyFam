@@ -768,7 +768,7 @@ function MemberBreakdown({ year, month }) {
       <CardContent>
         <div className="space-y-4">
           {data.map((member) => {
-            const m = { id: member.id, full_name: member.name }
+            const m = { id: member.id, full_name: member.name, avatar_color: member.avatar_color, emoji: member.emoji }
             const color = memberColor(m)
             return (
               <div key={member.id} className="flex items-center gap-3">

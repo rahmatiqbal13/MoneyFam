@@ -35,6 +35,14 @@ const QUICK_ACTIONS = [
   { id: 'budget', label: 'Anggaran', icon: 'pie', color: '#0EA5A4' },
 ]
 
+const QUICK_ACTION_ROUTES = {
+  add: '/transactions',
+  transfer: '/wallets',
+  goal: '/savings',
+  debt: '/savings',
+  budget: '/budget',
+}
+
 function SectionHeader({ title, actionLabel, onAction }) {
   return (
     <div className="flex items-center justify-between mb-3">
@@ -107,7 +115,7 @@ export default function Dashboard() {
 
   const { data: wallets = [] } = useWallets()
   const { data: stats } = useMonthlyStats(y, m)
-  const { data: budgets = [] } = useBudgets(`${y}-${m}`)
+  const { data: budgets = [] } = useBudgets(`${y}-${String(m).padStart(2, '0')}`)
   const { data: memberSpending = [] } = useMemberSpending(y, m)
   const { data: dailySpending = {} } = useDailySpending(y, m)
   const { data: goals = [] } = useSavingsGoals()
@@ -121,12 +129,15 @@ export default function Dashboard() {
   const leftToSpend = totalBudget - totalSpent
   const spentPct = totalBudget > 0 ? Math.round((totalSpent / totalBudget) * 100) : 0
 
-  const last14 = Array.from({ length: 14 }, (_, i) => {
+  // useDailySpending only covers the current month, so early in the month only
+  // the elapsed days are meaningful — average over those, not a fixed 14.
+  const elapsedDays = Math.min(14, now.getDate())
+  const spendBars = Array.from({ length: elapsedDays }, (_, i) => {
     const d = new Date(now)
-    d.setDate(d.getDate() - (13 - i))
+    d.setDate(d.getDate() - (elapsedDays - 1 - i))
     return dailySpending[toISODate(d)] || 0
   })
-  const avgPerDay = last14.reduce((a, b) => a + b, 0) / 14
+  const avgPerDay = spendBars.reduce((a, b) => a + b, 0) / elapsedDays
 
   const maxExpense = Math.max(...memberSpending.map((r) => r.expense), 1)
   const currentMonth = formatMonthYear(now.toISOString())
@@ -209,10 +220,8 @@ export default function Dashboard() {
       {isMobile && (
         <div className="flex gap-2.5 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
           {QUICK_ACTIONS.map((a) => {
-            const handler =
-              a.id === 'add' ? () => navigate('/transactions')
-                : a.id === 'budget' ? () => navigate('/budget')
-                  : undefined
+            const route = QUICK_ACTION_ROUTES[a.id]
+            const handler = route ? () => navigate(route) : undefined
             return (
               <button
                 key={a.id}
@@ -273,15 +282,15 @@ export default function Dashboard() {
         <Card padding={20}>
           <div className="mb-3.5">
             <div style={{ fontSize: 12, color: 'var(--ink-3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.04em' }}>
-              Pengeluaran 14 Hari
+              Pengeluaran {elapsedDays} Hari
             </div>
             <div style={{ fontSize: 13, marginTop: 4, fontWeight: 600, color: 'var(--ink)' }}>
               Rata-rata {idrShort(avgPerDay)}/hari
             </div>
           </div>
-          <Sparkbar data={last14} height={64} color="var(--accent)" />
+          <Sparkbar data={spendBars} height={64} color="var(--accent)" />
           <div className="flex justify-between mt-2" style={{ fontSize: 10.5, color: 'var(--ink-3)' }}>
-            <span>14 hari lalu</span>
+            <span>{elapsedDays} hari lalu</span>
             <span>Hari ini</span>
           </div>
         </Card>
@@ -310,10 +319,12 @@ export default function Dashboard() {
           </div>
         ) : (
           <div className="grid gap-3" style={{ gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4, 1fr)' }}>
-            {memberSpending.map((row) => (
+            {memberSpending.map((row) => {
+              const member = { id: row.id, full_name: row.name, avatar_color: row.avatar_color, emoji: row.emoji }
+              return (
               <div key={row.id} style={{ background: 'var(--surface-2)', borderRadius: 'var(--r-md)', padding: 14 }}>
                 <div className="flex items-center gap-2.5 mb-2.5">
-                  <Avatar member={{ id: row.id, full_name: row.name }} size={36} />
+                  <Avatar member={member} size={36} />
                   <div className="min-w-0">
                     <div className="text-sm font-semibold truncate" style={{ color: 'var(--ink)' }}>{row.name}</div>
                     <div style={{ fontSize: 10.5, color: 'var(--ink-3)' }}>{ROLE_LABEL[row.role] || row.role}</div>
@@ -322,9 +333,10 @@ export default function Dashboard() {
                 <div className="tabular-nums font-semibold mb-2" style={{ fontSize: 16, color: 'var(--ink)' }}>
                   {idrShort(row.expense)}
                 </div>
-                <Progress value={row.expense} max={maxExpense} color={memberColor({ id: row.id })} height={5} />
+                <Progress value={row.expense} max={maxExpense} color={memberColor(member)} height={5} />
               </div>
-            ))}
+              )
+            })}
           </div>
         )}
       </Card>

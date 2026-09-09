@@ -6,7 +6,6 @@ import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
 import { Card } from '@/components/ui/Card'
 import { HeroCard } from '@/components/ui/HeroCard'
-import { Sparkbar } from '@/components/ui/Sparkbar'
 import { Pill } from '@/components/ui/Pill'
 import { SegmentedControl } from '@/components/ui/SegmentedControl'
 import { Icon } from '@/components/ui/Icon'
@@ -67,9 +66,6 @@ const TYPE_EMOJI = {
 function getTypeInfo(type) {
   return INVESTMENT_TYPES.find((t) => t.value === type) || INVESTMENT_TYPES[0]
 }
-
-// gentle synthetic 12-point rising curve — we have no real portfolio history
-const PORTFOLIO_CURVE = [100, 102, 99, 104, 108, 106, 112, 115, 113, 119, 122, 126]
 
 function calc(inv) {
   const qty = Number(inv.quantity) || 0
@@ -417,11 +413,7 @@ function PortfolioHero({ investments }) {
           </span>
         </div>
       }
-    >
-      <div style={{ marginTop: 18 }}>
-        <Sparkbar data={PORTFOLIO_CURVE} height={56} color="rgba(255,255,255,.9)" track="rgba(255,255,255,.25)" />
-      </div>
-    </HeroCard>
+    />
   )
 }
 

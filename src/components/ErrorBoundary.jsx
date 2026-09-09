@@ -24,19 +24,28 @@ export class ErrorBoundary extends Component {
   render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl border border-gray-200 p-8 max-w-md w-full text-center shadow-sm">
+        <div
+          className="min-h-screen flex items-center justify-center p-4"
+          style={{ background: 'var(--bg)', color: 'var(--ink-3)' }}
+        >
+          <div
+            className="rounded-2xl p-8 max-w-md w-full text-center shadow-sm"
+            style={{ background: 'var(--surface)', border: '1px solid var(--line)' }}
+          >
             <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4">
               <AlertTriangle className="w-8 h-8 text-red-500" />
             </div>
-            <h2 className="text-lg font-bold text-gray-900 mb-2">
+            <h2 className="text-lg font-bold mb-2" style={{ color: 'var(--ink)' }}>
               Terjadi Kesalahan
             </h2>
-            <p className="text-sm text-gray-500 mb-6">
+            <p className="text-sm mb-6" style={{ color: 'var(--ink-3)' }}>
               Maaf, aplikasi mengalami masalah. Silakan muat ulang halaman.
             </p>
             {this.state.error?.message && (
-              <pre className="bg-gray-50 rounded-lg p-3 text-xs text-gray-600 text-left mb-6 overflow-auto max-h-32">
+              <pre
+                className="rounded-lg p-3 text-xs text-left mb-6 overflow-auto max-h-32"
+                style={{ background: 'var(--surface-2)', color: 'var(--ink-2)' }}
+              >
                 {this.state.error.message}
               </pre>
             )}
