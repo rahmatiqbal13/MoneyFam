@@ -64,7 +64,7 @@ export function useCreateFamily() {
       if (rpcError) {
         console.error('Error creating family via RPC:', rpcError)
         throw new Error(`Gagal membuat keluarga: ${rpcError.message}`)
-      }
+      }
 
       // Seed kategori default untuk keluarga baru (optional, don't fail if error)
       try {
@@ -95,7 +95,7 @@ export function useFamilyMembers() {
       if (!family?.id) return []
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, full_name, email, role, created_at')
+        .select('id, full_name, email, role, created_at, avatar_color, emoji')
         .eq('family_id', family.id)
         .order('role', { ascending: false })  // owner (o) > member (m) → owner tampil duluan
         .order('created_at', { ascending: true })

@@ -162,7 +162,7 @@ export default function Settings() {
   const removeMutation = useRemoveMember()
   const generateCode = useGenerateInviteCode()
 
-  const [editingProfile, setEditingProfile] = useState(false)
+  const [editingProfile, setEditingProfile] = useState(!profile)
   const [profileForm, setProfileForm] = useState({
     full_name: profile?.full_name || '',
     phone: profile?.phone || '',
@@ -777,8 +777,8 @@ export default function Settings() {
       {/* Danger Zone — hanya pemilik keluarga (atau akun personal) yang boleh menghapus semua data */}
       {isOwner && <DangerZoneSection />}
 
-      <Card padding={20} style={{ border: '1px solid #FCA5A5' }}>
-        <h3 className="m-0 mb-1.5 text-base font-bold" style={{ color: 'var(--bad)' }}>Zona Berbahaya</h3>
+      <Card padding={20}>
+        <h3 className="m-0 mb-1.5 text-base font-bold" style={{ color: 'var(--ink)' }}>Akun</h3>
         <div className="flex items-center justify-between gap-4 py-2">
           <div>
             <p className="text-sm font-medium" style={{ color: 'var(--ink)' }}>Keluar dari akun</p>
