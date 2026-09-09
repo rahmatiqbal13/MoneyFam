@@ -11,7 +11,7 @@ export const Select = forwardRef(function Select(
       {label && (
         <label className="text-sm font-medium" style={{ color: 'var(--ink-2)' }}>
           {label}
-          {required && <span className="ml-1" style={{ color: '#DC2626' }}>*</span>}
+          {required && <span className="ml-1" style={{ color: 'var(--bad)' }}>*</span>}
         </label>
       )}
       <div className="relative">
@@ -27,7 +27,7 @@ export const Select = forwardRef(function Select(
             borderRadius: 'var(--r-sm)',
             background: 'var(--surface)',
             color: 'var(--ink)',
-            borderColor: error ? '#DC2626' : 'var(--line-2)',
+            borderColor: error ? 'var(--bad)' : 'var(--line-2)',
             ...style,
           }}
           {...props}
@@ -42,7 +42,7 @@ export const Select = forwardRef(function Select(
       {helpText && !error && (
         <p className="text-xs" style={{ color: 'var(--ink-3)' }}>{helpText}</p>
       )}
-      {error && <p className="text-xs" style={{ color: '#DC2626' }}>{error}</p>}
+      {error && <p className="text-xs" style={{ color: 'var(--bad)' }}>{error}</p>}
     </div>
   )
 })

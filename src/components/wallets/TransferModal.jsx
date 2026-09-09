@@ -122,23 +122,14 @@ export function TransferModal({ isOpen, onClose, fromWallet = null }) {
             helpText={selectedFrom ? `Saldo: ${formatCurrency(selectedFrom.balance)}` : ''}
           />
 
-          <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium" style={{ color: 'var(--ink-2)' }}>
-              Tanggal <span style={{ color: '#DC2626' }}>*</span>
-            </label>
-            <input
-              type="date"
-              value={form.date}
-              onChange={update('date')}
-              className="w-full border px-3 py-2 text-sm focus:outline-none focus:ring-2"
-              style={{
-                borderRadius: 'var(--r-sm)',
-                background: 'var(--surface)',
-                color: 'var(--ink)',
-                borderColor: errors.date ? '#DC2626' : 'var(--line-2)',
-              }}
-            />
-          </div>
+          <Input
+            label="Tanggal"
+            type="date"
+            value={form.date}
+            onChange={update('date')}
+            error={errors.date}
+            required
+          />
 
           <Input
             label="Catatan"

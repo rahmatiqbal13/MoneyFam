@@ -24,8 +24,43 @@
   --shadow-lg:   0 20px 48px -16px rgba(75,53,18,.22);
   --r-sm:        12px;
   --r-md:        18px;
-  --r-lg:        22px;
-  --r-xl:        28px;
+  --r-lg:        26px;
+  --r-xl:        34px;
+}
+
+html[data-variant="ceria"] {
+  --bg: #FFFBF7; --bg-sub: #FFF1E6; --surface: #FFFFFF; --surface-2: #FFF6EC;
+  --ink: #221A2D; --ink-2: #5A4D6B; --ink-3: #968AA6;
+  --line: #F2E6F6; --line-2: #E8D8EE;
+  --accent: #8B5CF6; --accent-ink: #6D3FE2; --accent-soft: #EFE6FE;
+  --shadow-md: 0 8px 30px -10px rgba(139,92,246,.20), 0 2px 4px rgba(34,26,45,.04);
+  --shadow-lg: 0 24px 56px -16px rgba(139,92,246,.30);
+}
+html[data-variant="studio"] {
+  --bg: #F4F4F2; --bg-sub: #EAEAE6; --surface: #FFFFFF; --surface-2: #F8F8F6;
+  --ink: #0D0D0D; --ink-2: #4A4A4A; --ink-3: #8C8C8C;
+  --line: #E5E5E2; --line-2: #D5D5D1;
+  --accent: #16A34A; --accent-ink: #0F7A37; --accent-soft: #DCFCE7;
+  --shadow-md: 0 4px 16px -4px rgba(0,0,0,.08), 0 1px 3px rgba(0,0,0,.04);
+  --shadow-lg: 0 12px 32px -8px rgba(0,0,0,.16);
+  --r-sm: 10px; --r-md: 14px; --r-lg: 20px; --r-xl: 28px;
+}
+html[data-dark="true"] {
+  --bg: #14110B; --bg-sub: #1C1812; --surface: #221D14; --surface-2: #2B2519;
+  --ink: #F5EFE0; --ink-2: #C2B8A0; --ink-3: #897F68;
+  --line: #2F2818; --line-2: #3A3120; --accent-soft: #1B2F2F;
+  --shadow-md: 0 8px 32px -8px rgba(0,0,0,.50);
+  --shadow-lg: 0 20px 56px -16px rgba(0,0,0,.65);
+}
+html[data-dark="true"][data-variant="ceria"] {
+  --bg: #15101D; --bg-sub: #1D162A; --surface: #241B33; --surface-2: #2D2240;
+  --ink: #F5EFFB; --ink-2: #B9ABD0; --ink-3: #8676A0;
+  --line: #2D2240; --line-2: #3A2C52; --accent-soft: #2F1E50;
+}
+html[data-dark="true"][data-variant="studio"] {
+  --bg: #0B0B0B; --bg-sub: #131313; --surface: #1A1A1A; --surface-2: #222222;
+  --ink: #F5F5F5; --ink-2: #BABABA; --ink-3: #7E7E7E;
+  --line: #262626; --line-2: #333333; --accent-soft: #0F2A1A;
 }
 
 /* ── Base ────────────────────────────────────────────────────────── */
@@ -44,6 +79,16 @@
     color: var(--ink);
     font-family: 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, sans-serif;
   }
+
+  :root { --display: 'Fraunces', 'Plus Jakarta Sans', serif; --mono: 'JetBrains Mono', ui-monospace, monospace; }
+  html[data-variant="hangat"] body::before,
+  html:not([data-variant]) body::before {
+    content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    background-image:
+      radial-gradient(circle at 20% 10%, rgba(217,119,6,.04), transparent 40%),
+      radial-gradient(circle at 80% 80%, rgba(14,165,164,.05), transparent 40%);
+  }
+  #root { position: relative; z-index: 1; }
 
   /* Display / heading font */
   .font-display {

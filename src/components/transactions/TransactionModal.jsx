@@ -3,17 +3,18 @@ import { Modal, ModalBody, ModalFooter } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
+import { SegmentedControl } from '@/components/ui/SegmentedControl'
 import { useToast } from '@/components/ui/Toast'
 import { useCategories } from '@/hooks/useCategories'
 import { useWallets } from '@/hooks/useWallets'
-import { useCreateTransaction, useUpdateTransaction } from '@/hooks/useTransactions'
+import { useCreateTransaction, useUpdateTransaction, useDeleteTransaction } from '@/hooks/useTransactions'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/stores/authStore'
 
 const TYPES = [
-  { value: 'expense', label: 'Pengeluaran' },
-  { value: 'income', label: 'Pemasukan' },
-  { value: 'transfer', label: 'Transfer' },
+  { id: 'expense', label: 'Pengeluaran' },
+  { id: 'income', label: 'Pemasukan' },
+  { id: 'transfer', label: 'Transfer' },
 ]
 
 function getDefaultForm() {
@@ -41,12 +42,25 @@ export function TransactionModal({ isOpen, onClose, transaction = null }) {
   const [receiptFile, setReceiptFile] = useState(null)
   const [receiptPreview, setReceiptPreview] = useState(null)
   const [uploading, setUploading] = useState(false)
+  const [confirmingDelete, setConfirmingDelete] = useState(false)
   const abortControllerRef = useRef(null)
 
   const { data: categories } = useCategories()
   const { data: wallets } = useWallets()
   const createMutation = useCreateTransaction()
   const updateMutation = useUpdateTransaction()
+  const deleteMutation = useDeleteTransaction()
+
+  const handleConfirmDelete = () => {
+    if (!transaction?.id) return
+    deleteMutation.mutate(transaction.id, {
+      onSuccess: () => {
+        toast.success('Transaksi dihapus')
+        onClose()
+      },
+      onError: (e) => toast.error(e.message || 'Gagal menghapus transaksi'),
+    })
+  }
 
   const loading = createMutation.isPending || updateMutation.isPending || uploading
 
@@ -64,6 +78,7 @@ export function TransactionModal({ isOpen, onClose, transaction = null }) {
       setReceiptFile(null)
       setReceiptPreview(null)
       setErrors({})
+      setConfirmingDelete(false)
     }
   }, [isOpen])
 
@@ -90,6 +105,7 @@ export function TransactionModal({ isOpen, onClose, transaction = null }) {
         setReceiptPreview(null)
       }
       setErrors({})
+      setConfirmingDelete(false)
     }
   }, [isOpen, transaction])
 
@@ -254,36 +270,13 @@ export function TransactionModal({ isOpen, onClose, transaction = null }) {
       <form onSubmit={handleSubmit}>
         <ModalBody className="space-y-4">
           {/* Type tabs */}
-          <div
-            className="flex overflow-hidden"
-            style={{ border: '1px solid var(--line)', borderRadius: 'var(--r-sm)' }}
-          >
-            {TYPES.map((t) => (
-              <button
-                key={t.value}
-                type="button"
-                onClick={() => setForm({ ...form, type: t.value, category_id: '' })}
-                className={`flex-1 py-2 text-sm font-medium transition-colors ${
-                  form.type === t.value
-                    ? t.value === 'income'
-                      ? 'bg-emerald-500 text-white'
-                      : t.value === 'expense'
-                      ? 'bg-red-500 text-white'
-                      : 'bg-blue-500 text-white'
-                    : ''
-                }`}
-                style={form.type !== t.value ? { background: 'transparent', color: 'var(--ink-2)' } : undefined}
-                onMouseEnter={(e) => {
-                  if (form.type !== t.value) e.currentTarget.style.background = 'var(--surface-2)'
-                }}
-                onMouseLeave={(e) => {
-                  if (form.type !== t.value) e.currentTarget.style.background = 'transparent'
-                }}
-              >
-                {t.label}
-              </button>
-            ))}
-          </div>
+          <SegmentedControl
+            size="md"
+            className="w-full"
+            value={form.type}
+            options={TYPES}
+            onChange={(id) => setForm({ ...form, type: id, category_id: '' })}
+          />
 
           {/* Amount */}
           <Input
@@ -300,35 +293,23 @@ export function TransactionModal({ isOpen, onClose, transaction = null }) {
           {/* Date and Time */}
           <div className="flex flex-col gap-1">
             <label className="text-sm font-medium" style={{ color: 'var(--ink-2)' }}>
-              Tanggal & Waktu <span style={{ color: '#DC2626' }}>*</span>
+              Tanggal & Waktu <span style={{ color: 'var(--bad)' }}>*</span>
             </label>
             <div className="flex gap-2">
-              <input
+              <Input
                 type="date"
+                className="flex-1"
                 value={form.date}
                 onChange={update('date')}
-                className="flex-1 border px-3 py-2 text-sm focus:outline-none focus:ring-2"
-                style={{
-                  borderRadius: 'var(--r-sm)',
-                  background: 'var(--surface)',
-                  color: 'var(--ink)',
-                  borderColor: errors.date ? '#DC2626' : 'var(--line-2)',
-                }}
               />
-              <input
+              <Input
                 type="time"
+                className="w-28"
                 value={form.time}
                 onChange={update('time')}
-                className="w-28 border px-3 py-2 text-sm focus:outline-none focus:ring-2"
-                style={{
-                  borderRadius: 'var(--r-sm)',
-                  background: 'var(--surface)',
-                  color: 'var(--ink)',
-                  borderColor: 'var(--line-2)',
-                }}
               />
             </div>
-            {errors.date && <p className="text-xs" style={{ color: '#DC2626' }}>{errors.date}</p>}
+            {errors.date && <p className="text-xs" style={{ color: 'var(--bad)' }}>{errors.date}</p>}
           </div>
 
           {/* Description */}
@@ -478,14 +459,54 @@ export function TransactionModal({ isOpen, onClose, transaction = null }) {
             )}
           </div>
         </ModalBody>
-        <ModalFooter>
-          <Button variant="secondary" type="button" onClick={onClose} disabled={loading}>
-            Batal
-          </Button>
-          <Button type="submit" loading={loading}>
-            {isEdit ? 'Simpan' : 'Tambah'}
-          </Button>
-        </ModalFooter>
+        {isEdit && confirmingDelete ? (
+          <ModalFooter className="justify-between">
+            <span className="text-sm" style={{ color: 'var(--ink-2)' }}>
+              Hapus transaksi ini?
+            </span>
+            <div className="flex gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                type="button"
+                onClick={() => setConfirmingDelete(false)}
+              >
+                Batal
+              </Button>
+              <Button
+                variant="danger"
+                size="sm"
+                type="button"
+                onClick={handleConfirmDelete}
+                loading={deleteMutation.isPending}
+              >
+                Ya, hapus
+              </Button>
+            </div>
+          </ModalFooter>
+        ) : (
+          <ModalFooter className={isEdit ? 'justify-between' : undefined}>
+            {isEdit && (
+              <Button
+                variant="ghost"
+                type="button"
+                onClick={() => setConfirmingDelete(true)}
+                disabled={loading}
+                style={{ color: 'var(--bad)' }}
+              >
+                Hapus
+              </Button>
+            )}
+            <div className="flex gap-2">
+              <Button variant="secondary" type="button" onClick={onClose} disabled={loading}>
+                Batal
+              </Button>
+              <Button type="submit" loading={loading}>
+                {isEdit ? 'Simpan' : 'Tambah'}
+              </Button>
+            </div>
+          </ModalFooter>
+        )}
       </form>
     </Modal>
   )

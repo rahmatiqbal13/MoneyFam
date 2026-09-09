@@ -1,24 +1,19 @@
 import { useState, useEffect } from 'react'
 import { motion, useReducedMotion } from 'framer-motion'
-import {
-  Plus, Pencil, Trash2, RefreshCw, TrendingUp, TrendingDown,
-  BarChart3, AlertCircle,
-} from 'lucide-react'
-import {
-  PieChart,
-  Pie,
-  Cell,
-  Tooltip,
-  ResponsiveContainer,
-} from 'recharts'
+import { RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
-import { Card, CardContent } from '@/components/ui/Card'
+import { Card } from '@/components/ui/Card'
+import { HeroCard } from '@/components/ui/HeroCard'
+import { Pill } from '@/components/ui/Pill'
+import { SegmentedControl } from '@/components/ui/SegmentedControl'
+import { Icon } from '@/components/ui/Icon'
 import { Modal, ModalBody, ConfirmModal } from '@/components/ui/Modal'
 import { useToast } from '@/components/ui/Toast'
 import { useUndoableDelete } from '@/hooks/useUndoableDelete'
-import { formatCurrency, formatDate } from '@/lib/utils'
+import { useViewport } from '@/hooks/useViewport'
+import { formatCurrency, formatDate, idrShort } from '@/lib/utils'
 import {
   useInvestments,
   useCreateInvestment,
@@ -31,29 +26,56 @@ import { useWallets } from '@/hooks/useWallets'
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const INVESTMENT_TYPES = [
-  { value: 'saham', label: 'Saham IDX', icon: '📈', color: '#3b82f6', codePlaceholder: 'BBCA.JK' },
-  { value: 'reksadana', label: 'Reksa Dana', icon: '📊', color: '#8b5cf6', codePlaceholder: 'Nama reksa dana' },
-  { value: 'emas', label: 'Emas', icon: '🥇', color: '#f59e0b', codePlaceholder: 'Antam 1gr' },
-  { value: 'kripto', label: 'Kripto', icon: '🪙', color: '#ec4899', codePlaceholder: 'BTC / ETH / SOL' },
-  { value: 'deposito', label: 'Deposito', icon: '🏦', color: '#10b981', codePlaceholder: 'BCA / BRI' },
-  { value: 'obligasi', label: 'Obligasi', icon: '📄', color: '#6366f1', codePlaceholder: 'ORI024 / SBR013' },
+  { value: 'saham', label: 'Saham IDX', icon: '📈', codePlaceholder: 'BBCA.JK' },
+  { value: 'reksadana', label: 'Reksa Dana', icon: '📊', codePlaceholder: 'Nama reksa dana' },
+  { value: 'emas', label: 'Emas', icon: '🥇', codePlaceholder: 'Antam 1gr' },
+  { value: 'kripto', label: 'Kripto', icon: '🪙', codePlaceholder: 'BTC / ETH / SOL' },
+  { value: 'deposito', label: 'Deposito', icon: '🏦', codePlaceholder: 'BCA / BRI' },
+  { value: 'obligasi', label: 'Obligasi', icon: '📄', codePlaceholder: 'ORI024 / SBR013' },
 ]
+
+// type → short label (Bahasa Indonesia)
+const TYPE_LABEL = {
+  saham: 'Saham',
+  reksadana: 'Reksa Dana',
+  emas: 'Emas',
+  kripto: 'Kripto',
+  deposito: 'Deposito',
+  obligasi: 'Obligasi',
+}
+
+// type → fixed colour map (always guard: TYPE_COLOR[t] || '#6b7280')
+const TYPE_COLOR = {
+  saham: '#F472B6',
+  reksadana: '#0EA5A4',
+  emas: '#F59E0B',
+  kripto: '#8B5CF6',
+  deposito: '#16A34A',
+  obligasi: '#6366F1',
+}
+
+const TYPE_EMOJI = {
+  saham: '📈',
+  reksadana: '📊',
+  emas: '🥇',
+  kripto: '🪙',
+  deposito: '🏦',
+  obligasi: '📄',
+}
 
 function getTypeInfo(type) {
   return INVESTMENT_TYPES.find((t) => t.value === type) || INVESTMENT_TYPES[0]
 }
 
-function pctColor(pct) {
-  if (pct > 5) return 'text-emerald-600'
-  if (pct > 0) return 'text-emerald-500'
-  if (pct < -5) return 'text-red-600'
-  if (pct < 0) return 'text-red-500'
-  return 'text-ink-2'
-}
-
-function formatPct(pct) {
-  const sign = pct >= 0 ? '+' : ''
-  return `${sign}${pct.toFixed(2)}%`
+function calc(inv) {
+  const qty = Number(inv.quantity) || 0
+  const buy = Number(inv.buy_price) || 0
+  const cur = Number(inv.current_price || inv.buy_price) || 0
+  const value = qty * cur
+  const cost = qty * buy
+  const gain = value - cost
+  const changePct = cost ? gain / cost : 0
+  return { value, cost, gain, changePct }
 }
 
 function timeSince(dateStr) {
@@ -165,23 +187,28 @@ function InvestmentModal({ isOpen, onClose, investment }) {
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Type selector */}
           <div>
-            <label className="text-sm font-medium text-ink-2 block mb-2">Jenis Investasi</label>
+            <label className="text-sm font-medium block mb-2" style={{ color: 'var(--ink-2)' }}>Jenis Investasi</label>
             <div className="grid grid-cols-3 gap-2">
-              {INVESTMENT_TYPES.map((t) => (
-                <button
-                  key={t.value}
-                  type="button"
-                  onClick={() => setForm((f) => ({ ...f, type: t.value }))}
-                  className={`flex flex-col items-center gap-1 p-2.5 rounded-xl border-2 text-xs font-medium transition-all ${
-                    form.type === t.value
-                      ? 'border-primary bg-primary/5 text-primary'
-                      : 'border-line text-ink-2 hover:border-line-2'
-                  }`}
-                >
-                  <span className="text-xl">{t.icon}</span>
-                  {t.label}
-                </button>
-              ))}
+              {INVESTMENT_TYPES.map((t) => {
+                const active = form.type === t.value
+                return (
+                  <button
+                    key={t.value}
+                    type="button"
+                    onClick={() => setForm((f) => ({ ...f, type: t.value }))}
+                    className="flex flex-col items-center gap-1 p-2.5 text-xs font-medium transition-all"
+                    style={{
+                      borderRadius: 'var(--r-sm)',
+                      border: `2px solid ${active ? 'var(--accent)' : 'var(--line)'}`,
+                      background: active ? 'var(--accent-soft)' : 'transparent',
+                      color: active ? 'var(--accent-ink)' : 'var(--ink-2)',
+                    }}
+                  >
+                    <span className="text-xl">{t.icon}</span>
+                    {t.label}
+                  </button>
+                )
+              })}
             </div>
           </div>
 
@@ -194,7 +221,7 @@ function InvestmentModal({ isOpen, onClose, investment }) {
             required
           />
 
-          {/* Code (for saham/kripto) */}
+          {/* Code (for saham/kripto/obligasi) */}
           {(form.type === 'saham' || form.type === 'kripto' || form.type === 'obligasi') && (
             <Input
               label={`Kode ${form.type === 'kripto' ? 'Simbol' : 'Ticker'}`}
@@ -328,9 +355,9 @@ function UpdatePriceModal({ isOpen, onClose, investment }) {
     <Modal isOpen={isOpen} onClose={onClose} title={`Update Harga — ${investment?.name}`} size="sm">
       <ModalBody>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="bg-surface-2 rounded-xl p-3 text-sm text-ink-2">
+          <div className="rounded-xl p-3 text-sm" style={{ background: 'var(--surface-2)', color: 'var(--ink-2)' }}>
             Harga terakhir:{' '}
-            <span className="font-semibold text-ink">
+            <span className="font-semibold" style={{ color: 'var(--ink)' }}>
               {formatCurrency(investment?.current_price || 0)}
             </span>
           </div>
@@ -356,234 +383,185 @@ function UpdatePriceModal({ isOpen, onClose, investment }) {
   )
 }
 
-// ── Investment Card ───────────────────────────────────────────────────────────
+// ── Portfolio Hero ────────────────────────────────────────────────────────────
 
-function InvestmentCard({ inv, onEdit, onDelete, onUpdatePrice }) {
-  const typeInfo = getTypeInfo(inv.type)
-  const totalBuy = Number(inv.quantity) * Number(inv.buy_price)
-  const totalNow = Number(inv.quantity) * Number(inv.current_price || inv.buy_price)
-  const pl = totalNow - totalBuy
-  const plPct = totalBuy > 0 ? (pl / totalBuy) * 100 : 0
-  const isProfit = pl >= 0
+function PortfolioHero({ investments }) {
+  const { isMobile } = useViewport()
+
+  const totalNow = investments.reduce((s, i) => s + calc(i).value, 0)
+  const totalModal = investments.reduce((s, i) => s + calc(i).cost, 0)
+  const gain = totalNow - totalModal
+  const plPct = totalModal > 0 ? (gain / totalModal) * 100 : 0
+  const up = gain >= 0
 
   return (
-    <Card className="hover:shadow-md transition-shadow">
-      <CardContent className="pt-4 pb-4">
-        {/* Header */}
-        <div className="flex items-start justify-between mb-3">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div
-              className="w-10 h-10 rounded-xl flex items-center justify-center text-xl flex-shrink-0"
-              style={{ backgroundColor: `${typeInfo.color}18` }}
-            >
-              {typeInfo.icon}
-            </div>
-            <div className="min-w-0">
-              <p className="font-semibold text-ink truncate text-sm">{inv.name}</p>
-              <div className="flex items-center gap-1.5 flex-wrap">
-                {inv.code && (
-                  <span className="text-xs font-mono bg-surface-2 px-1.5 py-0.5 rounded text-ink-2">
-                    {inv.code}
-                  </span>
-                )}
-                <span
-                  className="text-xs px-1.5 py-0.5 rounded font-medium"
-                  style={{ backgroundColor: `${typeInfo.color}18`, color: typeInfo.color }}
-                >
-                  {typeInfo.label}
-                </span>
+    <HeroCard
+      label="Total Portofolio"
+      value={formatCurrency(totalNow)}
+      style={isMobile ? { padding: 20 } : undefined}
+      footer={
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
+          <Pill
+            tone={up ? 'good' : 'bad'}
+            style={{ background: 'rgba(255,255,255,.18)', color: '#fff' }}
+            icon={<Icon name="trending" size={12} stroke={2.4} />}
+          >
+            {up ? '+' : ''}{plPct.toFixed(1)}%
+          </Pill>
+          <span className="tabular-nums" style={{ fontSize: 13, opacity: 0.9 }}>
+            {up ? '+' : ''}{idrShort(gain)} sepanjang waktu
+          </span>
+        </div>
+      }
+    />
+  )
+}
+
+// ── Allocation Card ───────────────────────────────────────────────────────────
+
+function AllocationCard({ investments }) {
+  const { isMobile } = useViewport()
+
+  const groups = {}
+  investments.forEach((i) => {
+    groups[i.type] = (groups[i.type] || 0) + calc(i).value
+  })
+  const entries = Object.entries(groups).sort((a, b) => b[1] - a[1])
+  const total = entries.reduce((s, [, v]) => s + v, 0)
+
+  if (!entries.length) return null
+
+  return (
+    <Card padding={isMobile ? 18 : 22}>
+      <h3 className="font-bold" style={{ margin: '0 0 14px', fontSize: 16, color: 'var(--ink)' }}>
+        Alokasi Aset
+      </h3>
+      <div style={{ display: 'flex', gap: 4, borderRadius: 999, overflow: 'hidden', height: 14, marginBottom: 14 }}>
+        {entries.map(([type, val]) => (
+          <div
+            key={type}
+            style={{
+              width: `${total > 0 ? (val / total) * 100 : 0}%`,
+              background: TYPE_COLOR[type] || '#6b7280',
+            }}
+          />
+        ))}
+      </div>
+      <div style={{ display: 'flex', gap: 18, flexWrap: 'wrap' }}>
+        {entries.map(([type, val]) => {
+          const pct = total > 0 ? Math.round((val / total) * 100) : 0
+          return (
+            <div key={type} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div style={{ width: 10, height: 10, borderRadius: 3, background: TYPE_COLOR[type] || '#6b7280' }} />
+              <div>
+                <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--ink)' }}>
+                  {TYPE_LABEL[type] || type}
+                </div>
+                <div className="tabular-nums" style={{ fontSize: 11, color: 'var(--ink-3)' }}>
+                  {pct}% · {idrShort(val)}
+                </div>
               </div>
             </div>
-          </div>
-          <div className="flex gap-1 flex-shrink-0">
-            <button
-              onClick={() => onUpdatePrice(inv)}
-              className="p-1.5 rounded-lg text-ink-3 hover:text-blue-500 hover:bg-blue-50 transition-colors"
-              title="Update harga"
-              aria-label="Update harga investasi"
-            >
-              <RefreshCw className="w-3.5 h-3.5" />
-            </button>
-            <button
-              onClick={() => onEdit(inv)}
-              className="p-1.5 rounded-lg text-ink-3 hover:text-ink-2 hover:bg-surface-2 transition-colors"
-              aria-label="Edit investasi"
-            >
-              <Pencil className="w-3.5 h-3.5" />
-            </button>
-            <button
-              onClick={() => onDelete(inv.id)}
-              className="p-1.5 rounded-lg text-ink-3 hover:text-red-500 hover:bg-red-50 transition-colors"
-              aria-label="Hapus investasi"
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-            </button>
-          </div>
-        </div>
-
-        {/* Values */}
-        <div className="grid grid-cols-2 gap-2 mb-3">
-          <div className="bg-surface-2 rounded-lg p-2.5">
-            <p className="text-xs text-ink-3 mb-0.5">Nilai Sekarang</p>
-            <p className="text-sm font-bold text-ink">{formatCurrency(totalNow)}</p>
-          </div>
-          <div className={`rounded-lg p-2.5 ${isProfit ? 'bg-emerald-50' : 'bg-red-50'}`}>
-            <p className="text-xs text-ink-3 mb-0.5">Untung / Rugi</p>
-            <p className={`text-sm font-bold ${isProfit ? 'text-emerald-600' : 'text-red-600'}`}>
-              {isProfit ? '+' : ''}{formatCurrency(pl)}
-            </p>
-          </div>
-        </div>
-
-        {/* Details row */}
-        <div className="flex items-center justify-between text-xs text-ink-3">
-          <span>
-            {inv.quantity} × {formatCurrency(inv.current_price || inv.buy_price)}
-          </span>
-          <span className={`font-semibold ${pctColor(plPct)}`}>
-            {isProfit ? <TrendingUp className="w-3 h-3 inline mr-0.5" /> : <TrendingDown className="w-3 h-3 inline mr-0.5" />}
-            {formatPct(plPct)}
-          </span>
-        </div>
-
-        {/* Price updated */}
-        {inv.price_updated_at && inv.type === 'kripto' && (
-          <p className="text-xs text-ink-3 mt-1.5">
-            Harga diperbarui {timeSince(inv.price_updated_at)}
-          </p>
-        )}
-
-        {/* Deposito: interest info */}
-        {(inv.type === 'deposito' || inv.type === 'obligasi') && inv.interest_rate && (
-          <div className="mt-2 flex items-center gap-2 text-xs text-emerald-600 bg-emerald-50 rounded-lg px-2.5 py-1.5">
-            <span>Bunga {inv.interest_rate}%/thn</span>
-            {inv.maturity_date && <span>· JT: {formatDate(inv.maturity_date)}</span>}
-          </div>
-        )}
-      </CardContent>
+          )
+        })}
+      </div>
     </Card>
   )
 }
 
-// ── Summary Cards ─────────────────────────────────────────────────────────────
+// ── Investment Card ───────────────────────────────────────────────────────────
 
-function PortfolioSummary({ investments }) {
-  const totalModal = investments.reduce(
-    (s, i) => s + Number(i.quantity) * Number(i.buy_price),
-    0
-  )
-  const totalNow = investments.reduce(
-    (s, i) => s + Number(i.quantity) * Number(i.current_price || i.buy_price),
-    0
-  )
-  const pl = totalNow - totalModal
-  const plPct = totalModal > 0 ? (pl / totalModal) * 100 : 0
-  const isProfit = pl >= 0
-
-  const byType = INVESTMENT_TYPES.map((t) => {
-    const items = investments.filter((i) => i.type === t.value)
-    const val = items.reduce(
-      (s, i) => s + Number(i.quantity) * Number(i.current_price || i.buy_price),
-      0
-    )
-    return { ...t, value: val, count: items.length }
-  }).filter((t) => t.count > 0)
-
-  const chartData = byType.map((t) => ({
-    name: t.label,
-    value: t.value,
-    color: t.color,
-  }))
-
-  const ChartTooltip = ({ active, payload }) => {
-    if (!active || !payload?.length) return null
-    const d = payload[0]
-    return (
-      <div className="bg-surface border border-line rounded-xl shadow-lg p-3 text-sm">
-        <p className="font-semibold text-ink">{d.name}</p>
-        <p className="text-ink-2 mt-0.5">{formatCurrency(d.value)}</p>
-        <p className="text-ink-3 text-xs">{(d.percent * 100).toFixed(1)}%</p>
-      </div>
-    )
-  }
+function InvestmentCard({ inv, onEdit, onDelete, onUpdatePrice }) {
+  const { value, gain, changePct } = calc(inv)
+  const up = gain >= 0
+  const color = TYPE_COLOR[inv.type] || '#6b7280'
+  const isSahamCode = inv.type === 'saham' && inv.code
+  const badge = isSahamCode ? inv.code.slice(0, 4) : (TYPE_EMOJI[inv.type] || '📊')
 
   return (
-    <div className="space-y-3">
-      <div className="grid grid-cols-3 gap-3">
-        <div className="bg-surface rounded-xl border border-line p-4">
-          <p className="text-xs text-ink-3 mb-1">Total Modal</p>
-          <p className="text-base font-bold text-ink">{formatCurrency(totalModal)}</p>
-          <p className="text-xs text-ink-3 mt-0.5">{investments.length} aset</p>
+    <Card padding={18}>
+      {/* Header */}
+      <div className="flex items-start justify-between gap-2 mb-3">
+        <div className="flex items-center gap-3 min-w-0">
+          <div
+            className="flex items-center justify-center flex-shrink-0"
+            style={{
+              width: 42, height: 42, borderRadius: 12,
+              background: color + '22', color,
+              fontWeight: 800, fontSize: isSahamCode ? 12 : 20,
+            }}
+          >
+            {badge}
+          </div>
+          <div className="min-w-0">
+            <p className="font-semibold truncate" style={{ color: 'var(--ink)' }}>{inv.name}</p>
+            <p className="text-xs truncate" style={{ color: 'var(--ink-3)' }}>
+              {[TYPE_LABEL[inv.type] || inv.type, inv.code].filter(Boolean).join(' · ')}
+            </p>
+          </div>
         </div>
-        <div className="bg-surface rounded-xl border border-line p-4">
-          <p className="text-xs text-ink-3 mb-1">Nilai Sekarang</p>
-          <p className="text-base font-bold text-ink">{formatCurrency(totalNow)}</p>
+        <div className="flex gap-1 flex-shrink-0">
+          <Button size="sm" variant="ghost" onClick={() => onUpdatePrice(inv)} aria-label="Update harga investasi">
+            <RefreshCw className="w-4 h-4" />
+          </Button>
+          <Button size="sm" variant="ghost" onClick={() => onEdit(inv)} aria-label="Edit investasi">
+            <Icon name="pencil" size={16} />
+          </Button>
+          <Button size="sm" variant="ghost" onClick={() => onDelete(inv.id)} aria-label="Hapus investasi">
+            <Icon name="trash" size={16} />
+          </Button>
         </div>
-        <div className={`rounded-xl border p-4 ${isProfit ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200'}`}>
-          <p className="text-xs text-ink-3 mb-1">Untung / Rugi</p>
-          <p className={`text-base font-bold ${isProfit ? 'text-emerald-600' : 'text-red-600'}`}>
-            {isProfit ? '+' : ''}{formatCurrency(pl)}
-          </p>
-          <p className={`text-xs font-semibold mt-0.5 ${pctColor(plPct)}`}>
-            {formatPct(plPct)}
+      </div>
+
+      {/* Values */}
+      <div className="grid grid-cols-2 gap-2 mb-3">
+        <div style={{ background: 'var(--surface-2)', borderRadius: 'var(--r-sm)', padding: 10 }}>
+          <p className="text-xs" style={{ color: 'var(--ink-3)' }}>Nilai Sekarang</p>
+          <p className="tabular-nums font-bold" style={{ fontSize: 14, color: 'var(--ink)' }}>{formatCurrency(value)}</p>
+        </div>
+        <div
+          style={{
+            background: up
+              ? 'color-mix(in srgb, var(--good) 12%, var(--surface))'
+              : 'color-mix(in srgb, var(--bad) 12%, var(--surface))',
+            borderRadius: 'var(--r-sm)', padding: 10,
+          }}
+        >
+          <p className="text-xs" style={{ color: 'var(--ink-3)' }}>Untung / Rugi</p>
+          <p className="tabular-nums font-bold" style={{ fontSize: 14, color: up ? 'var(--good)' : 'var(--bad)' }}>
+            {up ? '+' : ''}{formatCurrency(gain)}
           </p>
         </div>
       </div>
 
-      {/* Type breakdown */}
-      {byType.length > 1 && (
-        <div className="bg-surface rounded-xl border border-line p-4">
-          <p className="text-xs text-ink-2 font-medium mb-3">Alokasi per Jenis</p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
-            {/* Donut chart */}
-            <ResponsiveContainer width="100%" height={180}>
-              <PieChart>
-                <Pie
-                  data={chartData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={50}
-                  outerRadius={80}
-                  paddingAngle={2}
-                  dataKey="value"
-                >
-                  {chartData.map((entry, index) => (
-                    <Cell key={index} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip content={<ChartTooltip />} />
-              </PieChart>
-            </ResponsiveContainer>
+      {/* Details row */}
+      <div className="flex items-center justify-between text-xs" style={{ color: 'var(--ink-3)' }}>
+        <span className="tabular-nums">
+          {inv.quantity} × {formatCurrency(inv.current_price || inv.buy_price)}
+        </span>
+        <span className="tabular-nums font-semibold" style={{ color: up ? 'var(--good)' : 'var(--bad)' }}>
+          {up ? '+' : ''}{(changePct * 100).toFixed(1)}%
+        </span>
+      </div>
 
-            {/* Legend + bars */}
-            <div className="space-y-2">
-              {byType.map((t) => {
-                const pct = totalNow > 0 ? (t.value / totalNow) * 100 : 0
-                return (
-                  <div key={t.value}>
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-xs text-ink-2">
-                        {t.icon} {t.label}
-                      </span>
-                      <div className="text-right">
-                        <span className="text-xs font-semibold text-ink">{formatCurrency(t.value)}</span>
-                        <span className="text-xs text-ink-3 ml-1.5">{pct.toFixed(1)}%</span>
-                      </div>
-                    </div>
-                    <div className="w-full bg-surface-2 rounded-full h-1.5">
-                      <div
-                        className="h-1.5 rounded-full"
-                        style={{ width: `${pct}%`, backgroundColor: t.color }}
-                      />
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
+      {/* Price updated (kripto) */}
+      {inv.price_updated_at && inv.type === 'kripto' && (
+        <p className="text-xs mt-1.5" style={{ color: 'var(--ink-3)' }}>
+          Harga diperbarui {timeSince(inv.price_updated_at)}
+        </p>
+      )}
+
+      {/* Deposito / obligasi: interest info */}
+      {(inv.type === 'deposito' || inv.type === 'obligasi') && inv.interest_rate && (
+        <div
+          className="mt-2 flex items-center gap-2 text-xs rounded-lg px-2.5 py-1.5"
+          style={{ color: 'var(--good)', background: 'color-mix(in srgb, var(--good) 12%, var(--surface))' }}
+        >
+          <span>Bunga {inv.interest_rate}%/thn</span>
+          {inv.maturity_date && <span>· JT: {formatDate(inv.maturity_date)}</span>}
         </div>
       )}
-    </div>
+    </Card>
   )
 }
 
@@ -601,11 +579,17 @@ export default function Investments() {
   const [priceModal, setPriceModal] = useState({ open: false, investment: null })
   const [deleteId, setDeleteId] = useState(null)
 
-  const filtered = (investments || []).filter(
-    (i) => filterType === 'all' || i.type === filterType
-  )
+  const all = investments || []
+  const filtered = all.filter((i) => filterType === 'all' || i.type === filterType)
+  const hasCrypto = all.some((i) => i.type === 'kripto')
 
-  const hasCrypto = (investments || []).some((i) => i.type === 'kripto')
+  const typeOptions = [
+    { id: 'all', label: `Semua (${all.length})` },
+    ...INVESTMENT_TYPES.map((t) => {
+      const count = all.filter((i) => i.type === t.value).length
+      return count ? { id: t.value, label: `${t.icon} ${TYPE_LABEL[t.value]} (${count})` } : null
+    }).filter(Boolean),
+  ]
 
   const handleRefreshCrypto = async () => {
     if (!hasCrypto) {
@@ -613,7 +597,7 @@ export default function Investments() {
       return
     }
     try {
-      const prices = await refreshMutation.mutateAsync(investments || [])
+      const prices = await refreshMutation.mutateAsync(all)
       const updated = Object.keys(prices).length
       if (updated > 0) {
         toast.success(`Harga ${updated} aset kripto diperbarui dari CoinGecko`)
@@ -640,12 +624,12 @@ export default function Investments() {
   return (
     <div className="space-y-5 max-w-5xl mx-auto">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-bold text-ink">Investasi</h1>
-          <p className="text-sm text-ink-3">Portfolio & tracking aset</p>
+          <h1 className="font-display font-semibold text-xl" style={{ color: 'var(--ink)' }}>Investasi</h1>
+          <p className="text-sm" style={{ color: 'var(--ink-3)' }}>Portofolio &amp; tracking aset</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-shrink-0">
           {hasCrypto && (
             <Button
               variant="secondary"
@@ -657,23 +641,29 @@ export default function Investments() {
               Refresh Kripto
             </Button>
           )}
-          <Button size="sm" onClick={() => setModal({ open: true, investment: null })}>
-            <Plus className="w-4 h-4" />
+          <Button size="sm" variant="soft" onClick={() => setModal({ open: true, investment: null })}>
+            <Icon name="plus" size={14} stroke={2.2} />
             Tambah
           </Button>
         </div>
       </div>
 
-      {/* Portfolio summary */}
-      {(investments || []).length > 0 && (
-        <PortfolioSummary investments={investments} />
+      {/* Portfolio hero + allocation */}
+      {all.length > 0 && (
+        <>
+          <PortfolioHero investments={all} />
+          <AllocationCard investments={all} />
+        </>
       )}
 
       {/* CoinGecko note */}
       {hasCrypto && (
-        <div className="flex items-start gap-2 bg-blue-50 border border-blue-200 rounded-xl p-3">
-          <AlertCircle className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
-          <p className="text-xs text-blue-700">
+        <div
+          className="flex items-start gap-2 rounded-xl p-3"
+          style={{ background: 'var(--accent-soft)', border: '1px solid var(--accent-soft)' }}
+        >
+          <Icon name="info" size={16} style={{ color: 'var(--accent-ink)', flexShrink: 0, marginTop: 2 }} />
+          <p className="text-xs" style={{ color: 'var(--accent-ink)' }}>
             Harga kripto diambil dari CoinGecko. Tekan{' '}
             <span className="font-semibold">Refresh Kripto</span> untuk update harga terbaru.
             Simbol yang didukung: BTC, ETH, BNB, SOL, ADA, DOGE, XRP, dll.
@@ -681,50 +671,35 @@ export default function Investments() {
         </div>
       )}
 
-      {/* Filter tabs */}
-      <div className="flex gap-1 bg-surface-2 rounded-xl p-1 overflow-x-auto">
-        <button
-          onClick={() => setFilterType('all')}
-          className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${
-            filterType === 'all' ? 'bg-surface shadow-sm text-ink' : 'text-ink-2 hover:text-ink'
-          }`}
-        >
-          Semua ({(investments || []).length})
-        </button>
-        {INVESTMENT_TYPES.map((t) => {
-          const count = (investments || []).filter((i) => i.type === t.value).length
-          if (!count) return null
-          return (
-            <button
-              key={t.value}
-              onClick={() => setFilterType(t.value)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${
-                filterType === t.value
-                  ? 'bg-surface shadow-sm text-ink'
-                  : 'text-ink-2 hover:text-ink'
-              }`}
-            >
-              {t.icon} {t.label} ({count})
-            </button>
-          )
-        })}
-      </div>
+      {/* Filter */}
+      {all.length > 0 && (
+        <SegmentedControl
+          size="sm"
+          value={filterType}
+          onChange={setFilterType}
+          options={typeOptions}
+        />
+      )}
 
-      {/* Investment grid */}
+      {/* Holdings */}
       {isLoading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {[...Array(3)].map((_, i) => (
-            <div key={i} className="bg-surface rounded-xl border border-line p-4 animate-pulse h-40" />
+            <div
+              key={i}
+              className="animate-pulse"
+              style={{ height: 160, borderRadius: 'var(--r-lg)', background: 'var(--surface-2)' }}
+            />
           ))}
         </div>
       ) : !filtered.length ? (
         <div className="py-16 text-center">
-          <BarChart3 className="w-12 h-12 text-ink-3 mx-auto mb-3" />
-          <p className="text-ink-3 font-medium">
-            {filterType === 'all' ? 'Belum ada investasi' : `Tidak ada ${getTypeInfo(filterType).label}`}
+          <Icon name="chart" size={48} className="mx-auto mb-3" style={{ color: 'var(--ink-3)' }} />
+          <p className="font-medium" style={{ color: 'var(--ink-3)' }}>
+            {filterType === 'all' ? 'Belum ada investasi' : `Tidak ada ${TYPE_LABEL[filterType] || filterType}`}
           </p>
           {filterType === 'all' && (
-            <p className="text-ink-3 text-sm mt-1">Tambah portofolio pertama kamu</p>
+            <p className="text-sm mt-1" style={{ color: 'var(--ink-3)' }}>Tambah portofolio pertama kamu</p>
           )}
         </div>
       ) : (

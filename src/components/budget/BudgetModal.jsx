@@ -109,7 +109,7 @@ export function BudgetModal({ isOpen, onClose, budget = null, yearMonth }) {
           />
         </ModalBody>
         <ModalFooter>
-          <Button variant="secondary" type="button" onClick={onClose} disabled={loading}>
+          <Button variant="ghost" type="button" onClick={onClose} disabled={loading}>
             Batal
           </Button>
           <Button type="submit" loading={loading}>

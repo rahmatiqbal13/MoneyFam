@@ -1,21 +1,32 @@
-import { useState, useEffect } from 'react'
-import { motion, useReducedMotion } from 'framer-motion'
-import { Plus, Edit2, Trash2, Tag, RotateCcw } from 'lucide-react'
+import { useState, useEffect, useMemo } from 'react'
+import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
+import { Icon } from '@/components/ui/Icon'
 import { Modal, ModalBody, ModalFooter, ConfirmModal } from '@/components/ui/Modal'
 import { Input } from '@/components/ui/Input'
-import { Select } from '@/components/ui/Select'
-import { Badge } from '@/components/ui/Badge'
+import { SegmentedControl } from '@/components/ui/SegmentedControl'
+import { TransactionTypeBadge } from '@/components/ui/Badge'
 import { useUndoableDelete } from '@/hooks/useUndoableDelete'
 import { useToast } from '@/components/ui/Toast'
 import { useCategories, useCreateCategory, useUpdateCategory, useDeleteCategory, useResetCategories } from '@/hooks/useCategories'
-import { useCategoryStore } from '@/stores/categoryStore'
+import { useReportCategoryDetail } from '@/hooks/useTransactions'
+import { idrShort } from '@/lib/utils'
 
 const CATEGORY_ICONS = ['🍔', '🚗', '🏠', '💊', '📚', '🎬', '👕', '✈️', '💰', '💼', '🎁', '📱', '🛒', '⚡', '💧', '🎮', '🏋️', '🐕', '🌱', '💳', '🔧', '🎵', '🍕', '☕', '🛡️']
 const CATEGORY_COLORS = [
   '#10b981', '#ef4444', '#3b82f6', '#f59e0b', '#8b5cf6',
   '#ec4899', '#06b6d4', '#84cc16', '#f97316', '#6366f1',
   '#14b8a6', '#f43f5e', '#a855f7', '#22c55e', '#eab308',
+]
+
+const TYPE_OPTIONS = [
+  { id: 'expense', label: 'Pengeluaran' },
+  { id: 'income', label: 'Pemasukan' },
+]
+
+const SECTIONS = [
+  { kind: 'expense', label: 'Pengeluaran' },
+  { kind: 'income', label: 'Pemasukan' },
 ]
 
 function getDefaultForm() {
@@ -69,46 +80,64 @@ function CategoryModal({ isOpen, onClose, category, activeTab }) {
     <Modal isOpen={isOpen} onClose={onClose} title={isEdit ? 'Edit Kategori' : 'Tambah Kategori'} size="sm">
       <form onSubmit={handleSubmit}>
         <ModalBody className="space-y-4">
-          <Select label="Tipe" value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })}>
-            <option value="expense">Pengeluaran</option>
-            <option value="income">Pemasukan</option>
-          </Select>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-sm font-medium" style={{ color: 'var(--ink-2)' }}>Tipe</label>
+            <SegmentedControl
+              size="md"
+              className="w-full"
+              value={form.type}
+              options={TYPE_OPTIONS}
+              onChange={(id) => setForm({ ...form, type: id })}
+            />
+          </div>
 
           <Input label="Nama Kategori" type="text" placeholder="Contoh: Makan Siang" value={form.name}
             onChange={(e) => setForm({ ...form, name: e.target.value })} error={errors.name} required />
 
           <div className="flex flex-col gap-2">
-            <label className="text-sm font-medium text-ink-2">Ikon</label>
+            <label className="text-sm font-medium" style={{ color: 'var(--ink-2)' }}>Ikon</label>
             <div className="flex flex-wrap gap-1.5">
-              {CATEGORY_ICONS.map((icon) => (
-                <button key={icon} type="button" onClick={() => setForm({ ...form, icon })}
-                  className={`w-9 h-9 rounded-lg text-lg flex items-center justify-center border-2 transition-colors ${form.icon === icon ? 'border-primary bg-primary-50' : 'border-line hover:border-line-2'}`}>
-                  {icon}
-                </button>
-              ))}
+              {CATEGORY_ICONS.map((icon) => {
+                const active = form.icon === icon
+                return (
+                  <button key={icon} type="button" onClick={() => setForm({ ...form, icon })}
+                    className="w-9 h-9 flex items-center justify-center text-lg transition-transform active:scale-95"
+                    style={{
+                      borderRadius: 'var(--r-sm)',
+                      border: `1.5px solid ${active ? 'var(--accent)' : 'var(--line)'}`,
+                      background: active ? 'var(--accent-soft)' : 'var(--surface)',
+                    }}>
+                    {icon}
+                  </button>
+                )
+              })}
             </div>
           </div>
 
           <div className="flex flex-col gap-2">
-            <label className="text-sm font-medium text-ink-2">Warna</label>
+            <label className="text-sm font-medium" style={{ color: 'var(--ink-2)' }}>Warna</label>
             <div className="flex flex-wrap gap-2">
               {CATEGORY_COLORS.map((color) => (
                 <button key={color} type="button" onClick={() => setForm({ ...form, color })}
-                  className={`w-7 h-7 rounded-full border-2 transition-transform ${form.color === color ? 'border-gray-800 scale-110' : 'border-transparent'}`}
-                  style={{ backgroundColor: color }} />
+                  className="w-7 h-7 rounded-full transition-transform"
+                  aria-label={`Warna ${color}`}
+                  style={{
+                    background: color,
+                    border: '2px solid ' + (form.color === color ? 'var(--ink)' : 'transparent'),
+                    transform: form.color === color ? 'scale(1.12)' : 'none',
+                  }} />
               ))}
             </div>
           </div>
 
           {/* Preview */}
-          <div className="flex items-center gap-2 p-3 bg-surface-2 rounded-lg">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center text-base" style={{ backgroundColor: form.color + '20' }}>
+          <div className="flex items-center gap-3 p-3" style={{ background: 'var(--surface-2)', borderRadius: 'var(--r-md)' }}>
+            <div className="flex items-center justify-center flex-shrink-0"
+              style={{ width: 36, height: 36, borderRadius: 12, background: (form.color || '#6b7280') + '20', fontSize: 18 }}>
               {form.icon}
             </div>
-            <span className="text-sm font-medium text-ink-2">{form.name || 'Preview Kategori'}</span>
-            <Badge variant={form.type === 'expense' ? 'red' : 'green'} className="ml-auto">
-              {form.type === 'expense' ? 'Pengeluaran' : 'Pemasukan'}
-            </Badge>
+            <span className="text-sm font-semibold" style={{ color: 'var(--ink-2)' }}>{form.name || 'Preview Kategori'}</span>
+            <span className="ml-auto"><TransactionTypeBadge type={form.type} /></span>
           </div>
         </ModalBody>
         <ModalFooter>
@@ -122,24 +151,20 @@ function CategoryModal({ isOpen, onClose, category, activeTab }) {
 
 export default function Categories() {
   const toast = useToast()
-  const reduceMotion = useReducedMotion()
-  const { activeTab, setActiveTab } = useCategoryStore()
 
   const { data: allCategories, isLoading } = useCategories()
   const deleteMutation = useDeleteCategory()
   const resetMutation = useResetCategories()
 
+  const now = new Date()
+  const { data: spending } = useReportCategoryDetail(now.getFullYear(), now.getMonth() + 1)
+  const usedMap = useMemo(() => new Map((spending || []).map((s) => [s.id, s.amount])), [spending])
+
   const [modalOpen, setModalOpen] = useState(false)
+  const [modalType, setModalType] = useState('expense')
   const [editingCategory, setEditingCategory] = useState(null)
   const [deleteCategory, setDeleteCategory] = useState(null)
   const [resetModalOpen, setResetModalOpen] = useState(false)
-
-  const categories = allCategories?.filter((c) => c.type === activeTab) || []
-
-  const handleEdit = (cat) => {
-    setEditingCategory(cat)
-    setModalOpen(true)
-  }
 
   const { triggerDelete } = useUndoableDelete(
     async (cat) => {
@@ -147,6 +172,23 @@ export default function Categories() {
     },
     { itemName: 'Kategori' }
   )
+
+  const openAdd = (type) => {
+    setEditingCategory(null)
+    setModalType(type)
+    setModalOpen(true)
+  }
+
+  const openEdit = (cat) => {
+    setEditingCategory(cat)
+    setModalType(cat.type)
+    setModalOpen(true)
+  }
+
+  const handleClose = () => {
+    setModalOpen(false)
+    setEditingCategory(null)
+  }
 
   const handleDelete = () => {
     triggerDelete(deleteCategory)
@@ -163,81 +205,108 @@ export default function Categories() {
     }
   }
 
-  const handleClose = () => {
-    setModalOpen(false)
-    setEditingCategory(null)
-  }
+  const total = allCategories?.length || 0
 
   return (
-    <div className="space-y-5 max-w-3xl mx-auto">
-      <div className="flex items-center justify-between">
-        <div className="flex rounded-lg border border-line overflow-hidden">
-          {['expense', 'income'].map((tab) => (
-            <button key={tab} onClick={() => setActiveTab(tab)}
-              className={`px-4 py-2 text-sm font-medium transition-colors ${activeTab === tab ? 'bg-primary text-white' : 'bg-surface text-ink-2 hover:bg-surface-2'}`}>
-              {tab === 'expense' ? 'Pengeluaran' : 'Pemasukan'}
-            </button>
-          ))}
+    <div className="space-y-5 max-w-3xl mx-auto pb-24 lg:pb-8">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <h2 className="text-base font-semibold" style={{ color: 'var(--ink)' }}>Kategori</h2>
+          <p className="text-xs mt-0.5" style={{ color: 'var(--ink-3)' }}>
+            {isLoading ? '...' : `${total} kategori`}
+          </p>
         </div>
-        <div className="flex gap-2">
-          <Button size="sm" variant="secondary" onClick={() => setResetModalOpen(true)} title="Reset ke kategori default" aria-label="Reset ke kategori default">
-            <RotateCcw className="w-4 h-4" />
-          </Button>
-          <Button size="sm" onClick={() => setModalOpen(true)}>
-            <Plus className="w-4 h-4" />
-            Tambah
-          </Button>
-        </div>
+        <Button size="sm" variant="secondary" onClick={() => setResetModalOpen(true)}>
+          Reset ke default
+        </Button>
       </div>
 
       {isLoading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {[...Array(6)].map((_, i) => (
-            <div key={i} className="flex items-center gap-3 p-4 bg-surface rounded-xl border border-line animate-pulse">
-              <div className="w-9 h-9 bg-surface-2 rounded-lg" />
-              <div className="h-4 bg-surface-2 rounded w-32" />
-            </div>
+        <div className="space-y-4">
+          {[...Array(3)].map((_, i) => (
+            <Card key={i} padding={20}>
+              <div className="h-4 w-32 rounded mb-4 animate-pulse" style={{ background: 'var(--surface-2)' }} />
+              <div className="grid gap-2.5 grid-cols-2 sm:[grid-template-columns:repeat(auto-fill,minmax(160px,1fr))]">
+                {[...Array(4)].map((_, j) => (
+                  <div key={j} className="rounded-xl animate-pulse" style={{ height: 68, background: 'var(--surface-2)' }} />
+                ))}
+              </div>
+            </Card>
           ))}
-        </div>
-      ) : !categories.length ? (
-        <div className="py-16 text-center">
-          <Tag className="w-10 h-10 text-ink-3 mx-auto mb-3" />
-          <p className="text-ink-3 font-medium">Belum ada kategori {activeTab === 'expense' ? 'pengeluaran' : 'pemasukan'}</p>
-          <Button className="mt-4" size="sm" onClick={() => setModalOpen(true)}>
-            <Plus className="w-4 h-4" /> Tambah Kategori
-          </Button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {categories.map((cat, i) => (
-            <motion.div
-              key={cat.id}
-              initial={reduceMotion ? false : { opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.25, delay: Math.min(i * 0.03, 0.24), ease: 'easeOut' }}
-              className="flex items-center gap-3 p-4 bg-surface rounded-xl border border-line hover:shadow-sm transition-shadow"
-            >
-              <div className="w-9 h-9 rounded-lg flex items-center justify-center text-lg flex-shrink-0" style={{ backgroundColor: (cat.color || '#6b7280') + '20' }}>
-                {cat.icon || '📦'}
+        SECTIONS.map((section) => {
+          const cats = (allCategories || []).filter((c) => c.type === section.kind)
+          return (
+            <Card key={section.kind} padding={20}>
+              <div className="flex items-center justify-between gap-3 mb-4">
+                <h3 className="text-[15px] font-bold" style={{ color: 'var(--ink)' }}>
+                  {section.label}{' '}
+                  <span style={{ color: 'var(--ink-3)', fontWeight: 500 }}>· {cats.length}</span>
+                </h3>
+                <Button size="sm" variant="soft" onClick={() => openAdd(section.kind)}>
+                  <Icon name="plus" size={15} stroke={2.2} /> Tambah
+                </Button>
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-ink truncate">{cat.name}</p>
-                {cat.is_default && <p className="text-xs text-ink-3">Default</p>}
-              </div>
-              <div className="flex gap-1">
-                <button onClick={() => handleEdit(cat)} className="p-1.5 rounded-lg text-ink-3 hover:text-blue-500 hover:bg-blue-50 transition-colors" aria-label="Edit kategori">
-                  <Edit2 className="w-3.5 h-3.5" />
-                </button>
-                <button onClick={() => setDeleteCategory(cat)} className="p-1.5 rounded-lg text-ink-3 hover:text-red-500 hover:bg-red-50 transition-colors" aria-label="Hapus kategori">
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            </motion.div>
-          ))}
-        </div>
+
+              {cats.length === 0 ? (
+                <p className="text-sm py-4 text-center" style={{ color: 'var(--ink-3)' }}>
+                  Belum ada kategori {section.label.toLowerCase()}
+                </p>
+              ) : (
+                <div className="grid gap-2.5 grid-cols-2 sm:[grid-template-columns:repeat(auto-fill,minmax(160px,1fr))]">
+                  {cats.map((cat) => {
+                    const color = cat.color || '#6b7280'
+                    const used = usedMap.get(cat.id) || 0
+                    return (
+                      <div key={cat.id} className="relative group">
+                        <button
+                          type="button"
+                          onClick={() => openEdit(cat)}
+                          className="w-full flex items-center gap-3 text-left"
+                          style={{
+                            background: color + '15',
+                            border: `1px solid ${color}25`,
+                            borderRadius: 'var(--r-md)',
+                            padding: 14,
+                            cursor: 'pointer',
+                          }}
+                        >
+                          <div
+                            className="flex items-center justify-center flex-shrink-0"
+                            style={{ width: 40, height: 40, borderRadius: 12, background: color, color: '#fff', fontSize: 20 }}
+                          >
+                            {cat.icon || '📦'}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="text-[13px] font-bold truncate" style={{ color: 'var(--ink)' }}>{cat.name}</div>
+                            {used > 0 && (
+                              <div className="text-[11px] font-mono tabular-nums mt-0.5" style={{ color: 'var(--ink-3)' }}>
+                                {idrShort(used)} bulan ini
+                              </div>
+                            )}
+                          </div>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setDeleteCategory(cat)}
+                          aria-label={`Hapus kategori ${cat.name}`}
+                          className="absolute top-1.5 right-1.5 p-1 rounded-md opacity-60 group-hover:opacity-100 focus:opacity-100 transition-opacity"
+                          style={{ color: 'var(--ink-3)', background: 'var(--surface)' }}
+                        >
+                          <Icon name="trash" size={13} />
+                        </button>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </Card>
+          )
+        })
       )}
 
-      <CategoryModal isOpen={modalOpen} onClose={handleClose} category={editingCategory} activeTab={activeTab} />
+      <CategoryModal isOpen={modalOpen} onClose={handleClose} category={editingCategory} activeTab={modalType} />
 
       <ConfirmModal isOpen={!!deleteCategory} onClose={() => setDeleteCategory(null)} onConfirm={handleDelete}
         title="Hapus Kategori" message="Yakin ingin menghapus kategori ini?" loading={deleteMutation.isPending} />

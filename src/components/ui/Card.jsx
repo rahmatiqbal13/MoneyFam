@@ -1,16 +1,53 @@
 import { cn } from '@/lib/utils'
 
-export function Card({ className, children, style, ...props }) {
-  return (
-    <div
-      className={cn('rounded-r-lg', className)}
-      style={{
+const RADIUS_MAP = {
+  sm: 'var(--r-sm)',
+  md: 'var(--r-md)',
+  lg: 'var(--r-lg)',
+  xl: 'var(--r-xl)',
+}
+
+function toneStyle(tone) {
+  switch (tone) {
+    case 'sub':
+      return { background: 'var(--surface-2)', border: 'none' }
+    case 'accent':
+      return {
+        background: 'var(--accent)',
+        color: '#fff',
+        border: 'none',
+        boxShadow: 'var(--shadow-md)',
+      }
+    case 'surface':
+    default:
+      return {
         background: 'var(--surface)',
         border: '1px solid var(--line)',
         boxShadow: 'var(--shadow-sm)',
-        borderRadius: 'var(--r-lg)',
+      }
+  }
+}
+
+export function Card({
+  className,
+  children,
+  style,
+  tone = 'surface',
+  padding,
+  radius,
+  onClick,
+  ...props
+}) {
+  return (
+    <div
+      className={cn(radius ? '' : 'rounded-r-lg', className)}
+      style={{
+        ...toneStyle(tone),
+        borderRadius: RADIUS_MAP[radius] || RADIUS_MAP.lg,
+        ...(padding !== undefined ? { padding } : {}),
         ...style,
       }}
+      onClick={onClick}
       {...props}
     >
       {children}

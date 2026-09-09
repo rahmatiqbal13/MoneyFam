@@ -1,33 +1,56 @@
 import { useState, useEffect } from 'react'
-import { User, Bell, Shield, ChevronRight, Save, Users, Copy, RefreshCw, Trash2, Crown } from 'lucide-react'
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card'
+import { useNavigate } from 'react-router-dom'
+import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
+import { Pill } from '@/components/ui/Pill'
+import { Icon } from '@/components/ui/Icon'
+import { Avatar } from '@/components/ui/Avatar'
 import { Modal, ModalBody, ConfirmModal } from '@/components/ui/Modal'
 import { useToast } from '@/components/ui/Toast'
 import { useAuthStore } from '@/stores/authStore'
+import { useThemeStore } from '@/stores/themeStore'
+import { THEME_VARIANTS, ACCENT_OPTIONS } from '@/lib/theme'
 import { supabase } from '@/lib/supabase'
 import { useFamilyMembers, useRemoveMember, useGenerateInviteCode, useJoinFamily, useCreateFamily } from '@/hooks/useFamily'
 import { useNotificationSettings, useUpdateNotificationSettings } from '@/hooks/useNotifications'
 import { ImportExportSection } from '@/components/settings/ImportExportSection'
 import { DangerZoneSection } from '@/components/settings/DangerZoneSection'
 
+// 10-color identity palette (mirrors the memberColor fallback palette).
+const IDENTITY_COLORS = [...ACCENT_OPTIONS, '#EF4444', '#10B981', '#F97316', '#3B82F6']
+
 function ToggleSwitch({ checked, onChange, disabled }) {
   return (
     <button
       type="button"
-      onClick={() => !disabled && onChange(!checked)}
       disabled={disabled}
-      className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
-        disabled ? 'bg-surface-2 cursor-not-allowed' : checked ? 'bg-primary' : 'bg-surface-2'
-      }`}
+      onClick={() => !disabled && onChange(!checked)}
+      style={{
+        width: 44, height: 26, borderRadius: 999, border: 'none', flexShrink: 0,
+        cursor: disabled ? 'not-allowed' : 'pointer',
+        background: checked ? 'var(--accent)' : 'var(--line-2)',
+        opacity: disabled ? 0.5 : 1,
+        position: 'relative', transition: 'background .2s',
+      }}
     >
       <span
-        className={`inline-block h-3.5 w-3.5 transform rounded-full bg-surface shadow transition-transform ${
-          checked ? 'translate-x-5' : 'translate-x-1'
-        } ${disabled ? 'bg-gray-300' : ''}`}
+        style={{
+          position: 'absolute', top: 3, left: checked ? 21 : 3, width: 20, height: 20,
+          borderRadius: '50%', background: '#fff', transition: 'left .2s',
+          boxShadow: '0 1px 3px rgba(0,0,0,.2)',
+        }}
       />
     </button>
+  )
+}
+
+function SectionTitle({ icon, iconColor, children }) {
+  return (
+    <div className="flex items-center gap-2">
+      {icon && <Icon name={icon} size={18} style={{ color: iconColor || 'var(--accent)' }} />}
+      <h3 className="m-0 text-base font-bold" style={{ color: 'var(--ink)' }}>{children}</h3>
+    </div>
   )
 }
 
@@ -129,13 +152,17 @@ function ChangePasswordModal({ isOpen, onClose }) {
 
 export default function Settings() {
   const toast = useToast()
-  const { user, profile, family, fetchProfile } = useAuthStore()
+  const navigate = useNavigate()
+  const { user, profile, family, fetchProfile, logout } = useAuthStore()
   const isOwner = profile?.role === 'owner'
+
+  const { variant, dark, accent, setVariant, setDark, setAccent } = useThemeStore()
 
   const { data: members, isLoading: membersLoading } = useFamilyMembers()
   const removeMutation = useRemoveMember()
   const generateCode = useGenerateInviteCode()
 
+  const [editingProfile, setEditingProfile] = useState(!profile)
   const [profileForm, setProfileForm] = useState({
     full_name: profile?.full_name || '',
     phone: profile?.phone || '',
@@ -148,6 +175,36 @@ export default function Settings() {
       phone: profile?.phone || '',
     })
   }, [profile])
+
+  // ── Member identity (own row) ──
+  const [colorDraft, setColorDraft] = useState(profile?.avatar_color || '')
+  const [emojiDraft, setEmojiDraft] = useState(profile?.emoji || '')
+  const [identityLoading, setIdentityLoading] = useState(false)
+
+  useEffect(() => {
+    setColorDraft(profile?.avatar_color || '')
+    setEmojiDraft(profile?.emoji || '')
+  }, [profile])
+
+  const handleSaveIdentity = async () => {
+    setIdentityLoading(true)
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ avatar_color: colorDraft || null, emoji: emojiDraft || null })
+        .eq('id', user.id)
+      if (error) throw error
+      await useAuthStore.getState().fetchProfile(user.id)
+      toast.success('Identitas kamu berhasil disimpan')
+    } catch (err) {
+      const msg = err?.message || ''
+      toast.error(/column|does not exist|schema cache/i.test(msg)
+        ? 'Jalankan migrasi database dulu'
+        : (msg || 'Gagal menyimpan identitas'))
+    } finally {
+      setIdentityLoading(false)
+    }
+  }
 
   const { data: notificationSettings, isLoading: settingsLoading } = useNotificationSettings()
   const updateSettingsMutation = useUpdateNotificationSettings()
@@ -207,6 +264,7 @@ export default function Settings() {
       if (error) throw error
       await fetchProfile(user.id)
       toast.success('Profil berhasil diperbarui')
+      setEditingProfile(false)
     } catch (err) {
       toast.error(err.message || 'Gagal menyimpan profil')
     } finally {
@@ -265,17 +323,27 @@ export default function Settings() {
     }
   }
 
+  const handleLogout = async () => {
+    try {
+      await logout()
+      navigate('/login')
+    } catch (err) {
+      toast.error(err.message || 'Gagal keluar')
+    }
+  }
+
   const memberToRemove = members?.find((m) => m.id === removeMemberId)
+  const roleLabel = (role) => (role === 'owner' ? 'Pemilik' : 'Anggota')
 
   return (
-    <div className="space-y-5 max-w-2xl mx-auto">
+    <div className="flex flex-col gap-4 mx-auto" style={{ maxWidth: 720 }}>
       {/* Zombie account warning */}
       {!profile && (
-        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
-          <span className="text-amber-500 text-base mt-0.5">⚠️</span>
+        <div className="rounded-xl p-4 flex items-start gap-3" style={{ background: 'color-mix(in srgb, var(--warn) 12%, var(--surface))', border: '1px solid color-mix(in srgb, var(--warn) 30%, transparent)' }}>
+          <span className="text-base mt-0.5">⚠️</span>
           <div>
-            <p className="text-sm font-medium text-amber-800">Profil belum dibuat</p>
-            <p className="text-xs text-amber-600 mt-0.5">
+            <p className="text-sm font-medium" style={{ color: 'var(--ink)' }}>Profil belum dibuat</p>
+            <p className="text-xs mt-0.5" style={{ color: 'var(--ink-2)' }}>
               Isi nama lengkap di bawah lalu klik Simpan Profil, kemudian buat atau bergabung ke keluarga untuk menggunakan semua fitur.
             </p>
           </div>
@@ -283,35 +351,26 @@ export default function Settings() {
       )}
 
       {/* Profile */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <User className="w-4 h-4 text-ink-2" />
-            <CardTitle>Profil</CardTitle>
+      <Card padding={20}>
+        <div className="flex items-center gap-4">
+          <Avatar member={profile || { full_name: user?.email || 'U' }} size={64} />
+          <div className="flex-1 min-w-0">
+            <p className="text-lg font-bold truncate" style={{ color: 'var(--ink)' }}>
+              {profile?.full_name || 'User'}
+            </p>
+            <p className="text-[13px] truncate" style={{ color: 'var(--ink-3)' }}>
+              {user?.email}
+              {family && <> · {isOwner ? 'Pemilik' : 'Anggota'} {family.name}</>}
+            </p>
           </div>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSaveProfile} className="space-y-4">
-            <div className="flex items-center gap-4 mb-4">
-              <div className="w-14 h-14 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
-                <span className="text-2xl font-bold text-white">
-                  {(profile?.full_name || user?.email || 'U')[0].toUpperCase()}
-                </span>
-              </div>
-              <div>
-                <p className="font-semibold text-ink">{profile?.full_name || 'User'}</p>
-                <p className="text-sm text-ink-3">{user?.email}</p>
-                {family && (
-                  <p className="text-xs text-ink-3 mt-0.5">
-                    {family.name} ·{' '}
-                    <span className={isOwner ? 'text-amber-600 font-medium' : 'text-ink-3'}>
-                      {isOwner ? 'Pemilik' : 'Anggota'}
-                    </span>
-                  </p>
-                )}
-              </div>
-            </div>
+          <Button variant="ghost" size="sm" onClick={() => setEditingProfile((v) => !v)}>
+            <Icon name="pencil" size={14} />
+            {editingProfile ? 'Tutup' : 'Ubah'}
+          </Button>
+        </div>
 
+        {editingProfile && (
+          <form onSubmit={handleSaveProfile} className="space-y-4 mt-5 pt-5" style={{ borderTop: '1px solid var(--line)' }}>
             <Input
               label="Nama Lengkap"
               value={profileForm.full_name}
@@ -332,62 +391,47 @@ export default function Settings() {
               onChange={(e) => setProfileForm({ ...profileForm, phone: e.target.value })}
             />
             <Button type="submit" loading={profileLoading} size="sm">
-              <Save className="w-4 h-4" />
+              <Icon name="check" size={16} />
               Simpan Profil
             </Button>
           </form>
-        </CardContent>
+        )}
       </Card>
 
       {/* Family Members — hanya tampil jika user sudah punya keluarga */}
-      {family && <Card>
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <Users className="w-4 h-4 text-ink-2" />
-            <CardTitle>Anggota Keluarga</CardTitle>
+      {family && (
+        <Card padding={20}>
+          <div className="flex items-center justify-between mb-3.5">
+            <SectionTitle icon="family">Anggota Keluarga</SectionTitle>
           </div>
-        </CardHeader>
-        <CardContent>
           {membersLoading ? (
             <div className="space-y-3">
               {[...Array(2)].map((_, i) => (
-                <div key={i} className="h-12 bg-surface-2 rounded-lg animate-pulse" />
+                <div key={i} className="h-12 rounded-lg animate-pulse" style={{ background: 'var(--surface-2)' }} />
               ))}
             </div>
           ) : (
-            <div className="space-y-2">
+            <div className="flex flex-col gap-1">
               {(members || []).map((m) => (
-                <div key={m.id} className="flex items-center gap-3 py-2">
-                  <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                    <span className="text-sm font-bold text-primary">
-                      {(m.full_name || m.email || '?')[0].toUpperCase()}
-                    </span>
-                  </div>
+                <div key={m.id} className="flex items-center gap-3 py-2.5 px-1.5">
+                  <Avatar member={m} size={40} />
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1.5">
-                      <p className="text-sm font-medium text-ink truncate">{m.full_name}</p>
-                      {m.role === 'owner' && (
-                        <Crown className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />
-                      )}
-                    </div>
-                    <p className="text-xs text-ink-3 truncate">{m.email}</p>
+                    <p className="text-sm font-semibold truncate" style={{ color: 'var(--ink)' }}>{m.full_name}</p>
+                    <p className="text-xs truncate" style={{ color: 'var(--ink-3)' }}>{m.email}</p>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${
-                      m.role === 'owner'
-                        ? 'bg-amber-50 text-amber-700'
-                        : 'bg-surface-2 text-ink-2'
-                    }`}>
-                      {m.role === 'owner' ? 'Pemilik' : 'Anggota'}
-                    </span>
+                    <Pill tone={m.role === 'owner' ? 'accent' : 'neutral'} size="sm">
+                      {roleLabel(m.role)}
+                    </Pill>
                     {isOwner && m.id !== user?.id && (
                       <button
                         onClick={() => setRemoveMemberId(m.id)}
-                        className="p-1.5 rounded-lg text-ink-3 hover:text-red-500 hover:bg-red-50 transition-colors"
+                        className="p-1.5 rounded-lg transition-colors"
+                        style={{ color: 'var(--ink-3)' }}
                         title="Keluarkan anggota"
                         aria-label="Keluarkan anggota"
                       >
-                        <Trash2 className="w-3.5 h-3.5" />
+                        <Icon name="trash" size={15} />
                       </button>
                     )}
                   </div>
@@ -395,161 +439,279 @@ export default function Settings() {
               ))}
             </div>
           )}
-        </CardContent>
-      </Card>}
+        </Card>
+      )}
 
       {/* Keluarga — tampil jika user belum punya keluarga */}
       {!family && (
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <Users className="w-4 h-4 text-ink-2" />
-              <CardTitle>Bergabung / Buat Keluarga</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="flex rounded-lg border border-line overflow-hidden mb-4">
-              {[
-                { key: 'create', label: 'Buat Keluarga Baru' },
-                { key: 'join', label: 'Bergabung dengan Kode' },
-              ].map(({ key, label }) => (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => setFamilyTab(key)}
-                  className={`flex-1 py-2 text-sm font-medium transition-colors ${
-                    familyTab === key ? 'bg-primary text-white' : 'text-ink-2 hover:bg-surface-2'
-                  }`}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
+        <Card padding={20}>
+          <div className="mb-3.5">
+            <SectionTitle icon="family">Bergabung / Buat Keluarga</SectionTitle>
+          </div>
+          <div className="flex rounded-lg overflow-hidden mb-4" style={{ border: '1px solid var(--line)' }}>
+            {[
+              { key: 'create', label: 'Buat Keluarga Baru' },
+              { key: 'join', label: 'Bergabung dengan Kode' },
+            ].map(({ key, label }) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setFamilyTab(key)}
+                className="flex-1 py-2 text-sm font-medium transition-colors"
+                style={familyTab === key
+                  ? { background: 'var(--accent)', color: '#fff' }
+                  : { color: 'var(--ink-2)' }}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
 
-            {familyTab === 'create' ? (
-              <form onSubmit={handleCreateFamily} className="space-y-3">
-                <p className="text-sm text-ink-2">Buat keluarga baru — Anda akan menjadi pemilik dan bisa mengundang anggota lain.</p>
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="Nama keluarga, misal: Keluarga Budi"
-                    value={newFamilyName}
-                    onChange={(e) => setNewFamilyName(e.target.value)}
-                  />
-                  <Button type="submit" loading={createFamilyMutation.isPending} disabled={!newFamilyName.trim()}>
-                    Buat
-                  </Button>
-                </div>
-              </form>
-            ) : (
-              <form onSubmit={handleJoinFamily} className="space-y-3">
-                <p className="text-sm text-ink-2">Masukkan kode undangan dari pemilik keluarga.</p>
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="Contoh: AB3X7K"
-                    value={joinCode}
-                    onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
-                  />
-                  <Button type="submit" loading={joinMutation.isPending} disabled={!joinCode.trim()}>
-                    Gabung
-                  </Button>
-                </div>
-              </form>
-            )}
-          </CardContent>
+          {familyTab === 'create' ? (
+            <form onSubmit={handleCreateFamily} className="space-y-3">
+              <p className="text-sm" style={{ color: 'var(--ink-2)' }}>Buat keluarga baru — Anda akan menjadi pemilik dan bisa mengundang anggota lain.</p>
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Nama keluarga, misal: Keluarga Budi"
+                  value={newFamilyName}
+                  onChange={(e) => setNewFamilyName(e.target.value)}
+                />
+                <Button type="submit" loading={createFamilyMutation.isPending} disabled={!newFamilyName.trim()}>
+                  Buat
+                </Button>
+              </div>
+            </form>
+          ) : (
+            <form onSubmit={handleJoinFamily} className="space-y-3">
+              <p className="text-sm" style={{ color: 'var(--ink-2)' }}>Masukkan kode undangan dari pemilik keluarga.</p>
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Contoh: AB3X7K"
+                  value={joinCode}
+                  onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
+                />
+                <Button type="submit" loading={joinMutation.isPending} disabled={!joinCode.trim()}>
+                  Gabung
+                </Button>
+              </div>
+            </form>
+          )}
         </Card>
       )}
 
       {/* Bergabung dengan kode — untuk member yang sudah punya keluarga */}
       {family && !isOwner && (
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <Users className="w-4 h-4 text-ink-2" />
-              <CardTitle>Bergabung ke Keluarga Lain</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-ink-2 mb-3">
-              Masukkan kode undangan untuk pindah ke keluarga lain.
-              <span className="block mt-1 text-xs text-amber-600">
-                Akun Anda akan dipindahkan dari keluarga saat ini.
-              </span>
-            </p>
-            <form onSubmit={handleJoinFamily} className="flex gap-2">
-              <Input
-                placeholder="Contoh: AB3X7K"
-                value={joinCode}
-                onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
-              />
-              <Button type="submit" loading={joinMutation.isPending} disabled={!joinCode.trim()}>
-                Gabung
-              </Button>
-            </form>
-          </CardContent>
+        <Card padding={20}>
+          <div className="mb-3.5">
+            <SectionTitle icon="family">Bergabung ke Keluarga Lain</SectionTitle>
+          </div>
+          <p className="text-sm mb-3" style={{ color: 'var(--ink-2)' }}>
+            Masukkan kode undangan untuk pindah ke keluarga lain.
+            <span className="block mt-1 text-xs" style={{ color: 'var(--warn)' }}>
+              Akun Anda akan dipindahkan dari keluarga saat ini.
+            </span>
+          </p>
+          <form onSubmit={handleJoinFamily} className="flex gap-2">
+            <Input
+              placeholder="Contoh: AB3X7K"
+              value={joinCode}
+              onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
+            />
+            <Button type="submit" loading={joinMutation.isPending} disabled={!joinCode.trim()}>
+              Gabung
+            </Button>
+          </form>
         </Card>
       )}
 
       {/* Invite Code — owner only */}
       {isOwner && (
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <Users className="w-4 h-4 text-ink-2" />
-              <CardTitle>Kode Undangan</CardTitle>
+        <Card padding={20}>
+          <div className="mb-3.5">
+            <SectionTitle icon="users">Kode Undangan</SectionTitle>
+          </div>
+          <p className="text-sm mb-4" style={{ color: 'var(--ink-2)' }}>
+            Bagikan kode ini agar anggota keluarga bisa bergabung saat mendaftar.
+          </p>
+
+          {family?.invite_code ? (
+            <div className="flex items-center gap-3 mb-4">
+              <div className="flex-1 rounded-xl px-4 py-3 text-center" style={{ background: 'var(--surface-2)', border: '1px solid var(--line)' }}>
+                <span className="text-2xl font-bold tracking-[0.3em] font-mono" style={{ color: 'var(--ink)' }}>
+                  {family.invite_code}
+                </span>
+              </div>
+              <Button variant="secondary" size="sm" onClick={handleCopyCode}>
+                <Icon name="check" size={16} />
+                Salin
+              </Button>
             </div>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-ink-2 mb-4">
-              Bagikan kode ini agar anggota keluarga bisa bergabung saat mendaftar.
+          ) : (
+            <div className="rounded-xl px-4 py-4 text-center mb-4" style={{ background: 'var(--surface-2)', border: '1px dashed var(--line-2)' }}>
+              <p className="text-sm" style={{ color: 'var(--ink-3)' }}>Belum ada kode undangan</p>
+            </div>
+          )}
+
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={handleGenerateCode}
+            loading={generateCode.isPending}
+          >
+            <Icon name="sparkles" size={16} />
+            {family?.invite_code ? 'Buat Kode Baru' : 'Buat Kode Undangan'}
+          </Button>
+
+          {family?.invite_code && (
+            <p className="text-xs mt-2" style={{ color: 'var(--ink-3)' }}>
+              Membuat kode baru akan menonaktifkan kode lama.
             </p>
-
-            {family?.invite_code ? (
-              <div className="flex items-center gap-3 mb-4">
-                <div className="flex-1 bg-surface-2 border border-line rounded-xl px-4 py-3 text-center">
-                  <span className="text-2xl font-bold tracking-[0.3em] text-ink font-mono">
-                    {family.invite_code}
-                  </span>
-                </div>
-                <Button variant="secondary" size="sm" onClick={handleCopyCode}>
-                  <Copy className="w-4 h-4" />
-                  Salin
-                </Button>
-              </div>
-            ) : (
-              <div className="bg-surface-2 border border-dashed border-line-2 rounded-xl px-4 py-4 text-center mb-4">
-                <p className="text-sm text-ink-3">Belum ada kode undangan</p>
-              </div>
-            )}
-
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={handleGenerateCode}
-              loading={generateCode.isPending}
-            >
-              <RefreshCw className="w-4 h-4" />
-              {family?.invite_code ? 'Buat Kode Baru' : 'Buat Kode Undangan'}
-            </Button>
-
-            {family?.invite_code && (
-              <p className="text-xs text-ink-3 mt-2">
-                Membuat kode baru akan menonaktifkan kode lama.
-              </p>
-            )}
-          </CardContent>
+          )}
         </Card>
       )}
 
-      {/* Notifications */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <Bell className="w-4 h-4 text-ink-2" />
-            <CardTitle>Notifikasi</CardTitle>
+      {/* Tampilan (NEW) */}
+      <Card padding={20}>
+        <h3 className="m-0 mb-1.5 text-base font-bold" style={{ color: 'var(--ink)' }}>Tampilan</h3>
+
+        <div className="flex items-center gap-3.5 py-3.5 px-1">
+          <div className="flex items-center justify-center flex-shrink-0" style={{ width: 40, height: 40, borderRadius: 12, background: '#8B5CF622', color: '#8B5CF6' }}>
+            <Icon name="moon" size={20} />
           </div>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>Mode gelap</div>
+            <div className="text-xs" style={{ color: 'var(--ink-3)' }}>Sesuaikan dengan suasana malam</div>
+          </div>
+          <ToggleSwitch checked={dark} onChange={setDark} />
+        </div>
+
+        <div className="py-3.5 px-1">
+          <div className="flex items-center gap-3.5 mb-3">
+            <div className="flex items-center justify-center flex-shrink-0" style={{ width: 40, height: 40, borderRadius: 12, background: 'var(--accent-soft)', color: 'var(--accent-ink)' }}>
+              <Icon name="sparkles" size={20} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>Tema</div>
+              <div className="text-xs" style={{ color: 'var(--ink-3)' }}>Pilih gaya tampilan</div>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            {THEME_VARIANTS.map((v) => (
+              <button
+                key={v.id}
+                type="button"
+                onClick={() => setVariant(v.id)}
+                style={{
+                  flex: 1, padding: 12, borderRadius: 14, cursor: 'pointer',
+                  background: v.bg,
+                  border: variant === v.id ? `2px solid ${v.accent}` : '1px solid var(--line)',
+                }}
+              >
+                <div className="flex gap-1 mb-2 justify-center">
+                  <span style={{ width: 16, height: 16, borderRadius: 5, background: v.accent }} />
+                  <span style={{ width: 16, height: 16, borderRadius: 5, background: '#fff', border: '1px solid rgba(0,0,0,.1)' }} />
+                </div>
+                <div className="text-xs font-semibold text-center" style={{ color: '#2A2418' }}>{v.label}</div>
+              </button>
+            ))}
+          </div>
+
+          <div className="mt-4">
+            <div className="text-xs font-semibold mb-2" style={{ color: 'var(--ink-3)' }}>Warna aksen</div>
+            <div className="flex gap-2.5 flex-wrap">
+              {ACCENT_OPTIONS.map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  aria-label={`Warna aksen ${c}`}
+                  onClick={() => setAccent(c)}
+                  style={{
+                    width: 34, height: 34, borderRadius: '50%', background: c, cursor: 'pointer',
+                    border: accent === c ? '3px solid var(--ink)' : '3px solid transparent',
+                    boxShadow: 'inset 0 -2px 0 rgba(0,0,0,.15)',
+                  }}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+      </Card>
+
+      {/* Identitas Kamu (NEW) */}
+      {profile && (
+        <Card padding={20}>
+          <h3 className="m-0 mb-1.5 text-base font-bold" style={{ color: 'var(--ink)' }}>Identitas Kamu</h3>
+          <p className="text-xs mb-4" style={{ color: 'var(--ink-3)' }}>
+            Pilih warna dan emoji untuk avatar kamu. Anggota lain akan melihat identitas ini.
+          </p>
+
+          <div className="flex items-center gap-4 mb-5">
+            <Avatar member={{ ...profile, avatar_color: colorDraft || null, emoji: emojiDraft || null }} size={48} />
+            <div className="flex-1 min-w-0">
+              <Input
+                label="Emoji"
+                maxLength={2}
+                placeholder="🙂"
+                value={emojiDraft}
+                onChange={(e) => setEmojiDraft(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div className="text-xs font-semibold mb-2" style={{ color: 'var(--ink-3)' }}>Warna avatar</div>
+          <div className="flex gap-2.5 flex-wrap mb-5">
+            {IDENTITY_COLORS.map((c) => (
+              <button
+                key={c}
+                type="button"
+                aria-label={`Warna avatar ${c}`}
+                onClick={() => setColorDraft(c)}
+                style={{
+                  width: 34, height: 34, borderRadius: '50%', background: c, cursor: 'pointer',
+                  border: colorDraft === c ? '3px solid var(--ink)' : '3px solid transparent',
+                  boxShadow: 'inset 0 -2px 0 rgba(0,0,0,.15)',
+                }}
+              />
+            ))}
+          </div>
+
+          <div className="flex gap-2">
+            <Button size="sm" onClick={handleSaveIdentity} loading={identityLoading}>
+              <Icon name="check" size={16} />
+              Simpan
+            </Button>
+            {(colorDraft || emojiDraft) && (
+              <Button variant="ghost" size="sm" onClick={() => { setColorDraft(''); setEmojiDraft('') }}>
+                Reset
+              </Button>
+            )}
+          </div>
+        </Card>
+      )}
+
+      {/* Data & Preferensi */}
+      <ImportExportSection />
+
+      <Card padding={20}>
+        <h3 className="m-0 mb-1.5 text-base font-bold" style={{ color: 'var(--ink)' }}>Data &amp; Preferensi</h3>
+
+        <div className="flex items-center gap-3.5 py-3 px-1" style={{ borderBottom: '1px solid var(--line)' }}>
+          <div className="flex items-center justify-center flex-shrink-0" style={{ width: 40, height: 40, borderRadius: 12, background: '#16A34A22', color: '#16A34A' }}>
+            <Icon name="coin" size={20} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>Mata uang</div>
+            <div className="text-xs" style={{ color: 'var(--ink-3)' }}>Rupiah (IDR)</div>
+          </div>
+          <span className="text-[13px] font-mono" style={{ color: 'var(--ink-3)' }}>Rp</span>
+        </div>
+
+        <div className="pt-4">
+          <div className="flex items-center gap-2 mb-3">
+            <Icon name="bell" size={16} style={{ color: '#F472B6' }} />
+            <span className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>Notifikasi</span>
+          </div>
+          <div className="space-y-3.5">
             {[
               { key: 'budget_warning', label: 'Peringatan Anggaran', desc: 'Notifikasi saat anggaran hampir habis (80%)' },
               { key: 'monthly_report', label: 'Laporan Bulanan', desc: 'Ringkasan keuangan di akhir bulan' },
@@ -558,10 +720,10 @@ export default function Settings() {
               { key: 'goal_achieved', label: 'Target Tercapai', desc: 'Notifikasi saat target tabungan tercapai' },
               { key: 'debt_due', label: 'Jatuh Tempo Hutang', desc: 'Peringatan hutang yang akan jatuh tempo' },
             ].map((item) => (
-              <div key={item.key} className="flex items-center justify-between py-1">
-                <div>
-                  <p className="text-sm font-medium text-ink">{item.label}</p>
-                  <p className="text-xs text-ink-3">{item.desc}</p>
+              <div key={item.key} className="flex items-center justify-between gap-3 py-1">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium" style={{ color: 'var(--ink)' }}>{item.label}</p>
+                  <p className="text-xs" style={{ color: 'var(--ink-3)' }}>{item.desc}</p>
                 </div>
                 <ToggleSwitch
                   checked={notifications[item.key]}
@@ -571,63 +733,69 @@ export default function Settings() {
               </div>
             ))}
           </div>
-          <div className="mt-4 pt-4 border-t border-line">
-            <p className="text-xs text-ink-3">
-              Notifikasi akan muncul di dalam aplikasi. Push notification akan segera hadir.
-            </p>
-          </div>
-        </CardContent>
+          <p className="text-xs mt-4 pt-4" style={{ color: 'var(--ink-3)', borderTop: '1px solid var(--line)' }}>
+            Notifikasi akan muncul di dalam aplikasi. Push notification akan segera hadir.
+          </p>
+        </div>
       </Card>
 
-      {/* Security */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <Shield className="w-4 h-4 text-ink-2" />
-            <CardTitle>Keamanan</CardTitle>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-2">
+      {/* Keamanan */}
+      <Card padding={20}>
+        <div className="mb-1.5">
+          <SectionTitle icon="settings">Keamanan</SectionTitle>
+        </div>
+        <div className="flex flex-col">
+          <button
+            className="flex items-center justify-between w-full py-3 px-1 rounded-lg transition-colors text-left"
+            onClick={() => setChangePasswordOpen(true)}
+          >
+            <div>
+              <p className="text-sm font-medium" style={{ color: 'var(--ink)' }}>Ubah Password</p>
+              <p className="text-xs" style={{ color: 'var(--ink-3)' }}>Ganti password akun kamu</p>
+            </div>
+            <Icon name="chevronR" size={16} style={{ color: 'var(--ink-3)' }} />
+          </button>
+          {[
+            { label: 'Autentikasi 2 Faktor', desc: 'Tambah lapisan keamanan ekstra' },
+            { label: 'Sesi Aktif', desc: 'Kelola perangkat yang login' },
+          ].map((item) => (
             <button
-              className="flex items-center justify-between w-full py-3 px-1 rounded-lg hover:bg-surface-2 transition-colors text-left"
-              onClick={() => setChangePasswordOpen(true)}
+              key={item.label}
+              className="flex items-center justify-between w-full py-3 px-1 rounded-lg transition-colors text-left"
+              onClick={() => toast.info(`Fitur "${item.label}" segera hadir`)}
             >
               <div>
-                <p className="text-sm font-medium text-ink">Ubah Password</p>
-                <p className="text-xs text-ink-3">Ganti password akun kamu</p>
+                <p className="text-sm font-medium" style={{ color: 'var(--ink)' }}>{item.label}</p>
+                <p className="text-xs" style={{ color: 'var(--ink-3)' }}>{item.desc}</p>
               </div>
-              <ChevronRight className="w-4 h-4 text-ink-3 flex-shrink-0" />
+              <Icon name="chevronR" size={16} style={{ color: 'var(--ink-3)' }} />
             </button>
-            {[
-              { label: 'Autentikasi 2 Faktor', desc: 'Tambah lapisan keamanan ekstra' },
-              { label: 'Sesi Aktif', desc: 'Kelola perangkat yang login' },
-            ].map((item) => (
-              <button
-                key={item.label}
-                className="flex items-center justify-between w-full py-3 px-1 rounded-lg hover:bg-surface-2 transition-colors text-left"
-                onClick={() => toast.info(`Fitur "${item.label}" segera hadir`)}
-              >
-                <div>
-                  <p className="text-sm font-medium text-ink">{item.label}</p>
-                  <p className="text-xs text-ink-3">{item.desc}</p>
-                </div>
-                <ChevronRight className="w-4 h-4 text-ink-3 flex-shrink-0" />
-              </button>
-            ))}
-          </div>
-        </CardContent>
+          ))}
+        </div>
       </Card>
-
-      {/* Import & Export */}
-      <ImportExportSection />
 
       {/* Danger Zone — hanya pemilik keluarga (atau akun personal) yang boleh menghapus semua data */}
       {isOwner && <DangerZoneSection />}
 
+      <Card padding={20}>
+        <h3 className="m-0 mb-1.5 text-base font-bold" style={{ color: 'var(--ink)' }}>Akun</h3>
+        <div className="flex items-center justify-between gap-4 py-2">
+          <div>
+            <p className="text-sm font-medium" style={{ color: 'var(--ink)' }}>Keluar dari akun</p>
+            <p className="text-xs mt-0.5" style={{ color: 'var(--ink-3)' }}>Kamu perlu login lagi untuk mengakses data.</p>
+          </div>
+          <Button variant="danger" size="sm" className="flex-shrink-0" onClick={handleLogout}>
+            <Icon name="logout" size={16} />
+            Keluar
+          </Button>
+        </div>
+      </Card>
+
       {/* App info */}
-      <div className="text-center py-4">
-        <p className="text-xs text-ink-3">MoneyFam v0.1.0 · Family Finance Tracker</p>
+      <div className="text-center py-2 pb-3">
+        <p className="text-xs" style={{ color: 'var(--ink-3)' }}>
+          MoneyFam v2.0 · Dibuat dengan ❤️ untuk keluarga Indonesia
+        </p>
       </div>
 
       {/* Modals */}

@@ -7,6 +7,8 @@ const variants = {
   danger:    'text-white hover:opacity-90 focus:ring-2',
   ghost:     'hover:opacity-80 focus:ring-2',
   outline:   'border focus:ring-2',
+  soft:      'focus:ring-2',
+  dark:      'focus:ring-2',
 }
 
 const sizes = {
@@ -45,7 +47,7 @@ export function Button({
         }
       case 'danger':
         return {
-          background: '#DC2626',
+          background: 'var(--bad)',
           color: '#fff',
           borderRadius: 'var(--r-sm)',
           ...style,
@@ -62,6 +64,20 @@ export function Button({
           background: 'transparent',
           color: 'var(--accent)',
           borderColor: 'var(--accent)',
+          borderRadius: 'var(--r-sm)',
+          ...style,
+        }
+      case 'soft':
+        return {
+          background: 'var(--accent-soft)',
+          color: 'var(--accent-ink)',
+          borderRadius: 'var(--r-sm)',
+          ...style,
+        }
+      case 'dark':
+        return {
+          background: 'var(--ink)',
+          color: 'var(--bg)',
           borderRadius: 'var(--r-sm)',
           ...style,
         }

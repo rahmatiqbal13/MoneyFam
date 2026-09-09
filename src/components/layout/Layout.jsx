@@ -1,9 +1,12 @@
 import { Suspense, useState } from 'react'
 import { Outlet } from 'react-router-dom'
-import { Plus } from 'lucide-react'
+import { useViewport } from '@/hooks/useViewport'
 import { Sidebar } from './Sidebar'
 import { Header } from './Header'
+import { BottomNav } from './BottomNav'
+import { MobileDrawer } from './MobileDrawer'
 import { TransactionModal } from '@/components/transactions/TransactionModal'
+import { Icon } from '@/components/ui/Icon'
 
 function PageLoader() {
   return (
@@ -17,16 +20,20 @@ function PageLoader() {
 }
 
 export function Layout() {
-  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const { isDesktop, narrow } = useViewport()
+  const [drawerOpen, setDrawerOpen] = useState(false)
   const [transactionModalOpen, setTransactionModalOpen] = useState(false)
 
   return (
     <div className="flex h-dvh overflow-hidden" style={{ background: 'var(--bg)' }}>
-      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      {isDesktop && <Sidebar />}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        <Header onMenuClick={() => setSidebarOpen(true)} />
+        <Header onMenuClick={() => setDrawerOpen(true)} />
         <main className="flex-1 overflow-y-auto">
-          <div className="p-4 lg:p-6 pb-24 max-w-screen-xl mx-auto">
+          <div
+            className="p-4 lg:p-6 max-w-[1180px] mx-auto"
+            style={narrow ? { paddingBottom: 110 } : { paddingBottom: 96 }}
+          >
             <Suspense fallback={<PageLoader />}>
               <Outlet />
             </Suspense>
@@ -34,20 +41,28 @@ export function Layout() {
         </main>
       </div>
 
-      {/* Floating Action Button */}
-      <button
-        onClick={() => setTransactionModalOpen(true)}
-        className="fixed bottom-6 right-6 w-14 h-14 text-white shadow-warm-lg flex items-center justify-center z-50 transition-all duration-200 hover:scale-105 active:scale-95"
-        style={{
-          background: 'var(--accent)',
-          borderRadius: 20,
-          boxShadow: '0 8px 20px -6px rgba(14,165,164,.5), inset 0 -2px 0 rgba(0,0,0,.15)',
-        }}
-        aria-label="Tambah transaksi baru"
-        title="Tambah transaksi"
-      >
-        <Plus className="w-7 h-7" strokeWidth={2.4} />
-      </button>
+      {narrow && (
+        <>
+          <BottomNav onAddTransaction={() => setTransactionModalOpen(true)} />
+          <MobileDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
+        </>
+      )}
+
+      {!narrow && (
+        <button
+          type="button"
+          onClick={() => setTransactionModalOpen(true)}
+          style={{
+            position: 'fixed', bottom: 32, right: 32, zIndex: 30,
+            display: 'flex', alignItems: 'center', gap: 8,
+            padding: '14px 22px', borderRadius: 999,
+            background: 'var(--accent)', color: '#fff', border: 'none',
+            fontWeight: 700, fontSize: 14, cursor: 'pointer', boxShadow: 'var(--shadow-lg)',
+          }}
+        >
+          <Icon name="plus" size={18} stroke={2.4} /> Catat Transaksi
+        </button>
+      )}
 
       <TransactionModal
         isOpen={transactionModalOpen}

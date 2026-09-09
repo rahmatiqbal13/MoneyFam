@@ -49,8 +49,8 @@ export default {
       borderRadius: {
         'r-sm': '12px',
         'r-md': '18px',
-        'r-lg': '22px',
-        'r-xl': '28px',
+        'r-lg': '26px',
+        'r-xl': '34px',
       },
       boxShadow: {
         'warm-sm': '0 1px 2px rgba(75,53,18,.05)',

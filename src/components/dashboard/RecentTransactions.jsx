@@ -10,7 +10,7 @@ function TransactionAmount({ type, amount }) {
     <span
       className="text-sm font-semibold font-mono tabular-nums"
       style={{
-        color: isIncome ? '#16A34A' : isTransfer ? 'var(--accent-ink)' : '#DC2626',
+        color: isIncome ? 'var(--good)' : isTransfer ? 'var(--accent-ink)' : 'var(--bad)',
       }}
     >
       {isIncome ? '+' : isTransfer ? '' : '-'}

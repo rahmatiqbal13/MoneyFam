@@ -1,4 +1,4 @@
-import { useEffect, lazy } from 'react'
+import { useEffect, useRef, lazy } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ToastProvider } from '@/components/ui/Toast'
@@ -6,6 +6,7 @@ import { Layout } from '@/components/layout/Layout'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import PWAInstallPrompt from '@/components/PWAInstallPrompt'
 import { useAuthStore } from '@/stores/authStore'
+import { useThemeStore } from '@/stores/themeStore'
 
 // Pages — Login/Register/ForgotPassword/ResetPassword/Dashboard load eagerly
 // (first thing an unauthenticated or freshly-logged-in user sees). The rest
@@ -44,10 +45,16 @@ function ProtectedRoute({ children }) {
 
   if (!initialized) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div
+        className="min-h-screen flex items-center justify-center"
+        style={{ background: 'var(--bg)', color: 'var(--ink-3)' }}
+      >
         <div className="flex flex-col items-center gap-3">
-          <div className="w-10 h-10 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-          <p className="text-sm text-gray-400">Memuat...</p>
+          <div
+            className="w-10 h-10 border-2 rounded-full animate-spin"
+            style={{ borderColor: 'var(--line-2)', borderTopColor: 'var(--accent)' }}
+          />
+          <p className="text-sm">Memuat...</p>
         </div>
       </div>
     )
@@ -65,8 +72,14 @@ function PublicRoute({ children }) {
 
   if (!initialized) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="w-10 h-10 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+      <div
+        className="min-h-screen flex items-center justify-center"
+        style={{ background: 'var(--bg)', color: 'var(--ink-3)' }}
+      >
+        <div
+          className="w-10 h-10 border-2 rounded-full animate-spin"
+          style={{ borderColor: 'var(--line-2)', borderTopColor: 'var(--accent)' }}
+        />
       </div>
     )
   }
@@ -98,13 +111,33 @@ function AppInitializer({ children }) {
     }
   }, [initialize])
 
+  const uiPrefs = useAuthStore((s) => s.profile?.ui_prefs)
+  useEffect(() => {
+    if (uiPrefs) useThemeStore.getState().hydrate(uiPrefs)
+  }, [uiPrefs])
+
+  // Reset theme to defaults when the signed-in user goes away (sign-out) so a
+  // shared browser doesn't carry one person's theme into the next session.
+  const userId = useAuthStore((s) => s.user?.id)
+  const prevUserId = useRef(userId)
+  useEffect(() => {
+    if (prevUserId.current && !userId) useThemeStore.getState().reset()
+    prevUserId.current = userId
+  }, [userId])
+
   // Show loading while initializing auth
   if (!initialized) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div
+        className="min-h-screen flex items-center justify-center"
+        style={{ background: 'var(--bg)', color: 'var(--ink-3)' }}
+      >
         <div className="flex flex-col items-center gap-3">
-          <div className="w-10 h-10 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-          <p className="text-sm text-gray-400">Memuat aplikasi...</p>
+          <div
+            className="w-10 h-10 border-2 rounded-full animate-spin"
+            style={{ borderColor: 'var(--line-2)', borderTopColor: 'var(--accent)' }}
+          />
+          <p className="text-sm">Memuat aplikasi...</p>
         </div>
       </div>
     )
