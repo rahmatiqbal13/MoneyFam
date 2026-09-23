@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
 import { useToast } from '@/components/ui/Toast'
 import { useWallets, useTransferBetweenWallets } from '@/hooks/useWallets'
-import { formatCurrency } from '@/lib/utils'
+import { formatCurrency, toDateStr } from '@/lib/utils'
 
 export function TransferModal({ isOpen, onClose, fromWallet = null }) {
   const toast = useToast()
@@ -16,7 +16,7 @@ export function TransferModal({ isOpen, onClose, fromWallet = null }) {
     from_wallet_id: '',
     to_wallet_id: '',
     amount: '',
-    date: new Date().toISOString().split('T')[0],
+    date: toDateStr(new Date()),
     note: '',
   })
   const [errors, setErrors] = useState({})
@@ -27,7 +27,7 @@ export function TransferModal({ isOpen, onClose, fromWallet = null }) {
         from_wallet_id: fromWallet?.id || '',
         to_wallet_id: '',
         amount: '',
-        date: new Date().toISOString().split('T')[0],
+        date: toDateStr(new Date()),
         note: '',
       })
       setErrors({})

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Card } from '@/components/ui/Card'
 import { StatTile } from '@/components/ui/StatTile'
 import { SegmentedControl } from '@/components/ui/SegmentedControl'
@@ -71,12 +71,20 @@ function TransactionRow({ tx, onClick }) {
 
 export default function Transactions() {
   const { filters, page, pageSize, setFilters, resetFilters, setPage, setPageSize } = useTransactionStore()
-  const { data: txData, isLoading } = useTransactions(filters, page, pageSize)
+  const { data: txData, isLoading, isError } = useTransactions(filters, page, pageSize)
   const transactions = txData?.data || []
   const totalCount = txData?.count || 0
   const totalPages = Math.ceil(totalCount / pageSize)
   const rangeStart = totalCount === 0 ? 0 : page * pageSize + 1
   const rangeEnd = Math.min(totalCount, (page + 1) * pageSize)
+
+  // Halaman bisa "kelewatan" setelah data terakhir di halaman terakhir dihapus
+  // (PostgREST membalas 416 / hasil kosong) — mundur satu halaman sampai valid.
+  useEffect(() => {
+    if (page > 0 && !isLoading && (isError || (txData && page >= totalPages))) {
+      setPage(page - 1)
+    }
+  }, [page, isLoading, isError, txData, totalPages, setPage])
 
   const now = new Date()
   const { data: stats } = useMonthlyStats(now.getFullYear(), now.getMonth() + 1)

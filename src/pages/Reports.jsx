@@ -17,7 +17,7 @@ import { Progress } from '@/components/ui/Progress'
 import { Avatar } from '@/components/ui/Avatar'
 import { Icon } from '@/components/ui/Icon'
 import { useToast } from '@/components/ui/Toast'
-import { formatCurrency, formatDate, getBudgetStatus, idrShort } from '@/lib/utils'
+import { formatCurrency, formatDate, getBudgetStatus, idrShort, toDateStr } from '@/lib/utils'
 import { memberColor } from '@/lib/memberColor'
 import {
   useMonthlyStats,
@@ -67,8 +67,8 @@ function getWeekRange(date) {
   const sun = new Date(mon)
   sun.setDate(mon.getDate() + 6)
   return {
-    from: mon.toISOString().split('T')[0],
-    to: sun.toISOString().split('T')[0],
+    from: toDateStr(mon),
+    to: toDateStr(sun),
     label: `${mon.getDate()}–${sun.getDate()} ${new Intl.DateTimeFormat('id-ID', { month: 'long' }).format(sun)} ${sun.getFullYear()}`,
   }
 }

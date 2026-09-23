@@ -19,7 +19,7 @@ import { Icon } from '@/components/ui/Icon'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { useToast } from '@/components/ui/Toast'
-import { formatCurrency, idrShort } from '@/lib/utils'
+import { formatCurrency, idrShort, toDateStr } from '@/lib/utils'
 import { usePensionSettings, useSavePensionSettings, useInvestments } from '@/hooks/useInvestments'
 import { useSavingsGoals, useCreateSavingsGoal } from '@/hooks/useSavingsGoals'
 
@@ -239,7 +239,7 @@ export default function PensionCalculator() {
         name: `Dana Pensiun (Usia ${form.targetAge})`,
         target_amount: Math.round(result.totalNeeded),
         current_amount: Math.round(Number(form.existingFund) || 0),
-        target_date: targetDate.toISOString().split('T')[0],
+        target_date: toDateStr(targetDate),
         icon: '🏖️',
         color: '#f59e0b',
       })

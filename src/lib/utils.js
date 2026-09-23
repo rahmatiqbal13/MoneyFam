@@ -43,12 +43,21 @@ export function formatMonthYear(dateString) {
   }).format(date)
 }
 
+// YYYY-MM-DD menurut zona waktu lokal. Jangan pakai toISOString() untuk ini:
+// di WIB (UTC+7) hasilnya mundur sehari untuk jam 00:00–06:59.
+export function toDateStr(date = new Date()) {
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}
+
 export function getMonthStart(date = new Date()) {
-  return new Date(date.getFullYear(), date.getMonth(), 1).toISOString().split('T')[0]
+  return toDateStr(new Date(date.getFullYear(), date.getMonth(), 1))
 }
 
 export function getMonthEnd(date = new Date()) {
-  return new Date(date.getFullYear(), date.getMonth() + 1, 0).toISOString().split('T')[0]
+  return toDateStr(new Date(date.getFullYear(), date.getMonth() + 1, 0))
 }
 
 export function getLast6Months() {
@@ -60,8 +69,8 @@ export function getLast6Months() {
       year: d.getFullYear(),
       month: d.getMonth() + 1,
       label: new Intl.DateTimeFormat('id-ID', { month: 'short', year: '2-digit' }).format(d),
-      start: new Date(d.getFullYear(), d.getMonth(), 1).toISOString().split('T')[0],
-      end: new Date(d.getFullYear(), d.getMonth() + 1, 0).toISOString().split('T')[0],
+      start: toDateStr(new Date(d.getFullYear(), d.getMonth(), 1)),
+      end: toDateStr(new Date(d.getFullYear(), d.getMonth() + 1, 0)),
     })
   }
   return months

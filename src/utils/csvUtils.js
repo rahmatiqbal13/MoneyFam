@@ -1,4 +1,5 @@
 import Papa from 'papaparse'
+import { toDateStr } from '@/lib/utils'
 
 /**
  * Parse CSV content to array of objects
@@ -128,7 +129,7 @@ export function mapOlloType(olloType) {
  */
 export function parseOlloDate(olloDate) {
   if (!olloDate) {
-    return new Date().toISOString().split('T')[0]
+    return toDateStr(new Date())
   }
   
   // Ollo format: "2026-03-03 11:03:50"
@@ -137,7 +138,7 @@ export function parseOlloDate(olloDate) {
   
   // Validate format YYYY-MM-DD
   if (!datePart || !/^\d{4}-\d{2}-\d{2}$/.test(datePart)) {
-    return new Date().toISOString().split('T')[0]
+    return toDateStr(new Date())
   }
   
   return datePart

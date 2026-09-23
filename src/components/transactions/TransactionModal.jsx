@@ -10,6 +10,7 @@ import { useWallets } from '@/hooks/useWallets'
 import { useCreateTransaction, useUpdateTransaction, useDeleteTransaction } from '@/hooks/useTransactions'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/stores/authStore'
+import { toDateStr } from '@/lib/utils'
 
 const TYPES = [
   { id: 'expense', label: 'Pengeluaran' },
@@ -21,8 +22,7 @@ function getDefaultForm() {
   return {
     type: 'expense',
     amount: '',
-    date: new Date().toISOString().split('T')[0],
-    time: new Date().toTimeString().slice(0, 5),
+    date: toDateStr(new Date()),
     description: '',
     category_id: '',
     wallet_id: '',
@@ -85,12 +85,10 @@ export function TransactionModal({ isOpen, onClose, transaction = null }) {
   useEffect(() => {
     if (isOpen) {
       if (transaction) {
-        const dateObj = new Date(transaction.date)
         setForm({
           type: transaction.type || 'expense',
           amount: String(transaction.amount || ''),
-          date: dateObj.toISOString().split('T')[0],
-          time: dateObj.toTimeString().slice(0, 5),
+          date: String(transaction.date).slice(0, 10),
           description: transaction.description || '',
           category_id: transaction.category_id || '',
           wallet_id: transaction.wallet_id || '',
@@ -235,7 +233,7 @@ export function TransactionModal({ isOpen, onClose, transaction = null }) {
     const payload = {
       type: form.type,
       amount: Number(form.amount),
-      date: `${form.date}T${form.time || '00:00'}`,
+      date: form.date,
       description: form.description,
       category_id: form.category_id || null,
       wallet_id: form.wallet_id,
@@ -290,27 +288,15 @@ export function TransactionModal({ isOpen, onClose, transaction = null }) {
             min="0"
           />
 
-          {/* Date and Time */}
-          <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium" style={{ color: 'var(--ink-2)' }}>
-              Tanggal & Waktu <span style={{ color: 'var(--bad)' }}>*</span>
-            </label>
-            <div className="flex gap-2">
-              <Input
-                type="date"
-                className="flex-1"
-                value={form.date}
-                onChange={update('date')}
-              />
-              <Input
-                type="time"
-                className="w-28"
-                value={form.time}
-                onChange={update('time')}
-              />
-            </div>
-            {errors.date && <p className="text-xs" style={{ color: 'var(--bad)' }}>{errors.date}</p>}
-          </div>
+          {/* Date */}
+          <Input
+            label="Tanggal"
+            type="date"
+            value={form.date}
+            onChange={update('date')}
+            error={errors.date}
+            required
+          />
 
           {/* Description */}
           <Input

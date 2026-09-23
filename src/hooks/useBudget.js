@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/stores/authStore'
+import { toDateStr } from '@/lib/utils'
 
 const QUERY_KEY = 'budgets'
 
@@ -32,7 +33,7 @@ export function useBudgets(yearMonth) {
 
       // Get spending per category this month
       const start = `${year}-${String(month).padStart(2, '0')}-01`
-      const end = new Date(year, month, 0).toISOString().split('T')[0]
+      const end = toDateStr(new Date(year, month, 0))
 
       let txQuery = supabase
         .from('transactions')

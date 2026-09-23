@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/stores/authStore'
+import { toDateStr } from '@/lib/utils'
 import { parseCSV, readFileAsText, convertOlloToMoneyFam, generateCSV, convertMoneyFamToOllo } from '@/utils/csvUtils'
 
 const CATEGORY_ICON_MAP = [
@@ -391,7 +392,7 @@ export function useDataExport() {
       const url = URL.createObjectURL(blob)
       const link = document.createElement('a')
       link.setAttribute('href', url)
-      link.setAttribute('download', `moneyfam_export_${new Date().toISOString().split('T')[0]}.csv`)
+      link.setAttribute('download', `moneyfam_export_${toDateStr(new Date())}.csv`)
       link.style.visibility = 'hidden'
       document.body.appendChild(link)
       link.click()
@@ -400,7 +401,7 @@ export function useDataExport() {
       
       return {
         total: olloData.length,
-        filename: `moneyfam_export_${new Date().toISOString().split('T')[0]}.csv`
+        filename: `moneyfam_export_${toDateStr(new Date())}.csv`
       }
     },
   })

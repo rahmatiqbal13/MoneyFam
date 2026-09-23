@@ -19,7 +19,7 @@ import { SegmentedControl } from '@/components/ui/SegmentedControl'
 import { Icon } from '@/components/ui/Icon'
 import { useUndoableDelete } from '@/hooks/useUndoableDelete'
 import { useToast } from '@/components/ui/Toast'
-import { formatCurrency, formatDate, idrShort } from '@/lib/utils'
+import { formatCurrency, formatDate, idrShort, toDateStr } from '@/lib/utils'
 import {
   useSavingsGoals,
   useCreateSavingsGoal,
@@ -237,7 +237,7 @@ function AddFundModal({ isOpen, onClose, goal }) {
   const [mode, setMode] = useState('add')
   const [walletId, setWalletId] = useState('')
   const [categoryId, setCategoryId] = useState('')
-  const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0])
+  const [paymentDate, setPaymentDate] = useState(toDateStr(new Date()))
   const [paymentTime, setPaymentTime] = useState(new Date().toTimeString().slice(0, 5))
   const [note, setNote] = useState('')
 
@@ -261,7 +261,7 @@ function AddFundModal({ isOpen, onClose, goal }) {
       setMode('add'); 
       setWalletId(''); 
       setCategoryId('');
-      setPaymentDate(new Date().toISOString().split('T')[0]);
+      setPaymentDate(toDateStr(new Date()));
       setPaymentTime(new Date().toTimeString().slice(0, 5));
       setNote('');
     }
@@ -780,7 +780,7 @@ function PayDebtModal({ isOpen, onClose, debt }) {
   const [amount, setAmount] = useState('')
   const [walletId, setWalletId] = useState('')
   const [categoryId, setCategoryId] = useState('')
-  const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0])
+  const [paymentDate, setPaymentDate] = useState(toDateStr(new Date()))
   const [paymentTime, setPaymentTime] = useState(new Date().toTimeString().slice(0, 5))
   const [note, setNote] = useState('')
 
@@ -804,7 +804,7 @@ function PayDebtModal({ isOpen, onClose, debt }) {
       setAmount(''); 
       setWalletId(''); 
       setCategoryId('');
-      setPaymentDate(new Date().toISOString().split('T')[0]);
+      setPaymentDate(toDateStr(new Date()));
       setPaymentTime(new Date().toTimeString().slice(0, 5));
       setNote('');
     }
@@ -1343,7 +1343,7 @@ function MarkPaidModal({ isOpen, onClose, debt, onConfirm, loading }) {
   const { data: incomeCategories } = useCategories('income')
   const [walletId, setWalletId] = useState('')
   const [categoryId, setCategoryId] = useState('')
-  const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0])
+  const [paymentDate, setPaymentDate] = useState(toDateStr(new Date()))
   const [paymentTime, setPaymentTime] = useState(new Date().toTimeString().slice(0, 5))
   const [note, setNote] = useState('')
 
@@ -1361,7 +1361,7 @@ function MarkPaidModal({ isOpen, onClose, debt, onConfirm, loading }) {
     if (isOpen) { 
       setWalletId(''); 
       setCategoryId('');
-      setPaymentDate(new Date().toISOString().split('T')[0]);
+      setPaymentDate(toDateStr(new Date()));
       setPaymentTime(new Date().toTimeString().slice(0, 5));
       setNote('');
     }

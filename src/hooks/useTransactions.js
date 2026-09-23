@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/stores/authStore'
 import { shouldSendNotification } from './useNotifications'
-import { formatCurrency } from '@/lib/utils'
+import { formatCurrency, toDateStr } from '@/lib/utils'
 
 const QUERY_KEY = 'transactions'
 const PAGE_SIZE = 50 // batas maksimal per halaman
@@ -44,7 +44,7 @@ async function checkAndCreateBudgetWarning(familyId, userId, categoryId, _amount
   
   // Get current spending
   const start = `${year}-${String(month).padStart(2, '0')}-01`
-  const end = new Date(year, month, 0).toISOString().split('T')[0]
+  const end = toDateStr(new Date(year, month, 0))
   
   let txQuery = supabase
     .from('transactions')
@@ -102,7 +102,7 @@ async function checkDailyReminder(familyId, userId) {
   const now = new Date()
   if (now.getHours() < 18) return
 
-  const todayStr = now.toISOString().split('T')[0]
+  const todayStr = toDateStr(now)
   const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString()
 
   const { data: existing } = await supabase
@@ -153,7 +153,7 @@ async function checkMonthlyReport(familyId, userId) {
   if (existing?.length) return
 
   const start = `${period}-01`
-  const end = new Date(year, month, 0).toISOString().split('T')[0]
+  const end = toDateStr(new Date(year, month, 0))
   let txQuery = supabase
     .from('transactions')
     .select('type, amount')
@@ -318,7 +318,7 @@ export function useMonthlyStats(year, month) {
     queryFn: async () => {
       if (!user?.id) return { income: 0, expense: 0, savings: 0 }
       const start = `${year}-${String(month).padStart(2, '0')}-01`
-      const end = new Date(year, month, 0).toISOString().split('T')[0]
+      const end = toDateStr(new Date(year, month, 0))
 
       let query = supabase
         .from('transactions')
@@ -362,8 +362,8 @@ export function useLast6MonthsData() {
           year: d.getFullYear(),
           month: d.getMonth() + 1,
           label: new Intl.DateTimeFormat('id-ID', { month: 'short' }).format(d),
-          start: new Date(d.getFullYear(), d.getMonth(), 1).toISOString().split('T')[0],
-          end: new Date(d.getFullYear(), d.getMonth() + 1, 0).toISOString().split('T')[0],
+          start: toDateStr(new Date(d.getFullYear(), d.getMonth(), 1)),
+          end: toDateStr(new Date(d.getFullYear(), d.getMonth() + 1, 0)),
         })
       }
 
@@ -411,7 +411,7 @@ export function useCategorySpending(year, month) {
     queryFn: async () => {
       if (!user?.id) return []
       const start = `${year}-${String(month).padStart(2, '0')}-01`
-      const end = new Date(year, month, 0).toISOString().split('T')[0]
+      const end = toDateStr(new Date(year, month, 0))
 
       let query = supabase
         .from('transactions')
@@ -462,8 +462,8 @@ export function useMonthlyTrend(year, month, count = 6) {
           year: d.getFullYear(),
           month: d.getMonth() + 1,
           label: new Intl.DateTimeFormat('id-ID', { month: 'short', year: '2-digit' }).format(d),
-          start: new Date(d.getFullYear(), d.getMonth(), 1).toISOString().split('T')[0],
-          end: new Date(d.getFullYear(), d.getMonth() + 1, 0).toISOString().split('T')[0],
+          start: toDateStr(new Date(d.getFullYear(), d.getMonth(), 1)),
+          end: toDateStr(new Date(d.getFullYear(), d.getMonth() + 1, 0)),
         })
       }
 
@@ -509,7 +509,7 @@ export function useReportCategoryDetail(year, month) {
     queryFn: async () => {
       if (!user?.id) return []
       const start = `${year}-${String(month).padStart(2, '0')}-01`
-      const end = new Date(year, month, 0).toISOString().split('T')[0]
+      const end = toDateStr(new Date(year, month, 0))
 
       let query = supabase
         .from('transactions')
@@ -558,7 +558,7 @@ export function useTopTransactions(year, month, limit = 5) {
     queryFn: async () => {
       if (!user?.id) return []
       const start = `${year}-${String(month).padStart(2, '0')}-01`
-      const end = new Date(year, month, 0).toISOString().split('T')[0]
+      const end = toDateStr(new Date(year, month, 0))
 
       // Tidak join wallets karena transactions punya 2 FK ke wallets (wallet_id & to_wallet_id)
       // yang bisa menyebabkan ambiguitas di PostgREST
@@ -597,7 +597,7 @@ export function useMemberSpending(year, month) {
     queryFn: async () => {
       if (!user?.id) return []
       const start = `${year}-${String(month).padStart(2, '0')}-01`
-      const end = new Date(year, month, 0).toISOString().split('T')[0]
+      const end = toDateStr(new Date(year, month, 0))
 
       let txQuery = supabase
         .from('transactions')
@@ -670,7 +670,7 @@ export function useDailySpending(year, month) {
     queryFn: async () => {
       if (!user?.id) return {}
       const start = `${year}-${String(month).padStart(2, '0')}-01`
-      const end = new Date(year, month, 0).toISOString().split('T')[0]
+      const end = toDateStr(new Date(year, month, 0))
 
       let query = supabase
         .from('transactions')

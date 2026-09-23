@@ -11,7 +11,7 @@ import { useUndoableDelete } from '@/hooks/useUndoableDelete'
 import { useToast } from '@/components/ui/Toast'
 import { useBudgets, useDeleteBudget, useCopyBudgetFromLastMonth } from '@/hooks/useBudget'
 import { useBudgetStore } from '@/stores/budgetStore'
-import { formatCurrency, idrShort, getBudgetStatus } from '@/lib/utils'
+import { formatCurrency, idrShort, getBudgetStatus, toDateStr } from '@/lib/utils'
 
 export default function Budget() {
   const toast = useToast()
@@ -43,7 +43,7 @@ export default function Budget() {
 
   // Days left — only meaningful when viewing the current month
   const now = new Date()
-  const isCurrentMonth = selectedMonth === now.toISOString().slice(0, 7)
+  const isCurrentMonth = selectedMonth === toDateStr(now).slice(0, 7)
   const daysInMonth = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0).getDate()
   const daysLeft = isCurrentMonth ? daysInMonth - now.getDate() : 0
 
