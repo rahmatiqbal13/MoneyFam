@@ -7,38 +7,18 @@ const QUERY_KEY = 'family-members'
 // Bergabung ke keluarga menggunakan kode undangan (untuk user yang sudah punya akun)
 export function useJoinFamily() {
   const user = useAuthStore((s) => s.user)
-  const profile = useAuthStore((s) => s.profile)
   const fetchProfile = useAuthStore((s) => s.fetchProfile)
 
   return useMutation({
     mutationFn: async (code) => {
-      const { data: rows, error: codeErr } = await supabase.rpc('get_family_by_invite_code', {
+      // RPC sekaligus memvalidasi kode & mengisi family_id/role (tidak bisa
+      // lewat update profiles langsung — diblokir trigger guard di database)
+      const { data: rows, error } = await supabase.rpc('join_family_by_invite_code', {
         p_code: code.trim().toUpperCase(),
       })
-      if (codeErr) throw codeErr
+      if (error) throw error
       if (!rows || rows.length === 0) throw new Error('Kode undangan tidak valid atau sudah tidak berlaku')
-
-      const targetFamily = rows[0]
-
-      if (profile) {
-        const { error } = await supabase
-          .from('profiles')
-          .update({ family_id: targetFamily.id, role: 'member' })
-          .eq('id', user.id)
-        if (error) throw error
-      } else {
-        // Zombie account — belum ada profile row, INSERT langsung
-        const { error } = await supabase.from('profiles').insert({
-          id: user.id,
-          full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
-          email: user.email,
-          family_id: targetFamily.id,
-          role: 'member',
-        })
-        if (error) throw error
-      }
-
-      return targetFamily
+      return rows[0]
     },
     onSuccess: async () => {
       // Add small delay to ensure database consistency

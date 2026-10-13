@@ -150,17 +150,23 @@ export const useAuthStore = create((set, get) => ({
         family = { id: familyId, name: familyName }
       }
 
-      // Buat profile
+      // Buat profile. Bergabung ke keluarga lain wajib lewat RPC — insert
+      // profile dengan family_id orang lain diblokir trigger guard di database.
       const profileData = {
         id: data.user.id,
         full_name: fullName,
         email,
         role: inviteCode ? 'member' : 'owner',
       }
-      if (family?.id) profileData.family_id = family.id
+      if (family?.id && !inviteCode) profileData.family_id = family.id
 
       const { error: profileError } = await supabase.from('profiles').insert(profileData)
       if (profileError) throw profileError
+
+      if (inviteCode) {
+        const { error: joinError } = await supabase.rpc('join_family_by_invite_code', { p_code: inviteCode })
+        if (joinError) throw joinError
+      }
 
       // Seed kategori default untuk keluarga baru
       if (!inviteCode && !isPersonal && family?.id) {

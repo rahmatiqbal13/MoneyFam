@@ -71,10 +71,18 @@ $$;
 drop policy if exists "notifications_insert" on notifications;
 create policy "notifications_insert" on notifications
   for insert with check (
-    family_id = get_user_family_id()
-    and exists (
-      select 1 from profiles
-      where id = notifications.user_id
-      and family_id = notifications.family_id
+    (
+      family_id is not null
+      and family_id = get_user_family_id()
+      and exists (
+        select 1 from profiles
+        where id = notifications.user_id
+        and family_id = notifications.family_id
+      )
+    )
+    or
+    (
+      family_id is null
+      and user_id = auth.uid()
     )
   );

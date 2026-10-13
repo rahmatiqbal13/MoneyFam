@@ -96,6 +96,10 @@ declare
   v_category record;
   v_exists boolean;
 begin
+  if p_family_id is distinct from get_user_family_id() then
+    raise exception 'Not authorized';
+  end if;
+
   -- Insert kategori default yang belum ada di keluarga ini dan belum di-hidden
   for v_category in 
     select DISTINCT ON (name) * from categories 
@@ -537,23 +541,6 @@ create trigger trg_wallet_balance_delete
 create trigger trg_wallet_balance_update
   after update on transactions
   for each row execute function update_wallet_balance_on_update();
-
--- ============================================================
--- RPC Functions for manual wallet balance adjustment
--- ============================================================
-create or replace function increment_wallet_balance(wallet_id uuid, amount numeric)
-returns void as $$
-begin
-  update wallets set balance = balance + amount where id = wallet_id;
-end;
-$$ language plpgsql security definer;
-
-create or replace function decrement_wallet_balance(wallet_id uuid, amount numeric)
-returns void as $$
-begin
-  update wallets set balance = balance - amount where id = wallet_id;
-end;
-$$ language plpgsql security definer;
 
 -- Delete all transactions for a family and reset wallet balances to initial_balance.
 -- Runs server-side to avoid N×round-trips from per-row delete triggers.
@@ -1026,3 +1013,86 @@ create index if not exists idx_savings_goals_user on savings_goals(user_id);
 create index if not exists idx_debts_user on debts(user_id);
 create index if not exists idx_notifications_user on notifications(user_id, created_at desc);
 create index if not exists idx_notifications_unread on notifications(user_id, is_read, created_at desc);
+
+-- ============================================================
+-- Profile guard: family_id & role hanya lewat fungsi security definer
+-- ============================================================
+-- Guard kolom family_id & role pada profiles
+create or replace function guard_profile_family_role()
+returns trigger
+language plpgsql
+set search_path = public
+as $$
+begin
+  -- Fungsi security definer berjalan sebagai owner (bukan 'authenticated')
+  if current_user <> 'authenticated' then
+    return NEW;
+  end if;
+
+  if TG_OP = 'UPDATE' then
+    if NEW.family_id is distinct from OLD.family_id
+       or NEW.role is distinct from OLD.role then
+      raise exception 'family_id dan role tidak boleh diubah langsung';
+    end if;
+  elsif NEW.family_id is not null then
+    -- INSERT dengan family_id hanya untuk pemilik keluarga yang baru dibuat
+    -- (alur registrasi "buat keluarga"), bukan bergabung ke keluarga yang ada.
+    if NEW.role <> 'owner' or exists (
+      select 1 from profiles where family_id = NEW.family_id
+    ) then
+      raise exception 'Gunakan kode undangan untuk bergabung ke keluarga';
+    end if;
+  end if;
+
+  return NEW;
+end;
+$$;
+
+drop trigger if exists trg_guard_profile_family_role on profiles;
+create trigger trg_guard_profile_family_role
+  before insert or update on profiles
+  for each row execute function guard_profile_family_role();
+
+-- Gabung keluarga via kode undangan (menggantikan update profiles dari client)
+create or replace function join_family_by_invite_code(p_code text)
+returns setof families
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_family families%rowtype;
+  v_user auth.users%rowtype;
+begin
+  if auth.uid() is null then
+    raise exception 'Not authorized';
+  end if;
+
+  select * into v_family from families
+  where invite_code = upper(trim(p_code))
+  limit 1;
+
+  if not found then
+    raise exception 'Kode undangan tidak valid atau sudah tidak berlaku';
+  end if;
+
+  if exists (select 1 from profiles where id = auth.uid()) then
+    update profiles
+    set family_id = v_family.id, role = 'member'
+    where id = auth.uid();
+  else
+    -- Akun tanpa baris profile (zombie account)
+    select * into v_user from auth.users where id = auth.uid();
+    insert into profiles (id, full_name, email, family_id, role)
+    values (
+      auth.uid(),
+      coalesce(v_user.raw_user_meta_data->>'full_name', split_part(v_user.email, '@', 1), 'User'),
+      v_user.email,
+      v_family.id,
+      'member'
+    );
+  end if;
+
+  return next v_family;
+end;
+$$;
