@@ -84,7 +84,7 @@ export function BudgetModal({ isOpen, onClose, budget = null, yearMonth }) {
           <Select
             label="Kategori Pengeluaran"
             value={form.category_id}
-            onChange={(e) => setForm({ ...form, category_id: e.target.value })}
+            onChange={(e) => { const value = e.target.value; setForm((f) => ({ ...f, category_id: value })) }}
             error={errors.category_id}
             required
             disabled={isEdit}
@@ -102,7 +102,7 @@ export function BudgetModal({ isOpen, onClose, budget = null, yearMonth }) {
             type="number"
             placeholder="0"
             value={form.amount}
-            onChange={(e) => setForm({ ...form, amount: e.target.value })}
+            onChange={(e) => { const value = e.target.value; setForm((f) => ({ ...f, amount: value })) }}
             error={errors.amount}
             required
             min="0"

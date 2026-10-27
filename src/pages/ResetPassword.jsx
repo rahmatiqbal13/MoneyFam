@@ -136,7 +136,7 @@ export default function ResetPassword() {
                   type={showPassword ? 'text' : 'password'}
                   placeholder="Minimal 6 karakter"
                   value={form.password}
-                  onChange={(e) => setForm({ ...form, password: e.target.value })}
+                  onChange={(e) => { const value = e.target.value; setForm((f) => ({ ...f, password: value })) }}
                   autoComplete="new-password"
                   autoFocus
                   className="w-full border pr-10 px-3 py-2 text-sm placeholder:opacity-50 focus:outline-none focus:ring-2"
@@ -167,7 +167,7 @@ export default function ResetPassword() {
                 type={showPassword ? 'text' : 'password'}
                 placeholder="Ulangi password baru"
                 value={form.confirmPassword}
-                onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })}
+                onChange={(e) => { const value = e.target.value; setForm((f) => ({ ...f, confirmPassword: value })) }}
                 autoComplete="new-password"
                 className="w-full border px-3 py-2 text-sm placeholder:opacity-50 focus:outline-none focus:ring-2"
                 style={{

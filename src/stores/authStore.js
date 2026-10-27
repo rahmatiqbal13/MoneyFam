@@ -1,6 +1,22 @@
 import { create } from 'zustand'
 import { supabase } from '@/lib/supabase'
 
+// Pesan error Supabase Auth → Bahasa Indonesia
+const AUTH_ERRORS = [
+  [/invalid login credentials/i, 'Email atau password salah'],
+  [/user already registered/i, 'Email sudah terdaftar. Silakan masuk.'],
+  [/email not confirmed/i, 'Email belum dikonfirmasi. Cek kotak masuk Anda.'],
+  [/password should be at least/i, 'Password minimal 6 karakter'],
+  [/rate limit|too many requests/i, 'Terlalu banyak percobaan. Coba lagi beberapa saat.'],
+  [/failed to fetch|network/i, 'Tidak dapat terhubung ke server. Periksa koneksi internet.'],
+]
+// fetchProfile yang sedang berjalan per user: login() dan listener SIGNED_IN
+// memanggilnya bersamaan — tanpa ini profile diambil dua kali dan pemulihan
+// akun tanpa profile bisa insert ganda (duplicate key).
+let profileFetch = null
+
+const translateAuthError = (msg = '') => AUTH_ERRORS.find(([re]) => re.test(msg))?.[1] || msg
+
 export const useAuthStore = create((set, get) => ({
   user: null,
   profile: null,
@@ -8,6 +24,10 @@ export const useAuthStore = create((set, get) => ({
   loading: false,
   initialized: false,
   initError: null,
+  // true selama register() berjalan: signUp memicu SIGNED_IN sebelum family &
+  // profile dibuat, jadi listener tidak boleh mengisi user lebih awal (yang
+  // membuat PublicRoute langsung redirect ke dashboard di tengah setup).
+  registering: false,
 
   setUser: (user) => set({ user }),
   setProfile: (profile) => set({ profile }),
@@ -21,8 +41,8 @@ export const useAuthStore = create((set, get) => ({
     try {
       const { data: { session } } = await supabase.auth.getSession()
       if (session?.user) {
+        await get().fetchProfile(session.user.id, session.user)
         set({ user: session.user })
-        await get().fetchProfile(session.user.id)
       } else {
         // No session, ensure clean state
         set({ user: null, profile: null, family: null })
@@ -37,16 +57,17 @@ export const useAuthStore = create((set, get) => ({
     // Setup auth state change listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       try {
-        if (event === 'SIGNED_IN' && session?.user) {
+        if (get().registering) return
+        if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session?.user) {
+          // Profile dimuat sebelum user diisi: begitu user ada, route guard
+          // langsung menampilkan dashboard, dan tanpa profile dashboard sempat
+          // menampilkan "Profil belum dibuat".
+          await get().fetchProfile(session.user.id, session.user)
           set({ user: session.user })
-          await get().fetchProfile(session.user.id)
         } else if (event === 'SIGNED_OUT') {
           set({ user: null, profile: null, family: null })
         } else if (event === 'TOKEN_REFRESHED' && session?.user) {
           set({ user: session.user })
-        } else if (event === 'INITIAL_SESSION' && session?.user) {
-          set({ user: session.user })
-          await get().fetchProfile(session.user.id)
         }
       } catch (err) {
         console.error('Auth state change handler error:', err)
@@ -59,7 +80,16 @@ export const useAuthStore = create((set, get) => ({
     }
   },
 
-  fetchProfile: async (userId) => {
+  fetchProfile: (userId, user = get().user) => {
+    if (profileFetch?.userId === userId) return profileFetch.promise
+    const promise = get().loadProfile(userId, user).finally(() => {
+      if (profileFetch?.promise === promise) profileFetch = null
+    })
+    profileFetch = { userId, promise }
+    return promise
+  },
+
+  loadProfile: async (userId, user) => {
     try {
       // Fetch profile first
       const { data: profile, error } = await supabase
@@ -69,6 +99,24 @@ export const useAuthStore = create((set, get) => ({
         .maybeSingle()
 
       if (error) throw error
+
+      // Akun tanpa profile (setup pendaftaran terputus, mis. tab ditutup/reload
+      // di tengah register): pulihkan sebagai akun personal agar tetap bisa dipakai.
+      if (!profile && !get().registering) {
+        const { data: created, error: createError } = await supabase
+          .from('profiles')
+          .insert({
+            id: userId,
+            full_name: user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Pengguna',
+            email: user?.email,
+            role: 'owner',
+          })
+          .select()
+          .maybeSingle()
+        if (createError) throw createError
+        set({ profile: created || null, family: null, initError: null })
+        return
+      }
 
       // If profile has family_id, fetch family separately
       let family = null
@@ -96,18 +144,18 @@ export const useAuthStore = create((set, get) => ({
     try {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password })
       if (error) throw error
+      await get().fetchProfile(data.user.id, data.user)
       set({ user: data.user })
-      await get().fetchProfile(data.user.id)
       return { success: true }
     } catch (err) {
-      return { success: false, error: err.message }
+      return { success: false, error: translateAuthError(err.message) }
     } finally {
       set({ loading: false })
     }
   },
 
   register: async ({ email, password, fullName, familyName, inviteCode, isPersonal }) => {
-    set({ loading: true })
+    set({ loading: true, registering: true })
     try {
       let family = null
 
@@ -173,13 +221,15 @@ export const useAuthStore = create((set, get) => ({
         await supabase.rpc('seed_default_categories', { p_family_id: family.id })
       }
 
-      set({ user: data.user, family })
-      await get().fetchProfile(data.user.id)
+      // Muat profile dulu baru isi user, supaya dashboard tidak sempat tampil
+      // dengan user tapi tanpa profile ("Profil belum dibuat")
+      await get().fetchProfile(data.user.id, data.user)
+      set({ user: data.user, registering: false })
       return { success: true }
     } catch (err) {
-      return { success: false, error: err.message }
+      return { success: false, error: translateAuthError(err.message) }
     } finally {
-      set({ loading: false })
+      set({ loading: false, registering: false })
     }
   },
 

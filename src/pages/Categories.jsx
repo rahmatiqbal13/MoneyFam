@@ -87,12 +87,12 @@ function CategoryModal({ isOpen, onClose, category, activeTab }) {
               className="w-full"
               value={form.type}
               options={TYPE_OPTIONS}
-              onChange={(id) => setForm({ ...form, type: id })}
+              onChange={(id) => setForm((f) => ({ ...f, type: id }))}
             />
           </div>
 
           <Input label="Nama Kategori" type="text" placeholder="Contoh: Makan Siang" value={form.name}
-            onChange={(e) => setForm({ ...form, name: e.target.value })} error={errors.name} required />
+            onChange={(e) => { const value = e.target.value; setForm((f) => ({ ...f, name: value })) }} error={errors.name} required />
 
           <div className="flex flex-col gap-2">
             <label className="text-sm font-medium" style={{ color: 'var(--ink-2)' }}>Ikon</label>
@@ -100,7 +100,7 @@ function CategoryModal({ isOpen, onClose, category, activeTab }) {
               {CATEGORY_ICONS.map((icon) => {
                 const active = form.icon === icon
                 return (
-                  <button key={icon} type="button" onClick={() => setForm({ ...form, icon })}
+                  <button key={icon} type="button" onClick={() => setForm((f) => ({ ...f, icon }))}
                     className="w-9 h-9 flex items-center justify-center text-lg transition-transform active:scale-95"
                     style={{
                       borderRadius: 'var(--r-sm)',
@@ -118,7 +118,7 @@ function CategoryModal({ isOpen, onClose, category, activeTab }) {
             <label className="text-sm font-medium" style={{ color: 'var(--ink-2)' }}>Warna</label>
             <div className="flex flex-wrap gap-2">
               {CATEGORY_COLORS.map((color) => (
-                <button key={color} type="button" onClick={() => setForm({ ...form, color })}
+                <button key={color} type="button" onClick={() => setForm((f) => ({ ...f, color }))}
                   className="w-7 h-7 rounded-full transition-transform"
                   aria-label={`Warna ${color}`}
                   style={{

@@ -109,7 +109,7 @@ export function WalletModal({ isOpen, onClose, wallet = null }) {
     }
   }
 
-  const update = (field) => (e) => setForm({ ...form, [field]: e.target.value })
+  const update = (field) => (e) => { const value = e.target.value; setForm((f) => ({ ...f, [field]: value })) }
 
   return (
     <Modal
@@ -150,7 +150,7 @@ export function WalletModal({ isOpen, onClose, wallet = null }) {
                 <button
                   key={icon}
                   type="button"
-                  onClick={() => setForm({ ...form, icon })}
+                  onClick={() => setForm((f) => ({ ...f, icon }))}
                   className="w-10 h-10 rounded-lg text-xl flex items-center justify-center border-2 transition-colors"
                   style={{
                     borderColor: form.icon === icon ? 'var(--accent)' : 'var(--line)',
@@ -171,7 +171,7 @@ export function WalletModal({ isOpen, onClose, wallet = null }) {
                 <button
                   key={color}
                   type="button"
-                  onClick={() => setForm({ ...form, color })}
+                  onClick={() => setForm((f) => ({ ...f, color }))}
                   className={`w-8 h-8 rounded-full border-2 transition-transform ${
                     form.color === color ? 'scale-110' : ''
                   }`}

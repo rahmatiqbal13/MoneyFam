@@ -160,7 +160,7 @@ export default function PensionCalculator() {
     }
   }, [savedSettings])
 
-  const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }))
+  const set = (k) => (e) => { const value = e.target.value; setForm((f) => ({ ...f, [k]: value })) }
 
   // Calculate total wealth from investments and savings
   const totalInvestment = investments?.reduce((s, i) => {

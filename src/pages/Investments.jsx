@@ -132,7 +132,7 @@ function InvestmentModal({ isOpen, onClose, investment }) {
     }
   }, [isOpen, investment])
 
-  const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }))
+  const set = (k) => (e) => { const value = e.target.value; setForm((f) => ({ ...f, [k]: value })) }
   const typeInfo = getTypeInfo(form.type)
   const isDeposito = form.type === 'deposito' || form.type === 'obligasi'
   const isKripto = form.type === 'kripto'

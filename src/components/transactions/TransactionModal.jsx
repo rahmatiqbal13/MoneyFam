@@ -43,6 +43,18 @@ function getDefaultForm() {
   }
 }
 
+const formFromTransaction = (transaction) => ({
+  type: transaction.type || 'expense',
+  amount: String(transaction.amount || ''),
+  date: String(transaction.date).slice(0, 10),
+  description: transaction.description || '',
+  category_id: transaction.category_id || '',
+  wallet_id: transaction.wallet_id || '',
+  to_wallet_id: transaction.to_wallet_id || '',
+  note: transaction.note || '',
+  receipt_url: transaction.receipt_url || '',
+})
+
 export function TransactionModal({ isOpen, onClose, transaction = null }) {
   const isEdit = !!transaction
   const toast = useToast()
@@ -83,48 +95,29 @@ export function TransactionModal({ isOpen, onClose, transaction = null }) {
     }
   }, [receiptPreview])
 
-  useEffect(() => {
-    if (!isOpen) {
-      setForm(getDefaultForm())
-      setReceiptFile(null)
-      setReceiptPreview(null)
-      setErrors({})
-      setConfirmingDelete(false)
-    }
-  }, [isOpen])
+  // Isi form langsung saat render ketika modal dibuka / transaksi berganti,
+  // bukan lewat useEffect — effect berjalan setelah paint sehingga form edit
+  // sempat tampil kosong satu frame dan input pada frame itu bisa hilang.
+  const formKey = isOpen ? (transaction?.id ?? 'new') : null
+  const [prevFormKey, setPrevFormKey] = useState(formKey)
+  if (formKey !== prevFormKey) {
+    setPrevFormKey(formKey)
+    setForm(transaction && isOpen ? formFromTransaction(transaction) : getDefaultForm())
+    setReceiptFile(null)
+    setReceiptPreview(null)
+    setErrors({})
+    setConfirmingDelete(false)
+  }
 
   useEffect(() => {
+    // Bucket "receipts" private → URL public tidak bisa dibuka; pakai signed URL
+    if (!isOpen || !transaction?.receipt_url) return
     let cancelled = false
-    if (isOpen) {
-      if (transaction) {
-        setForm({
-          type: transaction.type || 'expense',
-          amount: String(transaction.amount || ''),
-          date: String(transaction.date).slice(0, 10),
-          description: transaction.description || '',
-          category_id: transaction.category_id || '',
-          wallet_id: transaction.wallet_id || '',
-          to_wallet_id: transaction.to_wallet_id || '',
-          note: transaction.note || '',
-          receipt_url: transaction.receipt_url || '',
-        })
-        setReceiptPreview(null)
-        if (transaction.receipt_url) {
-          // Bucket "receipts" private → URL public tidak bisa dibuka; pakai signed URL
-          getReceiptSignedUrl(transaction.receipt_url).then((url) => {
-            if (url && !cancelled) setReceiptPreview(url)
-          })
-        }
-      } else {
-        setForm(getDefaultForm())
-        setReceiptFile(null)
-        setReceiptPreview(null)
-      }
-      setErrors({})
-      setConfirmingDelete(false)
-    }
+    getReceiptSignedUrl(transaction.receipt_url).then((url) => {
+      if (url && !cancelled) setReceiptPreview(url)
+    })
     return () => { cancelled = true }
-  }, [isOpen, transaction])
+  }, [isOpen, transaction?.receipt_url])
 
   const handleFileChange = (e) => {
     const file = e.target.files[0]
@@ -156,7 +149,7 @@ export function TransactionModal({ isOpen, onClose, transaction = null }) {
     }
     setReceiptFile(null)
     setReceiptPreview(null)
-    setForm({ ...form, receipt_url: '' })
+    setForm((f) => ({ ...f, receipt_url: '' }))
   }
 
   const cancelUpload = () => {
@@ -275,7 +268,7 @@ export function TransactionModal({ isOpen, onClose, transaction = null }) {
     }
   }
 
-  const update = (field) => (e) => setForm({ ...form, [field]: e.target.value })
+  const update = (field) => (e) => { const value = e.target.value; setForm((f) => ({ ...f, [field]: value })) }
 
   return (
     <Modal
@@ -292,7 +285,7 @@ export function TransactionModal({ isOpen, onClose, transaction = null }) {
             className="w-full"
             value={form.type}
             options={TYPES}
-            onChange={(id) => setForm({ ...form, type: id, category_id: '' })}
+            onChange={(id) => setForm((f) => ({ ...f, type: id, category_id: '' }))}
           />
 
           {/* Amount */}

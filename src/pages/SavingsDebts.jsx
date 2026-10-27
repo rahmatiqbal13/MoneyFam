@@ -96,7 +96,7 @@ function SavingsGoalModal({ isOpen, onClose, goal }) {
     }
   }, [isOpen, goal])
 
-  const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }))
+  const set = (k) => (e) => { const value = e.target.value; setForm((f) => ({ ...f, [k]: value })) }
 
   const validate = () => {
     const err = {}
@@ -672,7 +672,7 @@ function DebtModal({ isOpen, onClose, debt }) {
     }
   }, [isOpen, debt])
 
-  const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }))
+  const set = (k) => (e) => { const value = e.target.value; setForm((f) => ({ ...f, [k]: value })) }
 
   const validate = () => {
     const err = {}

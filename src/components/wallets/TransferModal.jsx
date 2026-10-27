@@ -73,7 +73,7 @@ export function TransferModal({ isOpen, onClose, fromWallet = null }) {
     }
   }
 
-  const update = (field) => (e) => setForm({ ...form, [field]: e.target.value })
+  const update = (field) => (e) => { const value = e.target.value; setForm((f) => ({ ...f, [field]: value })) }
   const selectedFrom = wallets?.find((w) => w.id === form.from_wallet_id)
 
   return (

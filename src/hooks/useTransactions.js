@@ -797,17 +797,19 @@ export function useCreateTransaction() {
       const { error } = await supabase.from('transactions').insert(insertData)
       if (error) throw error
     },
-    onSuccess: async (_data, variables) => {
-      await queryClient.invalidateQueries({ queryKey: [QUERY_KEY] })
-      await queryClient.invalidateQueries({ queryKey: ['wallets'] })
-      await queryClient.invalidateQueries({ queryKey: ['notifications'] })
-      await queryClient.invalidateQueries({ queryKey: ['budgets'] })
+    // Invalidate tanpa await: refetch berjalan di latar belakang sehingga modal
+    // langsung tertutup, tidak menunggu semua query dimuat ulang satu per satu.
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEY] })
+      queryClient.invalidateQueries({ queryKey: ['wallets'] })
+      queryClient.invalidateQueries({ queryKey: ['budgets'] })
 
       // Check budget warning after successful transaction creation
       // Run asynchronously so it doesn't block the mutation
       if (variables.type === 'expense' && variables.category_id) {
         checkAndCreateBudgetWarning(family?.id || null, user.id, variables.category_id, variables.amount)
           .catch((err) => console.error('Budget warning error:', err))
+          .finally(() => queryClient.invalidateQueries({ queryKey: ['notifications'] }))
       }
     },
   })
@@ -829,10 +831,10 @@ export function useUpdateTransaction() {
       const { error } = await query
       if (error) throw error
     },
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: [QUERY_KEY] })
-      await queryClient.invalidateQueries({ queryKey: ['wallets'] })
-      await queryClient.invalidateQueries({ queryKey: ['budgets'] })
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEY] })
+      queryClient.invalidateQueries({ queryKey: ['wallets'] })
+      queryClient.invalidateQueries({ queryKey: ['budgets'] })
     },
   })
 }
@@ -853,10 +855,10 @@ export function useDeleteTransaction() {
       const { error } = await query
       if (error) throw error
     },
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: [QUERY_KEY] })
-      await queryClient.invalidateQueries({ queryKey: ['wallets'] })
-      await queryClient.invalidateQueries({ queryKey: ['budgets'] })
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEY] })
+      queryClient.invalidateQueries({ queryKey: ['wallets'] })
+      queryClient.invalidateQueries({ queryKey: ['budgets'] })
     },
   })
 }

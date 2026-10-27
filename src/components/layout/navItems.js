@@ -1,6 +1,6 @@
 export const NAV = [
   { to: '/',             id: 'dashboard',     label: 'Beranda',           short: 'Beranda',  icon: 'home',     primary: true },
-  { to: '/transactions', id: 'transactions',  label: 'Transaksi',         short: 'Catat',    icon: 'swap',     primary: true },
+  { to: '/transactions', id: 'transactions',  label: 'Transaksi',         short: 'Riwayat',  icon: 'swap',     primary: true },
   { to: '/wallets',      id: 'wallets',       label: 'Kantong',           short: 'Kantong',  icon: 'wallet',   primary: true },
   { to: '/budget',       id: 'budget',        label: 'Anggaran',          short: 'Anggaran', icon: 'pie',      primary: true },
   { to: '/savings',      id: 'savings',       label: 'Tabungan & Hutang', short: 'Tabungan', icon: 'pig' },

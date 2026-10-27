@@ -69,7 +69,7 @@ export default function Register() {
     }
   }
 
-  const update = (field) => (e) => setForm({ ...form, [field]: e.target.value })
+  const update = (field) => (e) => { const value = e.target.value; setForm((f) => ({ ...f, [field]: value })) }
 
   const switchMode = (m) => {
     setMode(m)
@@ -173,7 +173,7 @@ export default function Register() {
               type="text"
               placeholder="contoh: AB3X7K"
               value={form.inviteCode}
-              onChange={(e) => setForm({ ...form, inviteCode: e.target.value.toUpperCase() })}
+              onChange={(e) => { const value = e.target.value.toUpperCase(); setForm((f) => ({ ...f, inviteCode: value })) }}
               error={errors.inviteCode}
               required
               helpText="Minta kode dari pemilik keluarga di menu Pengaturan"

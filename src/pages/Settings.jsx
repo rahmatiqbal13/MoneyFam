@@ -18,7 +18,7 @@ import { ImportExportSection } from '@/components/settings/ImportExportSection'
 import { DangerZoneSection } from '@/components/settings/DangerZoneSection'
 
 // 10-color identity palette (mirrors the memberColor fallback palette).
-const IDENTITY_COLORS = [...ACCENT_OPTIONS, '#EF4444', '#10B981', '#F97316', '#3B82F6']
+const IDENTITY_COLORS = [...ACCENT_OPTIONS, '#EF4444', '#10B981', '#F97316']
 
 function ToggleSwitch({ checked, onChange, disabled }) {
   return (
@@ -101,7 +101,7 @@ function ChangePasswordModal({ isOpen, onClose }) {
     }
   }
 
-  const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }))
+  const set = (k) => (e) => { const value = e.target.value; setForm((f) => ({ ...f, [k]: value })) }
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Ubah Password">
