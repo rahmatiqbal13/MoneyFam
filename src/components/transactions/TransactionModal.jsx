@@ -18,6 +18,17 @@ const TYPES = [
   { id: 'transfer', label: 'Transfer' },
 ]
 
+// receipt_url menyimpan URL public Supabase (…/object/public/receipts/<path>);
+// ambil <path>-nya lalu buat signed URL karena bucket bersifat private.
+async function getReceiptSignedUrl(receiptUrl) {
+  const marker = '/receipts/'
+  const idx = receiptUrl.indexOf(marker)
+  if (idx === -1) return receiptUrl
+  const path = decodeURIComponent(receiptUrl.slice(idx + marker.length).split('?')[0])
+  const { data, error } = await supabase.storage.from('receipts').createSignedUrl(path, 60 * 60)
+  return error ? null : data.signedUrl
+}
+
 function getDefaultForm() {
   return {
     type: 'expense',
@@ -83,6 +94,7 @@ export function TransactionModal({ isOpen, onClose, transaction = null }) {
   }, [isOpen])
 
   useEffect(() => {
+    let cancelled = false
     if (isOpen) {
       if (transaction) {
         setForm({
@@ -96,7 +108,13 @@ export function TransactionModal({ isOpen, onClose, transaction = null }) {
           note: transaction.note || '',
           receipt_url: transaction.receipt_url || '',
         })
-        setReceiptPreview(transaction.receipt_url || null)
+        setReceiptPreview(null)
+        if (transaction.receipt_url) {
+          // Bucket "receipts" private → URL public tidak bisa dibuka; pakai signed URL
+          getReceiptSignedUrl(transaction.receipt_url).then((url) => {
+            if (url && !cancelled) setReceiptPreview(url)
+          })
+        }
       } else {
         setForm(getDefaultForm())
         setReceiptFile(null)
@@ -105,6 +123,7 @@ export function TransactionModal({ isOpen, onClose, transaction = null }) {
       setErrors({})
       setConfirmingDelete(false)
     }
+    return () => { cancelled = true }
   }, [isOpen, transaction])
 
   const handleFileChange = (e) => {

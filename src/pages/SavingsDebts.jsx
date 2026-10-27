@@ -697,10 +697,13 @@ function DebtModal({ isOpen, onClose, debt }) {
 
     try {
       if (isEdit) {
+        // Total berubah → sisa ikut bergeser sebesar selisihnya (yang sudah dibayar tetap)
+        const remaining = Math.max(0, Number(debt.remaining_amount) + payload.amount - Number(debt.amount))
         await updateMutation.mutateAsync({
           id: debt.id,
           ...payload,
-          remaining_amount: debt.remaining_amount,
+          remaining_amount: remaining,
+          is_paid: remaining <= 0,
         })
         toast.success('Data berhasil diperbarui')
       } else {

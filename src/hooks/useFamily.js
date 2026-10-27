@@ -117,9 +117,16 @@ export function useGenerateInviteCode() {
 
   return useMutation({
     mutationFn: async () => {
-      const arr = new Uint8Array(6)
-      crypto.getRandomValues(arr)
-      const code = Array.from(arr, (b) => (b % 36).toString(36)).join('').toUpperCase()
+      // 8 karakter (batas kolom varchar(8)); 252 = 36*7 → buang byte >= 252 agar tidak bias
+      const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+      let code = ''
+      while (code.length < 8) {
+        const arr = new Uint8Array(16)
+        crypto.getRandomValues(arr)
+        for (const b of arr) {
+          if (b < 252 && code.length < 8) code += ALPHABET[b % 36]
+        }
+      }
       const { data, error } = await supabase
         .from('families')
         .update({ invite_code: code })

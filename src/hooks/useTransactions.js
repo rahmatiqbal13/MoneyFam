@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/stores/authStore'
 import { shouldSendNotification } from './useNotifications'
-import { formatCurrency, toDateStr } from '@/lib/utils'
+import { formatCurrency, toDateStr, fetchAllRows } from '@/lib/utils'
 
 const QUERY_KEY = 'transactions'
 const PAGE_SIZE = 50 // batas maksimal per halaman
@@ -15,6 +15,10 @@ const clampPageSize = (size) => {
   const n = Number(size)
   return Number.isFinite(n) && n > 0 ? Math.min(n, PAGE_SIZE) : 20
 }
+
+// 'YYYY-MM-DD' → [tahun, bulan 1-12] tanpa new Date() (yang membaca string
+// tanggal sebagai UTC dan bisa bergeser ke bulan sebelumnya di zona UTC-x)
+const yearMonthOf = (dateStr) => [Number(dateStr.slice(0, 4)), Number(dateStr.slice(5, 7))]
 
 // Helper to create budget warning notification
 async function checkAndCreateBudgetWarning(familyId, userId, categoryId, _amount) {
@@ -46,48 +50,56 @@ async function checkAndCreateBudgetWarning(familyId, userId, categoryId, _amount
   const start = `${year}-${String(month).padStart(2, '0')}-01`
   const end = toDateStr(new Date(year, month, 0))
   
-  let txQuery = supabase
-    .from('transactions')
-    .select('amount')
-    .eq('category_id', categoryId)
-    .eq('type', 'expense')
-    .gte('date', start)
-    .lte('date', end)
+  const txs = await fetchAllRows(() => {
+    const txQuery = supabase
+      .from('transactions')
+      .select('amount')
+      .eq('category_id', categoryId)
+      .eq('type', 'expense')
+      .gte('date', start)
+      .lte('date', end)
+    return familyId ? txQuery.eq('family_id', familyId) : txQuery.eq('user_id', userId)
+  })
   
-  if (familyId) {
-    txQuery = txQuery.eq('family_id', familyId)
-  } else {
-    txQuery = txQuery.eq('user_id', userId)
-  }
-  
-  const { data: txs } = await txQuery
-  
-  const spent = txs?.reduce((s, t) => s + Number(t.amount), 0) || 0
+  const spent = txs.reduce((s, t) => s + Number(t.amount), 0)
   const budgetAmount = Number(budget.amount)
   const pct = (spent / budgetAmount) * 100
+  const level = pct >= 100 ? 'over' : pct >= 80 ? 'near' : null
+  if (!level) return
   
   // Check if we should send notification
   const shouldSend = await shouldSendNotification(userId, 'budget_warning')
   if (!shouldSend) return
+
+  // Cukup 1x per kategori per level per bulan, bukan di setiap transaksi berikutnya
+  const period = start.slice(0, 7)
+  const { data: existing } = await supabase
+    .from('notifications')
+    .select('id')
+    .eq('type', 'budget_warning')
+    .eq('user_id', userId)
+    .contains('data', { category_id: categoryId, period, level })
+    .limit(1)
+  if (existing?.length) return
   
   // Create notification based on threshold
-  if (pct >= 100) {
+  if (level === 'over') {
     await supabase.from('notifications').insert({
       family_id: familyId,
       user_id: userId,
       type: 'budget_warning',
       title: 'Anggaran Terlampaui',
       message: `Pengeluaran untuk kategori ini telah melebihi anggaran (${Math.round(pct)}%). Total: Rp ${spent.toLocaleString('id-ID')}`,
-      data: { category_id: categoryId, spent, budget: budgetAmount, pct },
+      data: { category_id: categoryId, spent, budget: budgetAmount, pct, period, level },
     })
-  } else if (pct >= 80) {
+  } else {
     await supabase.from('notifications').insert({
       family_id: familyId,
       user_id: userId,
       type: 'budget_warning',
       title: 'Anggaran Hampir Habis',
       message: `Pengeluaran untuk kategori ini telah mencapai ${Math.round(pct)}% dari anggaran.`,
-      data: { category_id: categoryId, spent, budget: budgetAmount, pct },
+      data: { category_id: categoryId, spent, budget: budgetAmount, pct, period, level },
     })
   }
 }
@@ -154,15 +166,16 @@ async function checkMonthlyReport(familyId, userId) {
 
   const start = `${period}-01`
   const end = toDateStr(new Date(year, month, 0))
-  let txQuery = supabase
-    .from('transactions')
-    .select('type, amount')
-    .in('type', ['income', 'expense'])
-    .gte('date', start)
-    .lte('date', end)
-  txQuery = familyId ? txQuery.eq('family_id', familyId) : txQuery.eq('user_id', userId)
-  const { data: txs, error } = await txQuery
-  if (error || !txs?.length) return
+  const txs = await fetchAllRows(() => {
+    const txQuery = supabase
+      .from('transactions')
+      .select('type, amount')
+      .in('type', ['income', 'expense'])
+      .gte('date', start)
+      .lte('date', end)
+    return familyId ? txQuery.eq('family_id', familyId) : txQuery.eq('user_id', userId)
+  })
+  if (!txs.length) return
 
   const income = txs.filter((t) => t.type === 'income').reduce((s, t) => s + Number(t.amount), 0)
   const expense = txs.filter((t) => t.type === 'expense').reduce((s, t) => s + Number(t.amount), 0)
@@ -320,22 +333,15 @@ export function useMonthlyStats(year, month) {
       const start = `${year}-${String(month).padStart(2, '0')}-01`
       const end = toDateStr(new Date(year, month, 0))
 
-      let query = supabase
-        .from('transactions')
-        .select('type, amount')
-        .in('type', ['income', 'expense'])
-        .gte('date', start)
-        .lte('date', end)
-      
-      if (family?.id) {
-        query = query.eq('family_id', family.id)
-      } else {
-        query = query.eq('user_id', user.id)
-      }
-      
-      const { data, error } = await query
-
-      if (error) throw error
+      const data = await fetchAllRows(() => {
+        const query = supabase
+          .from('transactions')
+          .select('type, amount')
+          .in('type', ['income', 'expense'])
+          .gte('date', start)
+          .lte('date', end)
+        return family?.id ? query.eq('family_id', family.id) : query.eq('user_id', user.id)
+      })
 
       const income = (data || []).filter((t) => t.type === 'income').reduce((s, t) => s + Number(t.amount), 0)
       const expense = (data || []).filter((t) => t.type === 'expense').reduce((s, t) => s + Number(t.amount), 0)
@@ -370,27 +376,20 @@ export function useLast6MonthsData() {
       const start = months[0].start
       const end = months[months.length - 1].end
 
-      let query = supabase
-        .from('transactions')
-        .select('type, amount, date')
-        .in('type', ['income', 'expense'])
-        .gte('date', start)
-        .lte('date', end)
-      
-      if (family?.id) {
-        query = query.eq('family_id', family.id)
-      } else {
-        query = query.eq('user_id', user.id)
-      }
-      
-      const { data, error } = await query
-
-      if (error) throw error
+      const data = await fetchAllRows(() => {
+        const query = supabase
+          .from('transactions')
+          .select('type, amount, date')
+          .in('type', ['income', 'expense'])
+          .gte('date', start)
+          .lte('date', end)
+        return family?.id ? query.eq('family_id', family.id) : query.eq('user_id', user.id)
+      })
 
       return months.map((m) => {
-        const monthTxs = (data || []).filter((t) => {
-          const d = new Date(t.date)
-          return d.getFullYear() === m.year && d.getMonth() + 1 === m.month
+        const monthTxs = data.filter((t) => {
+          const [y, mo] = yearMonthOf(t.date)
+          return y === m.year && mo === m.month
         })
         const income = monthTxs.filter((t) => t.type === 'income').reduce((s, t) => s + Number(t.amount), 0)
         const expense = monthTxs.filter((t) => t.type === 'expense').reduce((s, t) => s + Number(t.amount), 0)
@@ -413,22 +412,15 @@ export function useCategorySpending(year, month) {
       const start = `${year}-${String(month).padStart(2, '0')}-01`
       const end = toDateStr(new Date(year, month, 0))
 
-      let query = supabase
-        .from('transactions')
-        .select('amount, categories(id, name, color)')
-        .eq('type', 'expense')
-        .gte('date', start)
-        .lte('date', end)
-      
-      if (family?.id) {
-        query = query.eq('family_id', family.id)
-      } else {
-        query = query.eq('user_id', user.id)
-      }
-      
-      const { data, error } = await query
-
-      if (error) throw error
+      const data = await fetchAllRows(() => {
+        const query = supabase
+          .from('transactions')
+          .select('amount, categories(id, name, color)')
+          .eq('type', 'expense')
+          .gte('date', start)
+          .lte('date', end)
+        return family?.id ? query.eq('family_id', family.id) : query.eq('user_id', user.id)
+      })
 
       const grouped = {}
       for (const t of data || []) {
@@ -467,27 +459,20 @@ export function useMonthlyTrend(year, month, count = 6) {
         })
       }
 
-      let query = supabase
-        .from('transactions')
-        .select('type, amount, date')
-        .in('type', ['income', 'expense'])
-        .gte('date', months[0].start)
-        .lte('date', months[months.length - 1].end)
-      
-      if (family?.id) {
-        query = query.eq('family_id', family.id)
-      } else {
-        query = query.eq('user_id', user.id)
-      }
-      
-      const { data, error } = await query
-
-      if (error) throw error
+      const data = await fetchAllRows(() => {
+        const query = supabase
+          .from('transactions')
+          .select('type, amount, date')
+          .in('type', ['income', 'expense'])
+          .gte('date', months[0].start)
+          .lte('date', months[months.length - 1].end)
+        return family?.id ? query.eq('family_id', family.id) : query.eq('user_id', user.id)
+      })
 
       return months.map((m) => {
-        const txs = (data || []).filter((t) => {
-          const d = new Date(t.date)
-          return d.getFullYear() === m.year && d.getMonth() + 1 === m.month
+        const txs = data.filter((t) => {
+          const [y, mo] = yearMonthOf(t.date)
+          return y === m.year && mo === m.month
         })
         const income = txs.filter((t) => t.type === 'income').reduce((s, t) => s + Number(t.amount), 0)
         const expense = txs.filter((t) => t.type === 'expense').reduce((s, t) => s + Number(t.amount), 0)
@@ -511,22 +496,15 @@ export function useReportCategoryDetail(year, month) {
       const start = `${year}-${String(month).padStart(2, '0')}-01`
       const end = toDateStr(new Date(year, month, 0))
 
-      let query = supabase
-        .from('transactions')
-        .select('amount, categories(id, name, icon, color)')
-        .eq('type', 'expense')
-        .gte('date', start)
-        .lte('date', end)
-      
-      if (family?.id) {
-        query = query.eq('family_id', family.id)
-      } else {
-        query = query.eq('user_id', user.id)
-      }
-      
-      const { data, error } = await query
-
-      if (error) throw error
+      const data = await fetchAllRows(() => {
+        const query = supabase
+          .from('transactions')
+          .select('amount, categories(id, name, icon, color)')
+          .eq('type', 'expense')
+          .gte('date', start)
+          .lte('date', end)
+        return family?.id ? query.eq('family_id', family.id) : query.eq('user_id', user.id)
+      })
 
       const grouped = {}
       for (const t of data || []) {
@@ -570,13 +548,13 @@ export function useTopTransactions(year, month, limit = 5) {
         .lte('date', end)
         .order('amount', { ascending: false })
         .limit(limit)
-      
+
       if (family?.id) {
         query = query.eq('family_id', family.id)
       } else {
         query = query.eq('user_id', user.id)
       }
-      
+
       const { data, error } = await query
 
       if (error) throw error
@@ -599,26 +577,23 @@ export function useMemberSpending(year, month) {
       const start = `${year}-${String(month).padStart(2, '0')}-01`
       const end = toDateStr(new Date(year, month, 0))
 
-      let txQuery = supabase
-        .from('transactions')
-        .select('amount, type, user_id')
-        .in('type', ['income', 'expense'])
-        .gte('date', start)
-        .lte('date', end)
-      
-      if (family?.id) {
-        txQuery = txQuery.eq('family_id', family.id)
-      } else {
-        txQuery = txQuery.eq('user_id', user.id)
-      }
+      const txRows = fetchAllRows(() => {
+        const txQuery = supabase
+          .from('transactions')
+          .select('amount, type, user_id')
+          .in('type', ['income', 'expense'])
+          .gte('date', start)
+          .lte('date', end)
+        return family?.id ? txQuery.eq('family_id', family.id) : txQuery.eq('user_id', user.id)
+      })
 
       const fetchProfiles = (cols) => {
         const q = supabase.from('profiles').select(cols)
         return family?.id ? q.eq('family_id', family.id) : q.eq('id', user.id)
       }
 
-      let [txResult, profileResult] = await Promise.all([
-        txQuery,
+      let [txData, profileResult] = await Promise.all([
+        txRows,
         fetchProfiles('id, full_name, role, avatar_color, emoji'),
       ])
 
@@ -630,12 +605,10 @@ export function useMemberSpending(year, month) {
         profileResult = await fetchProfiles('id, full_name, role')
       }
 
-      if (txResult.error) throw txResult.error
-
       const profileMap = new Map((profileResult.data || []).map(p => [p.id, p]))
 
       const grouped = {}
-      for (const t of txResult.data || []) {
+      for (const t of txData) {
         if (!t.user_id) continue
         if (!grouped[t.user_id]) {
           const profile = profileMap.get(t.user_id)
@@ -672,22 +645,15 @@ export function useDailySpending(year, month) {
       const start = `${year}-${String(month).padStart(2, '0')}-01`
       const end = toDateStr(new Date(year, month, 0))
 
-      let query = supabase
-        .from('transactions')
-        .select('amount, date')
-        .eq('type', 'expense')
-        .gte('date', start)
-        .lte('date', end)
-      
-      if (family?.id) {
-        query = query.eq('family_id', family.id)
-      } else {
-        query = query.eq('user_id', user.id)
-      }
-      
-      const { data, error } = await query
-
-      if (error) throw error
+      const data = await fetchAllRows(() => {
+        const query = supabase
+          .from('transactions')
+          .select('amount, date')
+          .eq('type', 'expense')
+          .gte('date', start)
+          .lte('date', end)
+        return family?.id ? query.eq('family_id', family.id) : query.eq('user_id', user.id)
+      })
 
       const byDay = {}
       for (const t of data || []) {
@@ -711,22 +677,15 @@ export function usePeriodStats(dateFrom, dateTo) {
     queryFn: async () => {
       if (!user?.id || !dateFrom || !dateTo) return { income: 0, expense: 0, savings: 0 }
       
-      let query = supabase
-        .from('transactions')
-        .select('type, amount')
-        .in('type', ['income', 'expense'])
-        .gte('date', dateFrom)
-        .lte('date', dateTo)
-      
-      if (family?.id) {
-        query = query.eq('family_id', family.id)
-      } else {
-        query = query.eq('user_id', user.id)
-      }
-      
-      const { data, error } = await query
-
-      if (error) throw error
+      const data = await fetchAllRows(() => {
+        const query = supabase
+          .from('transactions')
+          .select('type, amount')
+          .in('type', ['income', 'expense'])
+          .gte('date', dateFrom)
+          .lte('date', dateTo)
+        return family?.id ? query.eq('family_id', family.id) : query.eq('user_id', user.id)
+      })
 
       const income = (data || []).filter((t) => t.type === 'income').reduce((s, t) => s + Number(t.amount), 0)
       const expense = (data || []).filter((t) => t.type === 'expense').reduce((s, t) => s + Number(t.amount), 0)
@@ -747,22 +706,15 @@ export function usePeriodCategoryDetail(dateFrom, dateTo) {
     queryFn: async () => {
       if (!user?.id || !dateFrom || !dateTo) return []
       
-      let query = supabase
-        .from('transactions')
-        .select('amount, categories(id, name, icon, color)')
-        .eq('type', 'expense')
-        .gte('date', dateFrom)
-        .lte('date', dateTo)
-      
-      if (family?.id) {
-        query = query.eq('family_id', family.id)
-      } else {
-        query = query.eq('user_id', user.id)
-      }
-      
-      const { data, error } = await query
-
-      if (error) throw error
+      const data = await fetchAllRows(() => {
+        const query = supabase
+          .from('transactions')
+          .select('amount, categories(id, name, icon, color)')
+          .eq('type', 'expense')
+          .gte('date', dateFrom)
+          .lte('date', dateTo)
+        return family?.id ? query.eq('family_id', family.id) : query.eq('user_id', user.id)
+      })
 
       const grouped = {}
       for (const t of data || []) {
@@ -796,22 +748,15 @@ export function useYearlyStats(year) {
       const start = `${year}-01-01`
       const end = `${year}-12-31`
 
-      let query = supabase
-        .from('transactions')
-        .select('type, amount, date')
-        .in('type', ['income', 'expense'])
-        .gte('date', start)
-        .lte('date', end)
-      
-      if (family?.id) {
-        query = query.eq('family_id', family.id)
-      } else {
-        query = query.eq('user_id', user.id)
-      }
-      
-      const { data, error } = await query
-
-      if (error) throw error
+      const data = await fetchAllRows(() => {
+        const query = supabase
+          .from('transactions')
+          .select('type, amount, date')
+          .in('type', ['income', 'expense'])
+          .gte('date', start)
+          .lte('date', end)
+        return family?.id ? query.eq('family_id', family.id) : query.eq('user_id', user.id)
+      })
 
       const months = Array.from({ length: 12 }, (_, i) => {
         const m = i + 1
@@ -820,7 +765,7 @@ export function useYearlyStats(year) {
       })
 
       for (const t of data || []) {
-        const m = new Date(t.date).getMonth()
+        const m = yearMonthOf(t.date)[1] - 1
         if (t.type === 'income') months[m].income += Number(t.amount)
         if (t.type === 'expense') months[m].expense += Number(t.amount)
       }

@@ -125,7 +125,7 @@ export function useUpdateSavingsGoal() {
 
   return useMutation({
     mutationFn: async ({ id, ...data }) => {
-      const allowedFields = ['name', 'target_amount', 'current_amount', 'target_date', 'is_active', 'category_id', 'icon', 'note']
+      const allowedFields = ['name', 'target_amount', 'current_amount', 'target_date', 'icon', 'color', 'is_completed']
       const updateData = {}
       for (const key of allowedFields) {
         if (key in data) updateData[key] = data[key]

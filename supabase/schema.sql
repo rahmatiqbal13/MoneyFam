@@ -20,7 +20,7 @@ create table if not exists families (
 create or replace function get_family_by_invite_code(p_code text)
 returns setof families as $$
   select * from families where invite_code = upper(trim(p_code)) limit 1
-$$ language sql stable security definer;
+$$ language sql stable security definer set search_path = public;
 
 -- RPC: keluarkan anggota dari keluarga (hanya owner, bypass RLS profiles_update)
 create or replace function remove_family_member(member_id uuid)
@@ -48,7 +48,7 @@ begin
 
   update profiles set family_id = null where id = member_id;
 end;
-$$ language plpgsql security definer;
+$$ language plpgsql security definer set search_path = public;
 
 -- RPC: buat keluarga baru (bypass RLS)
 create or replace function create_family(p_name text, p_user_id uuid)
@@ -83,7 +83,7 @@ begin
   
   return v_family_id;
 end;
-$$ language plpgsql security definer;
+$$ language plpgsql security definer set search_path = public;
 
 -- RPC: Seed kategori default untuk keluarga baru
 -- Menyalin semua kategori default (family_id is null) ke keluarga tertentu
@@ -125,7 +125,7 @@ begin
     end if;
   end loop;
 end;
-$$ language plpgsql security definer;
+$$ language plpgsql security definer set search_path = public;
 
 -- Function untuk cleanup kategori duplikat (jalankan jika ada duplikat)
 create or replace function cleanup_duplicate_categories()
@@ -158,7 +158,7 @@ begin
       and c1.id != c2.id
   );
 end;
-$$ language plpgsql security definer;
+$$ language plpgsql security definer set search_path = public;
 
 -- ============================================================
 -- PROFILES (extends auth.users)
@@ -391,6 +391,7 @@ end $$;
 create table if not exists budgets (
   id uuid primary key default uuid_generate_v4(),
   family_id uuid references families(id) on delete cascade,
+  user_id uuid references auth.users(id) on delete cascade,
   category_id uuid references categories(id) on delete cascade not null,
   amount numeric(18,2) not null check (amount > 0),
   year integer not null,
@@ -592,201 +593,28 @@ end;
 $$;
 
 -- ============================================================
--- RPC: Atomic operations for savings goals and debts
+-- RPC pembayaran tabungan/hutang: lihat migration_payment_history.sql
+-- (versi aman di migration_security_hardening.sql). RPC lama
+-- add_to_savings_goal_atomic / mark_debt_paid_atomic / pay_debt_atomic
+-- dihapus: tidak memvalidasi kepemilikan kantong.
 -- ============================================================
 
--- Add to savings goal atomically (BUG-004 fix)
-create or replace function add_to_savings_goal_atomic(
-  p_goal_id uuid,
-  p_amount numeric,
-  p_wallet_id uuid,
-  p_category_id uuid,
-  p_goal_name text
-)
-returns void
-language plpgsql
+-- Apakah caller boleh memakai kantong ini? (dipakai RPC pembayaran)
+create or replace function can_access_wallet(p_wallet_id uuid)
+returns boolean
+language sql
+stable
 security definer
 set search_path = public
 as $$
-declare
-  v_current_amount numeric;
-  v_target_amount numeric;
-  v_family_id uuid;
-  v_user_id uuid;
-begin
-  -- Get current values and verify ownership
-  select current_amount, target_amount, family_id, user_id
-  into v_current_amount, v_target_amount, v_family_id, v_user_id
-  from savings_goals
-  where id = p_goal_id;
-  
-  if v_user_id is null then
-    raise exception 'Goal not found';
-  end if;
-  
-  -- Verify caller is the owner
-  if v_user_id <> auth.uid() then
-    raise exception 'Not authorized';
-  end if;
-  
-  -- Update goal amount
-  update savings_goals
-  set current_amount = current_amount + p_amount,
-      is_completed = (current_amount + p_amount >= target_amount),
-      updated_at = now()
-  where id = p_goal_id;
-  
-  -- Create transaction record
-  insert into transactions (
-    family_id,
-    user_id,
-    wallet_id,
-    category_id,
-    type,
-    amount,
-    date,
-    description
-  ) values (
-    v_family_id,
-    v_user_id,
-    p_wallet_id,
-    p_category_id,
-    case when p_amount > 0 then 'expense' else 'income' end,
-    abs(p_amount),
-    current_date,
-    case when p_amount > 0 then 'Menabung: ' || p_goal_name else 'Tarik tabungan: ' || p_goal_name end
-  );
-end;
-$$;
-
--- Mark debt as paid atomically (BUG-005 fix)
-create or replace function mark_debt_paid_atomic(
-  p_debt_id uuid,
-  p_wallet_id uuid,
-  p_category_id uuid,
-  p_amount numeric
-)
-returns void
-language plpgsql
-security definer
-set search_path = public
-as $$
-declare
-  v_family_id uuid;
-  v_user_id uuid;
-  v_debt_name text;
-  v_remaining numeric;
-begin
-  -- Get debt info and verify ownership
-  select family_id, user_id, name, remaining_amount
-  into v_family_id, v_user_id, v_debt_name, v_remaining
-  from debts
-  where id = p_debt_id;
-  
-  if v_user_id is null then
-    raise exception 'Debt not found';
-  end if;
-  
-  -- Verify caller is the owner
-  if v_user_id <> auth.uid() then
-    raise exception 'Not authorized';
-  end if;
-  
-  -- Update debt
-  update debts
-  set is_paid = true,
-      remaining_amount = 0,
-      updated_at = now()
-  where id = p_debt_id;
-  
-  -- Create transaction record
-  insert into transactions (
-    family_id,
-    user_id,
-    wallet_id,
-    category_id,
-    type,
-    amount,
-    date,
-    description
-  ) values (
-    v_family_id,
-    v_user_id,
-    p_wallet_id,
-    p_category_id,
-    'expense',
-    p_amount,
-    current_date,
-    'Pelunasan hutang: ' || v_debt_name
-  );
-end;
-$$;
-
--- Pay debt partially atomically (BUG-005 fix)
-create or replace function pay_debt_atomic(
-  p_debt_id uuid,
-  p_payment_amount numeric,
-  p_wallet_id uuid,
-  p_category_id uuid
-)
-returns void
-language plpgsql
-security definer
-set search_path = public
-as $$
-declare
-  v_family_id uuid;
-  v_user_id uuid;
-  v_debt_name text;
-  v_remaining numeric;
-  v_new_remaining numeric;
-begin
-  -- Get debt info and verify ownership
-  select family_id, user_id, name, remaining_amount
-  into v_family_id, v_user_id, v_debt_name, v_remaining
-  from debts
-  where id = p_debt_id;
-  
-  if v_user_id is null then
-    raise exception 'Debt not found';
-  end if;
-  
-  -- Verify caller is the owner
-  if v_user_id <> auth.uid() then
-    raise exception 'Not authorized';
-  end if;
-  
-  -- Calculate new remaining
-  v_new_remaining := v_remaining - p_payment_amount;
-  
-  -- Update debt
-  update debts
-  set remaining_amount = v_new_remaining,
-      is_paid = (v_new_remaining <= 0),
-      updated_at = now()
-  where id = p_debt_id;
-  
-  -- Create transaction record
-  insert into transactions (
-    family_id,
-    user_id,
-    wallet_id,
-    category_id,
-    type,
-    amount,
-    date,
-    description
-  ) values (
-    v_family_id,
-    v_user_id,
-    p_wallet_id,
-    p_category_id,
-    'expense',
-    p_payment_amount,
-    current_date,
-    'Bayar hutang: ' || v_debt_name
-  );
-end;
+  select exists (
+    select 1 from wallets
+    where id = p_wallet_id
+    and (
+      (family_id is null and user_id = auth.uid())
+      or (family_id is not null and family_id = get_user_family_id())
+    )
+  )
 $$;
 
 -- ============================================================
@@ -807,7 +635,7 @@ alter table debts enable row level security;
 create or replace function get_user_family_id()
 returns uuid as $$
   select family_id from profiles where id = auth.uid()
-$$ language sql stable security definer;
+$$ language sql stable security definer set search_path = public;
 
 -- FAMILIES: members of the same family OR owner can see their own created families (before profile update)
 drop policy if exists "families_select" on families;
@@ -851,8 +679,8 @@ create policy "categories_select" on categories
 drop policy if exists "categories_insert" on categories;
 create policy "categories_insert" on categories
   for insert with check (
-    family_id = get_user_family_id()  -- family user
-    or user_id = auth.uid()  -- solo user
+    (family_id is null and user_id = auth.uid())  -- solo user
+    or (family_id is not null and family_id = get_user_family_id())  -- family user
   );
 
 drop policy if exists "categories_update" on categories;
@@ -860,6 +688,9 @@ create policy "categories_update" on categories
   for update using (
     family_id = get_user_family_id()  -- family categories
     or user_id = auth.uid()  -- solo user categories
+  ) with check (
+    (family_id is null and user_id = auth.uid())
+    or (family_id is not null and family_id = get_user_family_id())
   );
 
 drop policy if exists "categories_delete" on categories;
@@ -876,11 +707,12 @@ create policy "wallets_select" on wallets
 
 drop policy if exists "wallets_insert" on wallets;
 create policy "wallets_insert" on wallets
-  for insert with check (user_id = auth.uid() or family_id = get_user_family_id());
+  for insert with check ((family_id is null and user_id = auth.uid()) or (family_id is not null and family_id = get_user_family_id()));
 
 drop policy if exists "wallets_update" on wallets;
 create policy "wallets_update" on wallets
-  for update using (user_id = auth.uid() or family_id = get_user_family_id());
+  for update using (user_id = auth.uid() or family_id = get_user_family_id())
+  with check ((family_id is null and user_id = auth.uid()) or (family_id is not null and family_id = get_user_family_id()));
 
 drop policy if exists "wallets_delete" on wallets;
 create policy "wallets_delete" on wallets
@@ -893,11 +725,12 @@ create policy "transactions_select" on transactions
 
 drop policy if exists "transactions_insert" on transactions;
 create policy "transactions_insert" on transactions
-  for insert with check (user_id = auth.uid() or family_id = get_user_family_id());
+  for insert with check ((family_id is null and user_id = auth.uid()) or (family_id is not null and family_id = get_user_family_id()));
 
 drop policy if exists "transactions_update" on transactions;
 create policy "transactions_update" on transactions
-  for update using (user_id = auth.uid() or family_id = get_user_family_id());
+  for update using (user_id = auth.uid() or family_id = get_user_family_id())
+  with check ((family_id is null and user_id = auth.uid()) or (family_id is not null and family_id = get_user_family_id()));
 
 drop policy if exists "transactions_delete" on transactions;
 create policy "transactions_delete" on transactions
@@ -910,24 +743,25 @@ create policy "transfers_select" on transfers
 
 drop policy if exists "transfers_insert" on transfers;
 create policy "transfers_insert" on transfers
-  for insert with check (user_id = auth.uid() or family_id = get_user_family_id());
+  for insert with check ((family_id is null and user_id = auth.uid()) or (family_id is not null and family_id = get_user_family_id()));
 
--- BUDGETS: personal (user_id) or family
+-- BUDGETS: personal (family_id null + user_id) or family
 drop policy if exists "budgets_select" on budgets;
 create policy "budgets_select" on budgets
-  for select using (family_id is null or family_id = get_user_family_id());
+  for select using ((family_id is null and user_id = auth.uid()) or (family_id is not null and family_id = get_user_family_id()));
 
 drop policy if exists "budgets_insert" on budgets;
 create policy "budgets_insert" on budgets
-  for insert with check (family_id is null or family_id = get_user_family_id());
+  for insert with check ((family_id is null and user_id = auth.uid()) or (family_id is not null and family_id = get_user_family_id()));
 
 drop policy if exists "budgets_update" on budgets;
 create policy "budgets_update" on budgets
-  for update using (family_id is null or family_id = get_user_family_id());
+  for update using ((family_id is null and user_id = auth.uid()) or (family_id is not null and family_id = get_user_family_id()))
+  with check ((family_id is null and user_id = auth.uid()) or (family_id is not null and family_id = get_user_family_id()));
 
 drop policy if exists "budgets_delete" on budgets;
 create policy "budgets_delete" on budgets
-  for delete using (family_id is null or family_id = get_user_family_id());
+  for delete using ((family_id is null and user_id = auth.uid()) or (family_id is not null and family_id = get_user_family_id()));
 
 -- SAVINGS GOALS: personal (user_id) or family
 drop policy if exists "savings_goals_select" on savings_goals;
@@ -936,11 +770,12 @@ create policy "savings_goals_select" on savings_goals
 
 drop policy if exists "savings_goals_insert" on savings_goals;
 create policy "savings_goals_insert" on savings_goals
-  for insert with check (user_id = auth.uid() or family_id = get_user_family_id());
+  for insert with check ((family_id is null and user_id = auth.uid()) or (family_id is not null and family_id = get_user_family_id()));
 
 drop policy if exists "savings_goals_update" on savings_goals;
 create policy "savings_goals_update" on savings_goals
-  for update using (user_id = auth.uid() or family_id = get_user_family_id());
+  for update using (user_id = auth.uid() or family_id = get_user_family_id())
+  with check ((family_id is null and user_id = auth.uid()) or (family_id is not null and family_id = get_user_family_id()));
 
 drop policy if exists "savings_goals_delete" on savings_goals;
 create policy "savings_goals_delete" on savings_goals
@@ -953,11 +788,12 @@ create policy "debts_select" on debts
 
 drop policy if exists "debts_insert" on debts;
 create policy "debts_insert" on debts
-  for insert with check (user_id = auth.uid() or family_id = get_user_family_id());
+  for insert with check ((family_id is null and user_id = auth.uid()) or (family_id is not null and family_id = get_user_family_id()));
 
 drop policy if exists "debts_update" on debts;
 create policy "debts_update" on debts
-  for update using (user_id = auth.uid() or family_id = get_user_family_id());
+  for update using (user_id = auth.uid() or family_id = get_user_family_id())
+  with check ((family_id is null and user_id = auth.uid()) or (family_id is not null and family_id = get_user_family_id()));
 
 drop policy if exists "debts_delete" on debts;
 create policy "debts_delete" on debts

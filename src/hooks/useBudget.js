@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/stores/authStore'
-import { toDateStr } from '@/lib/utils'
+import { toDateStr, fetchAllRows } from '@/lib/utils'
 
 const QUERY_KEY = 'budgets'
 
@@ -35,23 +35,18 @@ export function useBudgets(yearMonth) {
       const start = `${year}-${String(month).padStart(2, '0')}-01`
       const end = toDateStr(new Date(year, month, 0))
 
-      let txQuery = supabase
-        .from('transactions')
-        .select('category_id, amount')
-        .eq('type', 'expense')
-        .gte('date', start)
-        .lte('date', end)
-      
-      if (family?.id) {
-        txQuery = txQuery.eq('family_id', family.id)
-      } else {
-        txQuery = txQuery.eq('user_id', user.id)
-      }
-
-      const { data: txs } = await txQuery
+      const txs = await fetchAllRows(() => {
+        const txQuery = supabase
+          .from('transactions')
+          .select('category_id, amount')
+          .eq('type', 'expense')
+          .gte('date', start)
+          .lte('date', end)
+        return family?.id ? txQuery.eq('family_id', family.id) : txQuery.eq('user_id', user.id)
+      })
 
       const spending = {}
-      for (const t of txs || []) {
+      for (const t of txs) {
         spending[t.category_id] = (spending[t.category_id] || 0) + Number(t.amount)
       }
 

@@ -167,7 +167,7 @@ export function useUpdateDebt() {
 
   return useMutation({
     mutationFn: async ({ id, ...data }) => {
-      const allowedFields = ['name', 'amount', 'remaining_amount', 'due_date', 'is_paid', 'type', 'person_name', 'note', 'category_id']
+      const allowedFields = ['name', 'amount', 'remaining_amount', 'due_date', 'is_paid', 'type', 'description']
       const updateData = {}
       for (const key of allowedFields) {
         if (key in data) updateData[key] = data[key]

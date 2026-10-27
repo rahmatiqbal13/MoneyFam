@@ -57,4 +57,18 @@ export default defineConfig({
     },
     dedupe: ['react', 'react-dom'],
   },
+  build: {
+    rollupOptions: {
+      output: {
+        // Pisahkan library besar dari kode aplikasi: bundle utama lebih kecil
+        // dan cache vendor tetap valid saat hanya kode aplikasi yang berubah.
+        manualChunks(id) {
+          if (!id.includes('node_modules')) return
+          if (/[\\/](framer-motion|motion-dom|motion-utils)[\\/]/.test(id)) return 'motion'
+          if (/[\\/]@supabase[\\/]/.test(id)) return 'supabase'
+          if (/[\\/](react|react-dom|react-router|react-router-dom|scheduler|@tanstack)[\\/]/.test(id)) return 'react-vendor'
+        },
+      },
+    },
+  },
 })

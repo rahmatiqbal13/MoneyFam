@@ -161,3 +161,17 @@ export function fmtRelative(dateString) {
   if (days < 30) return `${Math.floor(days / 7)} minggu lalu`
   return formatDate(dateString)
 }
+
+// Supabase membatasi 1000 baris per request (max-rows), jadi query agregasi
+// diambil per halaman supaya total laporan tidak terpotong diam-diam.
+// buildQuery harus membuat query baru setiap dipanggil.
+const FETCH_CHUNK = 1000
+export async function fetchAllRows(buildQuery) {
+  const rows = []
+  for (let from = 0; ; from += FETCH_CHUNK) {
+    const { data, error } = await buildQuery().order('id').range(from, from + FETCH_CHUNK - 1)
+    if (error) throw error
+    rows.push(...(data || []))
+    if (!data || data.length < FETCH_CHUNK) return rows
+  }
+}

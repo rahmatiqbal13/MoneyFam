@@ -458,3 +458,95 @@ begin
 end;
 $$;
 ```
+
+---
+
+## Sesi: Oktober 2026 — Audit Keamanan & Bug
+
+### Masalah yang Diselesaikan
+
+1. **[HIGH] Anggaran user mode personal bisa dibaca/diubah/dihapus siapa pun yang login**
+2. **[HIGH] RPC pembayaran tabungan/hutang bisa mengubah saldo kantong milik orang lain**
+3. **Import CSV gagal total jika ada kantong e-wallet (GoPay, OVO, DANA, …)**
+4. **Foto nota tidak tampil (bucket private, tapi yang disimpan URL public)**
+5. **Edit target tabungan tidak menyimpan `color` & `is_completed`**
+6. **Edit hutang tidak menyimpan `description`; ubah total tidak menggeser sisa**
+7. **Laporan, statistik, & export terpotong di 1000 baris (batas max-rows Supabase)**
+8. **Edit jumlah pembayaran tabungan/hutang tidak ikut mengubah saldo kantong**
+9. **Notifikasi budget_warning terkirim di setiap transaksi setelah lewat 80%**
+10. **Bundle utama 717 KB**
+
+---
+
+## 1. `supabase/migration_security_hardening.sql` (BARU) + `supabase/schema.sql`
+
+### Perubahan
+- `budgets`: tambah kolom `user_id` (dipakai aplikasi tapi tidak ada di schema). Policy diganti dari `family_id is null or …` menjadi `(family_id is null and user_id = auth.uid()) or (family_id is not null and family_id = get_user_family_id())`
+- Helper baru `can_access_wallet(p_wallet_id)` (security definer)
+- `add_savings_payment`, `update_savings_payment`, `add_debt_payment`, `update_debt_payment`, `mark_debt_paid_with_payment` ditulis ulang:
+  - validasi kantong via `can_access_wallet`, validasi `p_amount > 0` dan `p_type`
+  - anggota keluarga boleh mencatat pembayaran target/hutang keluarga (sebelumnya hanya pembuatnya)
+  - transaksi & payment dicatat dengan `user_id = auth.uid()` (pencatat sebenarnya)
+  - `update_*_payment` ikut meng-update `transactions.amount/date` terkait
+- Dihapus: `add_to_savings_goal_atomic`, `mark_debt_paid_atomic`, `pay_debt_atomic` (tidak dipakai aplikasi, tanpa cek kantong)
+- Policy insert/update di wallets, transactions, transfers, savings_goals, debts, investments, savings_goal_payments, debt_payments, categories: `with check` mewajibkan family_id milik sendiri
+- `search_path = public` untuk fungsi security definer lama
+
+### Alasan
+Fungsi security definer berjalan sebagai owner (bypass RLS), dan trigger saldo ikut berjalan dengan hak itu. Tanpa cek `p_wallet_id`, siapa pun yang tahu UUID kantong orang lain bisa menaikkan/menurunkan saldonya.
+
+### Implikasi
+- **Harus dijalankan manual** di Supabase SQL Editor (lihat bagian bawah). Aman dijalankan ulang; tabel/fungsi yang belum ada dilewati
+- Payment lama tetap tercatat atas nama pembuat target/hutang, jadi hanya dia yang bisa edit/hapus payment lama
+- Diuji di PGlite (Postgres WASM) dengan stub `auth`: seluruh rantai migrasi + 14 tes RLS/RPC lulus. Belum diuji di Supabase asli
+
+---
+
+## 2. `src/lib/utils.js` — `fetchAllRows(buildQuery)`
+
+### Perubahan
+Helper baru yang mengambil data per 1000 baris (`.order('id').range(...)`) sampai habis. `buildQuery` harus membuat query baru setiap dipanggil.
+
+### Dipakai di
+- `src/hooks/useTransactions.js`: semua hook agregasi (monthly stats, 6 bulan, trend, kategori, member, harian, periode, tahunan), budget warning, laporan bulanan
+- `src/hooks/useBudget.js`: perhitungan `spent`
+- `src/hooks/useDataImportExport.js`: cek duplikat import (sebelumnya `.limit(10000)` yang tetap terpotong di 1000) dan **export** (sebelumnya backup tidak lengkap)
+
+### Catatan
+`useTopTransactions` sengaja tetap `.limit(n)`. Jika max-rows project diubah < 1000, helper berhenti di halaman pertama.
+
+---
+
+## 3. `src/hooks/useTransactions.js` (lainnya)
+
+- `yearMonthOf('YYYY-MM-DD')` menggantikan `new Date(t.date).getMonth()` (string tanggal dibaca sebagai UTC → bisa geser bulan di zona UTC-x)
+- Budget warning: dedupe per kategori + `period` + `level` (`near`/`over`) lewat `notifications.data`. Notifikasi lama tidak punya field ini, jadi bisa terkirim sekali lagi setelah deploy
+
+---
+
+## 4. Perbaikan kecil
+
+| File | Perubahan |
+|------|-----------|
+| `src/hooks/useDataImportExport.js` | Tipe kantong import `'e-wallet'` → `'ewallet'` (sesuai check constraint) |
+| `src/hooks/useSavingsGoals.js` | allowedFields: tambah `color`, `is_completed`; hapus kolom yang tidak ada (`is_active`, `category_id`, `note`) |
+| `src/hooks/useDebts.js` | allowedFields: tambah `description`; hapus `person_name`, `note`, `category_id` |
+| `src/pages/SavingsDebts.jsx` | Edit hutang: `remaining = max(0, remaining + (amountBaru - amountLama))`, `is_paid` ikut diset |
+| `src/components/transactions/TransactionModal.jsx` | `getReceiptSignedUrl()`: ambil path dari URL public yang tersimpan → `createSignedUrl` (1 jam). Format `receipt_url` di DB tidak berubah |
+| `src/hooks/useFamily.js` | Kode undangan 8 karakter tanpa modulo bias. Kode 6 karakter lama tetap berlaku |
+| `vite.config.js` | `manualChunks`: `react-vendor`, `supabase`, `motion`. Recharts **sengaja tidak** dimasukkan ke manual chunk (jika dimasukkan, chunk chart ikut di-preload di halaman awal) |
+| `package-lock.json` | `npm audit fix` (13 dari 15 advisory) |
+
+---
+
+## Belum Dikerjakan
+
+- `react-router` 2 advisory moderate: butuh upgrade ke v7 (breaking)
+- `get_family_by_invite_code` bisa dipanggil tanpa login (dipakai saat registrasi sebelum akun dibuat); belum ada masa berlaku kode undangan
+- `Reports.jsx` (modal transaksi harian) edit/hapus langsung via supabase tanpa invalidate query `wallets`
+
+---
+
+## SQL yang Harus Dijalankan Manual di Supabase
+
+Jalankan seluruh isi **`supabase/migration_security_hardening.sql`** di **Supabase Dashboard → SQL Editor** (setelah `migration_payment_history.sql`).

@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/stores/authStore'
-import { toDateStr } from '@/lib/utils'
+import { toDateStr, fetchAllRows } from '@/lib/utils'
 import { parseCSV, readFileAsText, convertOlloToMoneyFam, generateCSV, convertMoneyFamToOllo } from '@/utils/csvUtils'
 
 const CATEGORY_ICON_MAP = [
@@ -126,7 +126,7 @@ export function useDataImport() {
           
           return {
             name: wallet.name,
-            type: isBank ? 'bank' : (isEWallet ? 'e-wallet' : 'cash'),
+            type: isBank ? 'bank' : (isEWallet ? 'ewallet' : 'cash'),
             balance: 0,
             initial_balance: 0, // Set initial_balance for imported wallets
             user_id: user.id,
@@ -170,20 +170,15 @@ export function useDataImport() {
         }
       }
 
-      let txQuery = supabase
-        .from('transactions')
-        .select('date, amount, description, wallet_id')
-        .order('date', { ascending: false })
-        .limit(10000)
-
-      if (family?.id) {
-        txQuery = txQuery.eq('family_id', family.id)
-      } else {
-        txQuery = txQuery.eq('user_id', user.id)
-      }
-
-      const { data: existingTxs, error: existingTxError } = await txQuery
-      if (existingTxError) {
+      let existingTxs
+      try {
+        existingTxs = await fetchAllRows(() => {
+          const txQuery = supabase
+            .from('transactions')
+            .select('date, amount, description, wallet_id')
+          return family?.id ? txQuery.eq('family_id', family.id) : txQuery.eq('user_id', user.id)
+        })
+      } catch (existingTxError) {
         console.error('[Import] Error fetch existing transactions:', existingTxError)
         throw new Error('Gagal mengambil data transaksi yang sudah ada')
       }
@@ -319,21 +314,14 @@ export function useDataExport() {
     mutationFn: async () => {
       if (!user?.id) throw new Error('Anda harus login terlebih dahulu')
       
-      // Fetch all transactions
-      let txQuery = supabase
-        .from('transactions')
-        .select('*')
-        .order('date', { ascending: false })
-      
-      if (family?.id) {
-        txQuery = txQuery.eq('family_id', family.id)
-      } else {
-        txQuery = txQuery.eq('user_id', user.id)
-      }
-      
-      const { data: transactions, error: txError } = await txQuery
-      
-      if (txError) throw txError
+      // Fetch all transactions (per halaman — tanpa ini export terpotong di 1000 baris)
+      const transactions = await fetchAllRows(() => {
+        const txQuery = supabase
+          .from('transactions')
+          .select('*')
+          .order('date', { ascending: false })
+        return family?.id ? txQuery.eq('family_id', family.id) : txQuery.eq('user_id', user.id)
+      })
       
       // Fetch all wallets
       let walletQuery = supabase.from('wallets').select('*')
