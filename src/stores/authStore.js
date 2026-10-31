@@ -55,7 +55,11 @@ export const useAuthStore = create((set, get) => ({
     }
 
     // Setup auth state change listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    // auth-js menjalankan callback ini sambil memegang auth lock. Query Supabase
+    // di dalamnya (fetchProfile) butuh lock yang sama untuk membaca token →
+    // deadlock: semua query berikutnya menggantung ("Memuat…" selamanya).
+    // Jadi pekerjaan dijalankan setelah callback selesai dan lock dilepas.
+    const handleAuthEvent = async (event, session) => {
       try {
         if (get().registering) return
         if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session?.user) {
@@ -72,6 +76,10 @@ export const useAuthStore = create((set, get) => ({
       } catch (err) {
         console.error('Auth state change handler error:', err)
       }
+    }
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      setTimeout(() => handleAuthEvent(event, session), 0)
     })
 
     // Cleanup subscription on re-initialization
