@@ -1,8 +1,8 @@
 import { useState } from 'react'
-import { Card } from '@/components/ui/Card'
-import { StatTile } from '@/components/ui/StatTile'
+import { StatStrip } from '@/components/ui/StatTile'
 import { Button } from '@/components/ui/Button'
-import { Icon } from '@/components/ui/Icon'
+import { PageHeader } from '@/components/ui/PageHeader'
+import { envelopeTones } from '@/lib/theme'
 import { WalletModal } from '@/components/wallets/WalletModal'
 import { TransferModal } from '@/components/wallets/TransferModal'
 import { ConfirmModal } from '@/components/ui/Modal'
@@ -25,36 +25,25 @@ const typeLabel = (t) => WALLET_TYPE_LABELS[t] || t || 'Lainnya'
 
 function ActivityRow({ tx }) {
   const isIncome = tx.type === 'income'
-  const color = tx.categories?.color || '#6b7280'
-  const icon = tx.categories?.icon || (isIncome ? '💰' : tx.type === 'transfer' ? '🔄' : '💸')
-  const meta = [tx.creator_name, fmtRelative(tx.date)].filter(Boolean).join(' · ')
+  const meta = [tx.creator_name?.split(' ')[0], fmtRelative(tx.date)].filter(Boolean).join(' · ')
 
   return (
-    <div className="flex items-center gap-3 py-2.5">
-      <div
-        className="flex items-center justify-center flex-shrink-0"
-        style={{ width: 38, height: 38, borderRadius: 12, background: color + '22', fontSize: 18 }}
-      >
-        {icon}
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold truncate" style={{ color: 'var(--ink)' }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 0', borderBottom: '1px solid var(--line)' }}>
+      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+        <span style={{ fontSize: 14, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
           {tx.description || tx.categories?.name || '-'}
-        </p>
-        <p className="text-xs truncate" style={{ color: 'var(--ink-3)' }}>{meta}</p>
+        </span>
+        <span style={{ fontSize: 12, color: 'var(--ink-3)' }}>{meta}</span>
       </div>
-      <span
-        className="text-sm font-bold font-mono tabular-nums whitespace-nowrap"
-        style={{ color: isIncome ? 'var(--good)' : 'var(--ink)' }}
-      >
-        {isIncome ? '+' : '−'} {formatCurrency(tx.amount)}
+      <span className="font-mono" style={{ fontSize: 14, fontWeight: 600, whiteSpace: 'nowrap', color: isIncome ? 'var(--good)' : 'var(--ink)' }}>
+        {isIncome ? '+' : '−'}{idrShort(Number(tx.amount))}
       </span>
     </div>
   )
 }
 
 export default function Wallets() {
-  const { isMobile } = useViewport()
+  const { isMobile, narrow } = useViewport()
   const { data: wallets, isLoading } = useWallets()
   const deleteMutation = useDeleteWallet()
 
@@ -68,6 +57,7 @@ export default function Wallets() {
   const list = wallets || []
   const selected = list.find((w) => w.id === selectedId) || list[0] || null
   const totalBalance = list.reduce((s, w) => s + Number(w.balance || 0), 0)
+  const sumOf = (types) => list.filter((w) => types.includes(w.type)).reduce((s, w) => s + Number(w.balance || 0), 0)
 
   const { data: txData } = useTransactions(selected ? { wallet_id: selected.id } : {})
   const activity = (txData?.data || []).slice(0, 8)
@@ -106,149 +96,98 @@ export default function Wallets() {
   }
 
   return (
-    <div className="space-y-5 max-w-5xl mx-auto pb-24 lg:pb-8">
-      <div>
-        <h2 className="text-base font-semibold" style={{ color: 'var(--ink)' }}>Kantong / Dompet</h2>
-        <p className="text-xs mt-0.5" style={{ color: 'var(--ink-3)' }}>{list.length} kantong</p>
-      </div>
+    <div>
+      <PageHeader
+        title="Kantong"
+        eyebrow={`${list.length} kantong`}
+        actions={[
+          <Button key="add" onClick={openAdd}>Tambah kantong</Button>,
+          list.length > 1 && <Button key="tr" variant="secondary" onClick={() => openTransfer(selected)}>Transfer antar kantong</Button>,
+        ].filter(Boolean)}
+      />
 
-      {list.length > 0 && (
-        <StatTile
-          accent
-          label="Total Kekayaan"
-          value={formatCurrency(totalBalance)}
-          sub={`${list.length} kantong`}
-        />
-      )}
-
-      {isLoading ? (
-        <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))' }}>
-          {[...Array(4)].map((_, i) => (
-            <div
-              key={i}
-              className="animate-pulse"
-              style={{ background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 'var(--r-lg)', padding: 16 }}
-            >
-              <div style={{ width: 36, height: 36, borderRadius: 12, background: 'var(--surface-2)' }} />
-              <div className="h-3 rounded w-14 mt-3" style={{ background: 'var(--surface-2)' }} />
-              <div className="h-4 rounded w-24 mt-2" style={{ background: 'var(--surface-2)' }} />
-              <div className="h-5 rounded w-20 mt-3" style={{ background: 'var(--surface-2)' }} />
-            </div>
-          ))}
-        </div>
-      ) : !list.length ? (
-        <Card padding={0}>
-          <div className="py-16 text-center">
-            <div className="mx-auto mb-3 flex items-center justify-center" style={{ width: 48, height: 48, borderRadius: 16, background: 'var(--surface-2)' }}>
-              <Icon name="wallet" size={22} style={{ color: 'var(--ink-3)' }} />
-            </div>
-            <p className="text-sm font-medium" style={{ color: 'var(--ink-2)' }}>Belum ada kantong</p>
-            <p className="text-sm mt-1" style={{ color: 'var(--ink-3)' }}>Tambah kantong pertama kamu</p>
-            <Button className="mt-4" size="sm" onClick={openAdd}>
-              <Icon name="plus" size={15} stroke={2.2} />
-              Tambah Kantong
-            </Button>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+        {isMobile ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <span style={{ fontSize: 13, color: 'var(--ink-3)' }}>Total semua kantong</span>
+            <span className="font-mono" style={{ fontWeight: 600, fontSize: 30, letterSpacing: '-.04em' }}>{formatCurrency(totalBalance)}</span>
+            <span style={{ fontSize: 13, color: 'var(--ink-3)' }}>Bank & e-wallet {idrShort(sumOf(['bank', 'ewallet']))} · Tunai {idrShort(sumOf(['cash']))}</span>
           </div>
-        </Card>
-      ) : (
-        <div className="grid gap-4" style={{ gridTemplateColumns: isMobile ? '1fr' : '1.2fr 1fr' }}>
-          {/* LEFT: wallet grid */}
-          <div>
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-base font-bold" style={{ color: 'var(--ink)' }}>Kantong Kamu</h3>
-              <Button variant="soft" size="sm" onClick={openAdd}>
-                <Icon name="plus" size={14} stroke={2.2} />
-                Tambah
-              </Button>
-            </div>
-            <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))' }}>
+        ) : (
+          <StatStrip
+            items={[
+              { label: 'Total semua kantong', value: formatCurrency(totalBalance) },
+              { label: 'Bank & e-wallet', value: formatCurrency(sumOf(['bank', 'ewallet'])) },
+              { label: 'Tunai', value: formatCurrency(sumOf(['cash'])) },
+            ]}
+          />
+        )}
+
+        {isLoading ? (
+          <p style={{ color: 'var(--ink-3)', fontSize: 15 }}>Memuat kantong…</p>
+        ) : !list.length ? (
+          <div style={{ padding: '40px 24px', borderRadius: 18, border: '1.5px dashed var(--line-2)', display: 'flex', flexDirection: 'column', gap: 14, alignItems: 'flex-start', maxWidth: 640 }}>
+            <h3 className="font-display" style={{ margin: 0, fontWeight: 700, fontSize: 24, letterSpacing: '-.02em' }}>Belum ada kantong</h3>
+            <p style={{ margin: 0, fontSize: 15, lineHeight: 1.5, color: 'var(--ink-2)' }}>
+              Kantong adalah tempat uang keluarga disimpan: rekening bank, dompet digital, atau uang tunai di rumah.
+            </p>
+            <Button onClick={openAdd}>Tambah kantong pertama</Button>
+          </div>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: narrow ? 'minmax(0,1fr)' : 'minmax(0,1fr) 360px', gap: narrow ? 18 : 32, alignItems: 'start' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(auto-fill, minmax(190px, 1fr))', gap: isMobile ? 10 : 14 }}>
               {list.map((w) => {
                 const isSel = selected?.id === w.id
                 return (
-                  <Card
+                  <button
                     key={w.id}
-                    padding={16}
                     onClick={() => setSelectedId(w.id)}
+                    aria-pressed={isSel}
+                    className="lift"
                     style={{
-                      background: w.color + '15',
-                      border: isSel ? `2px solid ${w.color}` : `1px solid ${w.color}30`,
-                      cursor: 'pointer',
+                      minHeight: isMobile ? 124 : 168, border: 'none', borderRadius: isMobile ? 14 : 16, padding: isMobile ? 14 : 18,
+                      background: envelopeTones(w.color).face, color: '#1D1B17', cursor: 'pointer', textAlign: 'left',
+                      display: 'flex', flexDirection: 'column', gap: isMobile ? 3 : 6,
+                      boxShadow: isSel ? 'inset 0 0 0 2px #1D1B17' : 'none',
                     }}
                   >
-                    <div
-                      className="flex items-center justify-center"
-                      style={{ width: 36, height: 36, borderRadius: 12, background: w.color, color: '#fff', fontSize: 18 }}
-                    >
-                      {w.icon || '💳'}
-                    </div>
-                    <div className="text-[11px] mt-3" style={{ color: 'var(--ink-3)' }}>{typeLabel(w.type)}</div>
-                    <div className="text-[13px] font-bold" style={{ color: 'var(--ink)', margin: '2px 0 8px' }}>{w.name}</div>
-                    <div className="font-display tabular-nums" style={{ fontSize: 18 }}>
-                      {idrShort(w.balance)}
-                    </div>
-                  </Card>
+                    <span className="font-mono" style={{ fontSize: isMobile ? 10 : 12, letterSpacing: '.06em', color: '#3E382F', textTransform: 'uppercase' }}>
+                      {typeLabel(w.type)}
+                    </span>
+                    <span style={{ fontWeight: 600, fontSize: isMobile ? 15 : 16 }}>{w.name}</span>
+                    <span className="font-mono" style={{ marginTop: 'auto', fontWeight: 600, fontSize: isMobile ? 18 : 22, letterSpacing: '-.03em', whiteSpace: 'nowrap' }}>
+                      {idrShort(Number(w.balance))}
+                    </span>
+                  </button>
                 )
               })}
             </div>
+
+            {selected && (
+              <div style={{ background: 'var(--surface)', borderRadius: 18, padding: isMobile ? 18 : 24, boxShadow: '0 0 0 1px var(--line)', display: 'flex', flexDirection: 'column', gap: 18, position: narrow ? 'static' : 'sticky', top: 0 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <span className="eyebrow" style={{ color: 'var(--ink-3)' }}>{typeLabel(selected.type)}</span>
+                  <h3 className="font-display" style={{ margin: 0, fontWeight: 800, fontSize: isMobile ? 22 : 28, letterSpacing: '-.03em' }}>{selected.name}</h3>
+                  <span className="font-mono" style={{ fontWeight: 600, fontSize: isMobile ? 24 : 30, letterSpacing: '-.04em' }}>{formatCurrency(selected.balance)}</span>
+                </div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  {list.length > 1 && <Button className="flex-1" onClick={() => openTransfer(selected)}>Transfer</Button>}
+                  <Button variant="secondary" className="flex-1" onClick={() => openEdit(selected)}>Ubah</Button>
+                  <Button variant="danger-outline" className="flex-1" onClick={() => setDeleteId(selected.id)}>Hapus</Button>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  <span className="eyebrow" style={{ marginBottom: 6 }}>Aktivitas terakhir</span>
+                  {activity.length === 0 ? (
+                    <p style={{ margin: 0, fontSize: 14, color: 'var(--ink-3)' }}>Belum ada aktivitas.</p>
+                  ) : (
+                    activity.map((tx) => <ActivityRow key={tx.id} tx={tx} />)
+                  )}
+                </div>
+              </div>
+            )}
           </div>
-
-          {/* RIGHT: detail panel */}
-          {selected && (
-            <Card
-              padding={isMobile ? 18 : 22}
-              style={{ alignSelf: 'flex-start', position: isMobile ? 'static' : 'sticky', top: 90 }}
-            >
-              <div className="flex items-center gap-3 mb-4">
-                <div
-                  className="flex items-center justify-center flex-shrink-0"
-                  style={{ width: 52, height: 52, borderRadius: 16, background: selected.color, color: '#fff', fontSize: 24 }}
-                >
-                  {selected.icon || '💳'}
-                </div>
-                <div className="min-w-0">
-                  <div className="text-xs" style={{ color: 'var(--ink-3)' }}>{typeLabel(selected.type)}</div>
-                  <div className="text-base font-bold truncate" style={{ color: 'var(--ink)' }}>{selected.name}</div>
-                </div>
-              </div>
-
-              <div className="font-display tabular-nums" style={{ fontSize: 32, marginBottom: 14 }}>
-                {formatCurrency(selected.balance)}
-              </div>
-
-              <div className="flex gap-2 mb-5">
-                <Button variant="soft" size="sm" className="flex-1" onClick={() => openTransfer(selected)}>
-                  <Icon name="swap" size={15} />
-                  Transfer
-                </Button>
-                <Button variant="ghost" size="sm" className="flex-1" onClick={() => openEdit(selected)}>
-                  <Icon name="pencil" size={14} />
-                  Ubah
-                </Button>
-                <Button variant="ghost" size="sm" className="flex-1" onClick={() => setDeleteId(selected.id)} style={{ color: 'var(--bad)' }}>
-                  <Icon name="trash" size={14} />
-                  Hapus
-                </Button>
-              </div>
-
-              <div
-                className="mb-2"
-                style={{ fontSize: 12, color: 'var(--ink-3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.04em' }}
-              >
-                Aktivitas
-              </div>
-              {activity.length === 0 ? (
-                <div className="text-sm" style={{ color: 'var(--ink-3)' }}>Belum ada transaksi.</div>
-              ) : (
-                <div className="flex flex-col">
-                  {activity.map((tx) => (
-                    <ActivityRow key={tx.id} tx={tx} />
-                  ))}
-                </div>
-              )}
-            </Card>
-          )}
-        </div>
-      )}
+        )}
+      </div>
 
       <WalletModal
         isOpen={walletModalOpen}
@@ -266,7 +205,7 @@ export default function Wallets() {
         isOpen={!!deleteId}
         onClose={() => setDeleteId(null)}
         onConfirm={handleDelete}
-        title="Hapus Kantong"
+        title="Hapus kantong"
         message="Yakin ingin menghapus kantong ini? Kantong hanya bisa dihapus jika tidak memiliki transaksi."
         loading={deleteMutation.isPending}
       />

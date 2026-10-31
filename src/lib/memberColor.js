@@ -1,7 +1,7 @@
-import { ACCENT_OPTIONS } from '@/lib/theme'
+import { MEMBER_COLORS } from '@/lib/theme'
 
 // Extra swatches so 6+ members still get distinct colors.
-const PALETTE = [...ACCENT_OPTIONS, '#EF4444', '#10B981', '#F97316', '#3B82F6']
+const PALETTE = [...MEMBER_COLORS, '#5E7A35', '#8A5A2B']
 
 export function memberColor(profile) {
   if (profile?.avatar_color) return profile.avatar_color

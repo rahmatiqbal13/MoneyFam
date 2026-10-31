@@ -1,12 +1,42 @@
 import { NavLink, useNavigate } from 'react-router-dom'
-import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/stores/authStore'
 import { useUnreadNotificationsCount } from '@/hooks/useNotifications'
 import { useFamilyMembers } from '@/hooks/useFamily'
-import { NAV } from './navItems'
-import { Logo } from './Logo'
+import { NAV, NAV_GROUPS } from './navItems'
+import { Logo, Wordmark } from './Logo'
 import { Icon } from '@/components/ui/Icon'
 import { Avatar, AvatarStack } from '@/components/ui/Avatar'
+
+export function FamilyCard({ family, members }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: 12, borderRadius: 14, background: 'var(--bg-sub)' }}>
+      {members.length > 0 && <AvatarStack members={members} size={28} ring="var(--bg-sub)" />}
+      <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+        <span style={{ fontWeight: 600, fontSize: 14, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          {family?.name || 'Mode Personal'}
+        </span>
+        <span style={{ fontSize: 13, color: 'var(--ink-3)' }}>
+          {family ? `${members.length} anggota` : 'Belum bergabung keluarga'}
+        </span>
+      </div>
+    </div>
+  )
+}
+
+export function UnreadBadge({ count, size = 22 }) {
+  if (!count) return null
+  return (
+    <span
+      style={{
+        minWidth: size, height: size, padding: '0 6px', borderRadius: size / 2,
+        background: '#B3261E', color: '#fff', fontSize: 12, fontWeight: 700,
+        display: 'grid', placeItems: 'center',
+      }}
+    >
+      {count > 99 ? '99+' : count}
+    </span>
+  )
+}
 
 export function Sidebar() {
   const navigate = useNavigate()
@@ -21,127 +51,62 @@ export function Sidebar() {
 
   return (
     <aside
-      className="hidden lg:flex flex-col flex-shrink-0 static h-full"
-      style={{
-        width: 264,
-        background: 'var(--surface)',
-        borderRight: '1px solid var(--line)',
-      }}
+      className="hidden lg:flex flex-col flex-shrink-0 h-full overflow-y-auto scrollbar-hide"
+      style={{ width: 232, padding: '28px 18px 22px', gap: 26, borderRight: '1px solid var(--line)' }}
     >
-      {/* Brand */}
-      <div className="flex items-center px-5 py-5">
-        <div className="flex items-center gap-2.5">
-          <Logo size={40} />
-          <div>
-            <div className="font-display font-semibold text-xl leading-tight" style={{ color: 'var(--ink)' }}>
-              MoneyFam
-            </div>
-            <div className="text-xs mt-0.5" style={{ color: 'var(--ink-3)' }}>
-              Keuangan Keluarga
-            </div>
-          </div>
-        </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0 8px' }}>
+        <Logo size={34} />
+        <Wordmark />
       </div>
 
-      {/* Family card */}
-      <div
-        className="mx-4 mb-4 px-3.5 py-3"
-        style={{
-          background: 'var(--surface-2)',
-          borderRadius: 'var(--r-sm)',
-        }}
-      >
-        <div className="flex items-center justify-between mb-2">
-          <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--ink-3)' }}>
-            Keluarga
-          </p>
-          <Icon name="chevronD" size={16} style={{ color: 'var(--ink-3)' }} />
-        </div>
-        <p className="text-sm font-bold truncate" style={{ color: 'var(--ink)' }}>
-          {family?.name || 'Mode Personal'}
-        </p>
-        {members.length > 0 && (
-          <div className="mt-2">
-            <AvatarStack members={members} size={28} />
-          </div>
-        )}
-      </div>
+      <FamilyCard family={family} members={members} />
 
-      {/* Nav */}
-      <nav className="flex-1 px-3 overflow-y-auto scrollbar-hide">
-        <ul className="space-y-0.5">
-          {NAV.map((item) => (
-            <li key={item.to}>
+      <nav aria-label="Menu utama" style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+        {NAV_GROUPS.map((g) => (
+          <div key={g.id} style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <span className="eyebrow" style={{ padding: '0 10px 6px' }}>{g.label}</span>
+            {NAV.filter((n) => n.group === g.id).map((item) => (
               <NavLink
+                key={item.to}
                 to={item.to}
                 end={item.to === '/'}
-                className={({ isActive }) =>
-                  cn(
-                    'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all duration-150',
-                    isActive ? 'font-semibold' : 'font-medium'
-                  )
-                }
+                className="sidebar-link"
                 style={({ isActive }) => ({
-                  background: isActive ? 'var(--accent-soft)' : 'transparent',
-                  color: isActive ? 'var(--accent-ink)' : 'var(--ink-2)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  minHeight: 40, padding: '0 10px', borderRadius: 10, textDecoration: 'none', fontSize: 15,
+                  background: isActive ? 'var(--accent)' : undefined,
+                  color: isActive ? 'var(--on-accent)' : 'var(--ink-2)',
+                  fontWeight: isActive ? 600 : 400,
+                  transition: 'background-color .15s ease',
                 })}
-                onMouseEnter={(e) => {
-                  if (!e.currentTarget.classList.contains('font-semibold')) {
-                    e.currentTarget.style.background = 'var(--surface-2)'
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!e.currentTarget.classList.contains('font-semibold')) {
-                    e.currentTarget.style.background = 'transparent'
-                  }
-                }}
               >
-                <Icon name={item.icon} size={20} className="flex-shrink-0" />
-                <span className="flex-1">{item.label}</span>
-                {item.id === 'notifications' && unreadCount > 0 && (
-                  <span
-                    className="text-white text-xs font-bold px-1.5 py-0.5 rounded-full min-w-[1.25rem] text-center"
-                    style={{ background: '#EF4444', fontSize: 10 }}
-                  >
-                    {unreadCount > 99 ? '99+' : unreadCount}
-                  </span>
-                )}
+                {item.label}
+                {item.id === 'notifications' && <UnreadBadge count={unreadCount} />}
               </NavLink>
-            </li>
-          ))}
-        </ul>
+            ))}
+          </div>
+        ))}
       </nav>
 
-      {/* User & logout */}
-      <div className="px-4 py-4" style={{ borderTop: '1px solid var(--line)' }}>
-        <div className="flex items-center gap-3">
-          <Avatar member={profile} size={36} />
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold truncate" style={{ color: 'var(--ink)' }}>
-              {profile?.full_name || 'User'}
-            </p>
-            <p className="text-xs truncate" style={{ color: 'var(--ink-3)' }}>
-              {profile?.email || user?.email}
-            </p>
-          </div>
-          <button
-            onClick={handleLogout}
-            className="p-1.5 rounded-lg transition-colors flex-shrink-0"
-            style={{ color: 'var(--ink-3)' }}
-            title="Keluar"
-            aria-label="Keluar"
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'var(--surface-2)'
-              e.currentTarget.style.color = 'var(--ink)'
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'transparent'
-              e.currentTarget.style.color = 'var(--ink-3)'
-            }}
-          >
-            <Icon name="logout" size={16} />
-          </button>
+      <div style={{ marginTop: 'auto', display: 'flex', alignItems: 'center', gap: 10, padding: '0 8px' }}>
+        <Avatar member={profile} size={34} />
+        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+          <span style={{ fontWeight: 600, fontSize: 14, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {profile?.full_name || 'Pengguna'}
+          </span>
+          <span style={{ fontSize: 13, color: 'var(--ink-3)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {profile?.email || user?.email}
+          </span>
         </div>
+        <button
+          onClick={handleLogout}
+          title="Keluar"
+          aria-label="Keluar"
+          className="sidebar-link press"
+          style={{ width: 36, height: 36, borderRadius: 999, border: 'none', background: 'transparent', color: 'var(--ink-3)', display: 'grid', placeItems: 'center', cursor: 'pointer', flexShrink: 0 }}
+        >
+          <Icon name="logout" size={16} />
+        </button>
       </div>
     </aside>
   )

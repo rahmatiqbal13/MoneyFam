@@ -232,8 +232,8 @@ export function ImportExportSection() {
           {/* Export Section */}
           <div className="p-4 rounded-xl" style={{ background: 'var(--surface-2)', border: '1px solid var(--line)' }}>
             <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: '#16A34A22' }}>
-                <Download className="w-5 h-5" style={{ color: '#16A34A' }} />
+              <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: 'var(--good-soft)' }}>
+                <Download className="w-5 h-5" style={{ color: 'var(--good)' }} />
               </div>
               <div className="flex-1">
                 <h4 className="font-medium" style={{ color: 'var(--ink)' }}>Export ke CSV</h4>

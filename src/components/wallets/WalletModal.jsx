@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
 import { useToast } from '@/components/ui/Toast'
 import { useCreateWallet, useUpdateWallet } from '@/hooks/useWallets'
+import { INK_COLORS } from '@/lib/theme'
 
 const WALLET_TYPES = [
   { value: 'cash', label: 'Tunai' },
@@ -18,17 +19,14 @@ const WALLET_TYPES = [
 
 const WALLET_ICONS = ['💳', '🏦', '💰', '💵', '🪙', '📱', '💎', '🏧', '💼', '🎯']
 
-const WALLET_COLORS = [
-  '#10b981', '#3b82f6', '#8b5cf6', '#f59e0b', '#ef4444',
-  '#ec4899', '#06b6d4', '#84cc16', '#f97316', '#6366f1',
-]
+const WALLET_COLORS = INK_COLORS
 
 function getDefaultForm() {
   return {
     name: '',
     type: 'cash',
     icon: '💳',
-    color: '#10b981',
+    color: INK_COLORS[2],
     initial_balance: '0',
     balance: '',
     description: '',
@@ -53,7 +51,7 @@ export function WalletModal({ isOpen, onClose, wallet = null }) {
           name: wallet.name || '',
           type: wallet.type || 'cash',
           icon: wallet.icon || '💳',
-          color: wallet.color || '#10b981',
+          color: wallet.color || INK_COLORS[2],
           initial_balance: String(wallet.initial_balance ?? 0),
           balance: String(wallet.balance ?? 0),
           description: wallet.description || '',

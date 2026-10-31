@@ -4,27 +4,12 @@ import { CheckCircle, XCircle, AlertCircle, Info, X } from 'lucide-react'
 
 const ToastContext = createContext(null)
 
-const toastStyles = {
-  success: {
-    border: '1px solid color-mix(in srgb, #16A34A 35%, var(--surface))',
-    background: 'color-mix(in srgb, #16A34A 14%, var(--surface))',
-    iconColor: '#16A34A',
-  },
-  error: {
-    border: '1px solid color-mix(in srgb, #DC2626 35%, var(--surface))',
-    background: 'color-mix(in srgb, #DC2626 14%, var(--surface))',
-    iconColor: '#DC2626',
-  },
-  warning: {
-    border: '1px solid color-mix(in srgb, #D97706 35%, var(--surface))',
-    background: 'color-mix(in srgb, #D97706 14%, var(--surface))',
-    iconColor: '#D97706',
-  },
-  info: {
-    border: '1px solid var(--accent-soft)',
-    background: 'var(--accent-soft)',
-    iconColor: 'var(--accent-ink)',
-  },
+// Ink pill toast from the Amplop design; the icon carries the tone.
+const iconColor = {
+  success: '#9FD3A8',
+  error:   '#F2A39C',
+  warning: '#E5B866',
+  info:    'currentColor',
 }
 
 const IconMap = {
@@ -79,41 +64,41 @@ export function ToastProvider({ children }) {
     <ToastContext.Provider value={toast}>
       {children}
       <div
-        className="fixed bottom-4 right-4 z-[100] flex flex-col gap-2"
-        style={{ maxWidth: 360, width: 'calc(100vw - 2rem)' }}
+        className="fixed z-[400] flex flex-col items-center gap-2 pointer-events-none"
+        style={{ left: '50%', transform: 'translateX(-50%)', bottom: 'max(104px, calc(env(safe-area-inset-bottom) + 96px))', width: 'min(440px, calc(100vw - 32px))' }}
       >
         <AnimatePresence initial={false}>
           {toasts.map((t) => {
-            const s = toastStyles[t.type]
             const IconComp = IconMap[t.type]
             return (
               <motion.div
                 key={t.id}
                 layout={!reduceMotion}
-                className="flex items-start gap-3 p-3.5"
+                role="status"
+                className="flex items-center gap-2.5 pointer-events-auto"
                 style={{
-                  ...s,
-                  borderRadius: 'var(--r-md)',
-                  boxShadow: 'var(--shadow-md)',
+                  background: 'var(--accent)', color: 'var(--on-accent)',
+                  padding: '12px 14px 12px 18px', borderRadius: 18,
+                  boxShadow: '0 16px 30px -12px rgba(29,27,23,.5)',
                 }}
-                initial={reduceMotion ? { opacity: 0 } : { opacity: 0, x: 40, scale: 0.95 }}
-                animate={{ opacity: 1, x: 0, scale: 1 }}
+                initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 16, scale: 0.97 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={reduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.9, transition: { duration: 0.15 } }}
                 transition={{ type: 'spring', stiffness: 400, damping: 32 }}
               >
-                <span className="flex-shrink-0 mt-0.5">
-                  <IconComp className="w-5 h-5" style={{ color: s.iconColor }} />
+                <span className="flex-shrink-0">
+                  <IconComp className="w-[18px] h-[18px]" strokeWidth={2.4} style={{ color: iconColor[t.type] }} />
                 </span>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium" style={{ color: 'var(--ink)' }}>{t.message}</p>
+                  <p style={{ fontSize: 15, fontWeight: 600, margin: 0 }}>{t.message}</p>
                   {t.action && (
                     <button
                       onClick={() => {
                         t.action.onClick()
                         removeToast(t.id)
                       }}
-                      className="mt-1.5 text-xs font-semibold hover:underline"
-                      style={{ color: 'var(--accent-ink)' }}
+                      className="mt-1 text-sm font-semibold underline underline-offset-[3px]"
+                      style={{ color: 'inherit' }}
                     >
                       {t.action.label}
                     </button>
@@ -121,10 +106,9 @@ export function ToastProvider({ children }) {
                 </div>
                 <button
                   onClick={() => removeToast(t.id)}
-                  className="flex-shrink-0 transition-colors"
-                  style={{ color: 'var(--ink-3)' }}
-                  onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--ink)')}
-                  onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--ink-3)')}
+                  aria-label="Tutup"
+                  className="flex-shrink-0 grid place-items-center rounded-full"
+                  style={{ width: 32, height: 32, color: 'inherit', opacity: 0.7 }}
                 >
                   <X className="w-4 h-4" />
                 </button>

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
+import { PageHeader } from '@/components/ui/PageHeader'
 import { Card } from '@/components/ui/Card'
 import { Pill } from '@/components/ui/Pill'
 import { Icon } from '@/components/ui/Icon'
@@ -19,12 +20,12 @@ import {
 import { formatDistanceToNow } from '@/lib/utils'
 
 const typeConfig = {
-  budget_warning:    { emoji: '⚠️', color: '#F59E0B',      label: 'Anggaran',  to: '/budget' },
-  monthly_report:    { emoji: '📊', color: '#3B82F6',      label: 'Laporan',   to: '/reports' },
-  transaction_alert: { emoji: '🛒', color: '#8B5CF6',      label: 'Transaksi', to: '/transactions' },
+  budget_warning:    { emoji: '⚠️', color: '#A86E00',      label: 'Amplop',    to: '/budget' },
+  monthly_report:    { emoji: '📊', color: '#46658F',      label: 'Laporan',   to: '/reports' },
+  transaction_alert: { emoji: '🛒', color: '#6A57AC',      label: 'Transaksi', to: '/transactions' },
   reminder_daily:    { emoji: '🔔', color: 'var(--ink-3)', label: 'Pengingat', to: '/transactions' },
-  goal_achieved:     { emoji: '🎯', color: '#16A34A',      label: 'Tujuan',    to: '/savings' },
-  debt_due:          { emoji: '📅', color: '#DC2626',      label: 'Hutang',    to: '/savings' },
+  goal_achieved:     { emoji: '🎯', color: '#3F7A70',      label: 'Tabungan',  to: '/savings' },
+  debt_due:          { emoji: '📅', color: '#9C7A3E',      label: 'Hutang',    to: '/savings' },
 }
 
 const UNKNOWN = { emoji: '🔔', color: 'var(--ink-3)', label: 'Info', to: null }
@@ -85,11 +86,12 @@ export default function Notifications() {
   }
 
   return (
-    <div className="flex flex-col gap-4" style={{ maxWidth: 720, margin: '0 auto' }}>
+    <div className="flex flex-col gap-5" style={{ maxWidth: 880 }}>
+      <PageHeader title="Notifikasi" eyebrow={unreadCount ? `${unreadCount} belum dibaca` : 'Semua sudah dibaca'} />
       {/* Header row */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <SegmentedControl
-          size="sm"
+          size="md"
           value={filter}
           options={[
             { id: 'all', label: 'Semua' },

@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { Card } from '@/components/ui/Card'
+import { PageHeader } from '@/components/ui/PageHeader'
 import { Button } from '@/components/ui/Button'
 import { Icon } from '@/components/ui/Icon'
 import { Modal, ModalBody, ModalFooter, ConfirmModal } from '@/components/ui/Modal'
@@ -11,13 +12,10 @@ import { useToast } from '@/components/ui/Toast'
 import { useCategories, useCreateCategory, useUpdateCategory, useDeleteCategory, useResetCategories } from '@/hooks/useCategories'
 import { useReportCategoryDetail } from '@/hooks/useTransactions'
 import { idrShort } from '@/lib/utils'
+import { INK_COLORS } from '@/lib/theme'
 
 const CATEGORY_ICONS = ['🍔', '🚗', '🏠', '💊', '📚', '🎬', '👕', '✈️', '💰', '💼', '🎁', '📱', '🛒', '⚡', '💧', '🎮', '🏋️', '🐕', '🌱', '💳', '🔧', '🎵', '🍕', '☕', '🛡️']
-const CATEGORY_COLORS = [
-  '#10b981', '#ef4444', '#3b82f6', '#f59e0b', '#8b5cf6',
-  '#ec4899', '#06b6d4', '#84cc16', '#f97316', '#6366f1',
-  '#14b8a6', '#f43f5e', '#a855f7', '#22c55e', '#eab308',
-]
+const CATEGORY_COLORS = INK_COLORS
 
 const TYPE_OPTIONS = [
   { id: 'expense', label: 'Pengeluaran' },
@@ -30,7 +28,7 @@ const SECTIONS = [
 ]
 
 function getDefaultForm() {
-  return { name: '', icon: '📦', color: '#10b981', type: 'expense' }
+  return { name: '', icon: '📦', color: INK_COLORS[0], type: 'expense' }
 }
 
 function CategoryModal({ isOpen, onClose, category, activeTab }) {
@@ -46,7 +44,7 @@ function CategoryModal({ isOpen, onClose, category, activeTab }) {
   useEffect(() => {
     if (isOpen) {
       if (category) {
-        setForm({ name: category.name, icon: category.icon || '📦', color: category.color || '#10b981', type: category.type })
+        setForm({ name: category.name, icon: category.icon || '📦', color: category.color || INK_COLORS[0], type: category.type })
       } else {
         setForm({ ...getDefaultForm(), type: activeTab })
       }
@@ -208,18 +206,14 @@ export default function Categories() {
   const total = allCategories?.length || 0
 
   return (
-    <div className="space-y-5 max-w-3xl mx-auto pb-24 lg:pb-8">
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <h2 className="text-base font-semibold" style={{ color: 'var(--ink)' }}>Kategori</h2>
-          <p className="text-xs mt-0.5" style={{ color: 'var(--ink-3)' }}>
-            {isLoading ? '...' : `${total} kategori`}
-          </p>
-        </div>
-        <Button size="sm" variant="secondary" onClick={() => setResetModalOpen(true)}>
-          Reset ke default
-        </Button>
-      </div>
+    <div className="space-y-6" style={{ maxWidth: 960 }}>
+      <PageHeader
+        title="Kategori"
+        eyebrow={isLoading ? 'Memuat…' : `${total} kategori · dipakai di transaksi & amplop`}
+        actions={[
+          <Button key="reset" variant="secondary" onClick={() => setResetModalOpen(true)}>Reset ke default</Button>,
+        ]}
+      />
 
       {isLoading ? (
         <div className="space-y-4">

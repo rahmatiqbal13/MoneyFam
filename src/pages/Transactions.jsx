@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react'
-import { Card } from '@/components/ui/Card'
-import { StatTile } from '@/components/ui/StatTile'
+import { StatStrip } from '@/components/ui/StatTile'
 import { SegmentedControl } from '@/components/ui/SegmentedControl'
 import { Avatar } from '@/components/ui/Avatar'
+import { PageHeader } from '@/components/ui/PageHeader'
+import { EnvelopeMark } from '@/components/ui/Envelope'
 import { Icon } from '@/components/ui/Icon'
 import { Sheet } from '@/components/ui/Sheet'
 import { Input } from '@/components/ui/Input'
@@ -14,11 +15,14 @@ import { useFamilyMembers } from '@/hooks/useFamily'
 import { useCategories } from '@/hooks/useCategories'
 import { useWallets } from '@/hooks/useWallets'
 import { useTransactionStore } from '@/stores/transactionStore'
-import { idrShort, formatCurrency, fmtRelative, formatDate } from '@/lib/utils'
+import { useViewport } from '@/hooks/useViewport'
+import { memberColor } from '@/lib/memberColor'
+import { idrShort, formatCurrency, fmtRelative } from '@/lib/utils'
 
 const dayLabel = (d) => {
   const n = Math.round((new Date().setHours(0, 0, 0, 0) - new Date(d).setHours(0, 0, 0, 0)) / 86400000)
-  return n < 7 ? fmtRelative(d) : formatDate(d)
+  const full = new Date(d).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long' })
+  return n <= 1 ? `${fmtRelative(d)}, ${full.split(', ')[1] || full}` : full
 }
 
 const TYPE_OPTIONS = [
@@ -29,47 +33,54 @@ const TYPE_OPTIONS = [
 
 const EMPTY_ADVANCED = { search: '', category_id: '', wallet_id: '', dateFrom: '', dateTo: '' }
 
-function TransactionRow({ tx, onClick }) {
+function TransactionRow({ tx, member, wide, onClick }) {
   const isIncome = tx.type === 'income'
   const isTransfer = tx.type === 'transfer'
-  const color = tx.categories?.color || '#6b7280'
-  const icon = tx.categories?.icon || (isIncome ? '💰' : tx.type === 'transfer' ? '🔄' : '💸')
-  const meta = [tx.creator_name, tx.wallets?.name, fmtRelative(tx.date)].filter(Boolean).join(' · ')
+  const sub = [isTransfer ? 'Transfer' : tx.categories?.name, tx.wallets?.name].filter(Boolean).join(' · ')
+  const who = tx.creator_name?.split(' ')[0]
 
   return (
     <button
       type="button"
       onClick={onClick}
-      className="w-full flex items-center gap-3 py-3 px-2 text-left transition-colors"
-      style={{ borderRadius: 'var(--r-sm)', background: 'transparent', border: 'none', cursor: 'pointer' }}
-      onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--surface-2)')}
-      onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+      className="tx-row"
+      style={{
+        width: '100%', display: 'grid', alignItems: 'center', gap: wide ? 14 : 12, textAlign: 'left',
+        gridTemplateColumns: wide ? '30px minmax(0,1fr) 150px 140px' : '28px minmax(0,1fr) auto',
+        padding: wide ? '12px 6px' : '11px 0', background: 'transparent', border: 'none',
+        borderBottom: '1px solid var(--line)', cursor: 'pointer', color: 'inherit',
+      }}
     >
-      <div
-        className="flex items-center justify-center flex-shrink-0"
-        style={{ width: 42, height: 42, borderRadius: 14, background: color + '22', fontSize: 20 }}
-      >
-        {icon}
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold truncate" style={{ color: 'var(--ink)' }}>
+      <EnvelopeMark color={tx.categories?.color} width={wide ? 30 : 28} height={wide ? 22 : 21} />
+      <span style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+        <span style={{ fontSize: 15, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
           {tx.description || tx.categories?.name || '-'}
-        </p>
-        <p className="text-xs truncate" style={{ color: 'var(--ink-3)' }}>
-          {meta}
-        </p>
-      </div>
+        </span>
+        <span style={{ fontSize: wide ? 13 : 12, color: 'var(--ink-3)', display: 'flex', alignItems: 'center', gap: 5, minWidth: 0 }}>
+          {!wide && member && <span style={{ width: 7, height: 7, borderRadius: '50%', background: memberColor(member), flexShrink: 0 }} />}
+          <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {[!wide && who, sub].filter(Boolean).join(' · ')}
+          </span>
+        </span>
+      </span>
+      {wide && (
+        <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, minWidth: 0 }}>
+          {member && <Avatar member={member} size={24} />}
+          <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{who}</span>
+        </span>
+      )}
       <span
-        className="text-sm font-bold font-mono tabular-nums whitespace-nowrap"
-        style={{ color: isTransfer ? 'var(--ink-2)' : isIncome ? 'var(--good)' : 'var(--ink)' }}
+        className="font-mono"
+        style={{ fontSize: wide ? 15 : 14, fontWeight: 600, textAlign: 'right', whiteSpace: 'nowrap', color: isIncome ? 'var(--good)' : isTransfer ? 'var(--ink-2)' : 'var(--ink)' }}
       >
-        {isTransfer ? '' : isIncome ? '+ ' : '− '}{formatCurrency(tx.amount)}
+        {isTransfer ? '' : isIncome ? '+' : '−'}{wide ? formatCurrency(tx.amount) : idrShort(Number(tx.amount))}
       </span>
     </button>
   )
 }
 
 export default function Transactions() {
+  const { narrow, isMobile } = useViewport()
   const { filters, page, pageSize, setFilters, resetFilters, setPage, setPageSize } = useTransactionStore()
   const { data: txData, isLoading, isError } = useTransactions(filters, page, pageSize)
   const transactions = txData?.data || []
@@ -148,169 +159,119 @@ export default function Transactions() {
     groups[groupIndex[key]][1].push(t)
   })
 
+  const memberById = new Map(members.map((m) => [m.id, m]))
+  const openNew = () => { setEditingTx(null); setModalOpen(true) }
+
   return (
-    <div className="space-y-4 max-w-5xl mx-auto pb-24 lg:pb-8">
-      <div>
-        <h2 className="text-base font-semibold" style={{ color: 'var(--ink)' }}>Daftar Transaksi</h2>
-        <p className="text-xs mt-0.5" style={{ color: 'var(--ink-3)' }}>
-          {isLoading ? '...' : `${totalCount} transaksi`}
-        </p>
-      </div>
+    <div>
+      <PageHeader
+        title="Transaksi"
+        eyebrow={isLoading ? 'Memuat…' : `${totalCount} transaksi${hasActiveFilter ? ' · terfilter' : ''}`}
+        actions={[
+          <Button key="add" onClick={openNew}>Catat transaksi</Button>,
+          <Button key="filter" variant="secondary" onClick={openFilter}>
+            <Icon name="filter" size={15} />
+            Filter{advancedActive ? ' · aktif' : ''}
+          </Button>,
+        ]}
+      />
 
-      {/* Monthly stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
-        <StatTile label="Pemasukan" value={idrShort(income)} />
-        <StatTile label="Pengeluaran" value={idrShort(expense)} />
-        <StatTile label="Net" value={idrShort(income - expense)} className="col-span-2 lg:col-span-1" />
-      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: narrow ? 16 : 24 }}>
+        <StatStrip
+          columns={isMobile ? 2 : 3}
+          compact={isMobile}
+          items={[
+            { label: 'Masuk bulan ini', value: `+${formatCurrency(income)}`, tone: 'good' },
+            { label: 'Keluar bulan ini', value: `−${formatCurrency(expense)}` },
+            ...(isMobile ? [] : [{ label: 'Selisih bulan ini', value: formatCurrency(income - expense), tone: income - expense < 0 ? 'bad' : undefined }]),
+          ]}
+        />
 
-      {/* Filters */}
-      <Card padding={16}>
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex flex-wrap items-center gap-2">
-            <SegmentedControl
-              size="sm"
-              value={filters.type || 'all'}
-              options={TYPE_OPTIONS}
-              onChange={(id) => setFilters({ type: id === 'all' ? '' : id })}
-            />
-            <button
-              type="button"
-              onClick={openFilter}
-              className="relative inline-flex items-center gap-1.5"
-              style={{
-                padding: '8px 14px', borderRadius: 999, fontSize: 13, fontWeight: 600, cursor: 'pointer',
-                border: '1px solid ' + (advancedActive ? 'var(--ink)' : 'var(--line)'),
-                background: 'transparent', color: 'var(--ink-2)',
-              }}
-            >
-              <Icon name="filter" size={15} />
-              Filter
-              {advancedActive && (
-                <span
-                  style={{
-                    position: 'absolute', top: -3, right: -3, width: 9, height: 9,
-                    borderRadius: '50%', background: 'var(--accent)', border: '2px solid var(--surface)',
-                  }}
-                />
-              )}
-            </button>
-          </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+          <SegmentedControl
+            size="md"
+            fill={isMobile}
+            className={isMobile ? 'w-full' : undefined}
+            value={filters.type || 'all'}
+            options={TYPE_OPTIONS}
+            onChange={(id) => setFilters({ type: id === 'all' ? '' : id })}
+          />
           {members.length > 0 && (
-            <div className="flex items-center gap-2 flex-wrap">
-              <button
-                type="button"
-                onClick={() => setMemberId('all')}
-                style={{
-                  padding: '6px 12px', borderRadius: 999, fontSize: 12, fontWeight: 600, cursor: 'pointer',
-                  border: '1px solid ' + (memberId === 'all' ? 'var(--ink)' : 'var(--line)'),
-                  background: memberId === 'all' ? 'var(--ink)' : 'transparent',
-                  color: memberId === 'all' ? 'var(--bg)' : 'var(--ink-2)',
-                }}
-              >
-                Semua
-              </button>
-              {members.map((m) => (
-                <button
-                  key={m.id}
-                  type="button"
-                  onClick={() => setMemberId(m.id)}
-                  title={m.full_name}
-                  style={{
-                    padding: 2, border: 'none', background: 'transparent', cursor: 'pointer', borderRadius: '50%',
-                    outline: memberId === m.id ? '2px solid var(--accent)' : 'none', outlineOffset: 2,
-                    opacity: memberId !== 'all' && memberId !== m.id ? 0.4 : 1,
-                  }}
-                >
-                  <Avatar member={m} size={28} />
-                </button>
-              ))}
+            <div className="scroll-x" style={{ display: 'flex', alignItems: 'center', gap: 8, margin: isMobile ? '0 -18px' : 0, padding: isMobile ? '0 18px' : 0, maxWidth: isMobile ? 'none' : '100%' }}>
+              {!isMobile && <span style={{ fontSize: 14, color: 'var(--ink-3)', marginRight: 4 }}>Siapa</span>}
+              <SegmentedControl
+                size="sm"
+                nowrap
+                value={memberId}
+                onChange={setMemberId}
+                options={[
+                  { id: 'all', label: 'Semua' },
+                  ...members.map((m) => ({ id: m.id, label: m.full_name?.split(' ')[0] || 'Anggota', dot: memberColor(m) })),
+                ]}
+              />
             </div>
           )}
         </div>
-      </Card>
 
-      {/* List */}
-      {isLoading ? (
-        <div className="space-y-2">
-          {[...Array(5)].map((_, i) => (
-            <div key={i} className="flex items-center gap-3 p-4 animate-pulse" style={{ background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 'var(--r-lg)' }}>
-              <div style={{ width: 42, height: 42, borderRadius: 14, background: 'var(--surface-2)' }} />
-              <div className="flex-1">
-                <div className="h-4 rounded w-32 mb-2" style={{ background: 'var(--surface-2)' }} />
-                <div className="h-3 rounded w-24" style={{ background: 'var(--surface-2)' }} />
-              </div>
-              <div className="h-4 rounded w-20" style={{ background: 'var(--surface-2)' }} />
-            </div>
-          ))}
-        </div>
-      ) : transactions.length === 0 ? (
-        <Card padding={0}>
-          <div className="py-16 text-center">
-            <p className="text-sm" style={{ color: 'var(--ink-3)' }}>
-              {hasActiveFilter ? 'Tidak ada transaksi yang cocok dengan filter' : 'Belum ada transaksi'}
+        {isLoading ? (
+          <p style={{ color: 'var(--ink-3)', fontSize: 15 }}>Memuat transaksi…</p>
+        ) : transactions.length === 0 ? (
+          <div style={{ padding: '40px 0' }}>
+            <p style={{ margin: 0, fontSize: 16, color: 'var(--ink-3)' }}>
+              {hasActiveFilter ? 'Belum ada transaksi yang cocok dengan filter ini.' : 'Belum ada transaksi. Catat pengeluaran pertama dari tombol di atas.'}
             </p>
             {hasActiveFilter && (
               <button
                 type="button"
                 onClick={() => resetFilters()}
-                className="mt-2 text-sm font-semibold hover:underline"
-                style={{ color: 'var(--accent-ink)' }}
+                style={{ marginTop: 10, border: 'none', background: 'transparent', padding: 0, fontSize: 15, fontWeight: 600, textDecoration: 'underline', textUnderlineOffset: 3, cursor: 'pointer', color: 'var(--ink)' }}
               >
-                Reset filter
+                Hapus semua filter
               </button>
             )}
           </div>
-        </Card>
-      ) : (
-        <Card padding={12}>
-          {groups.map(([day, items]) => {
-            const daySum = items.reduce((s, t) => s + (t.type === 'expense' ? t.amount : 0), 0)
-            return (
-              <div key={day}>
-                <div
-                  className="flex items-baseline justify-between"
-                  style={{ padding: '12px 8px 8px', fontSize: 11.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.06em', color: 'var(--ink-3)' }}
-                >
-                  <span>{dayLabel(day)}</span>
-                  {daySum > 0 && (
-                    <span className="font-mono tabular-nums" style={{ color: 'var(--bad)' }}>
-                      −{idrShort(daySum)}
-                    </span>
-                  )}
-                </div>
-                <div className="flex flex-col gap-0.5">
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 22, maxWidth: narrow ? 'none' : 960 }}>
+            {groups.map(([day, items]) => {
+              const daySum = items.reduce((s, t) => s + (t.type === 'expense' ? Number(t.amount) : 0), 0)
+              return (
+                <div key={day} style={{ display: 'flex', flexDirection: 'column' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', padding: '6px 0 8px', borderBottom: '1.5px solid var(--ink)' }}>
+                    <span className="font-display" style={{ fontWeight: 700, fontSize: narrow ? 15 : 17 }}>{dayLabel(day)}</span>
+                    {daySum > 0 && (
+                      <span className="font-mono" style={{ fontSize: narrow ? 12 : 13, color: 'var(--ink-2)' }}>−{idrShort(daySum)}</span>
+                    )}
+                  </div>
                   {items.map((t) => (
-                    <TransactionRow key={t.id} tx={t} onClick={() => handleEdit(t)} />
+                    <TransactionRow key={t.id} tx={t} member={memberById.get(t.user_id)} wide={!isMobile} onClick={() => handleEdit(t)} />
                   ))}
                 </div>
-              </div>
-            )
-          })}
-        </Card>
-      )}
+              )
+            })}
+          </div>
+        )}
 
       {/* Pagination */}
       {!isLoading && totalCount > 0 && (
         <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
           <div className="flex items-center gap-2">
-            <span className="text-xs" style={{ color: 'var(--ink-3)' }}>Tampilkan</span>
+            <span className="text-sm" style={{ color: 'var(--ink-3)' }}>Tampilkan</span>
             <select
               value={pageSize}
               onChange={(e) => setPageSize(Number(e.target.value))}
               aria-label="Jumlah data per halaman"
-              className="text-xs font-medium rounded-lg px-2 py-1.5 outline-none"
+              className="text-sm font-medium rounded-full px-3 py-1.5 outline-none"
               style={{
-                background: 'var(--surface-2)',
-                color: 'var(--ink-2)',
-                border: '1px solid var(--line)',
+                background: 'transparent',
+                color: 'var(--ink)',
+                border: '1.5px solid var(--line-2)',
               }}
             >
               {TRANSACTIONS_PAGE_SIZE_OPTIONS.map((n) => (
                 <option key={n} value={n}>{n}</option>
               ))}
             </select>
-            <span className="text-xs whitespace-nowrap" style={{ color: 'var(--ink-3)' }}>
+            <span className="text-sm whitespace-nowrap" style={{ color: 'var(--ink-3)' }}>
               {rangeStart}–{rangeEnd} dari {totalCount}
             </span>
           </div>
@@ -333,10 +294,11 @@ export default function Transactions() {
                   <button
                     key={pageNum}
                     onClick={() => setPage(pageNum)}
-                    className="w-7 h-7 rounded-lg text-xs font-medium transition-colors"
+                    aria-current={active ? 'page' : undefined}
+                    className="w-9 h-9 rounded-full text-sm font-semibold font-mono transition-colors"
                     style={{
                       background: active ? 'var(--accent)' : 'transparent',
-                      color: active ? '#fff' : 'var(--ink-2)',
+                      color: active ? 'var(--on-accent)' : 'var(--ink-2)',
                     }}
                   >
                     {pageNum + 1}
@@ -357,7 +319,9 @@ export default function Transactions() {
         </div>
       )}
 
-      <Sheet open={filterOpen} onClose={() => setFilterOpen(false)} title="Filter Transaksi">
+      </div>
+
+      <Sheet open={filterOpen} onClose={() => setFilterOpen(false)} title="Filter transaksi">
         <div className="space-y-4">
           <Input
             label="Cari deskripsi"

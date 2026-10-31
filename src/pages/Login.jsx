@@ -54,12 +54,12 @@ export default function Login() {
         {/* Brand */}
         <div className="flex flex-col items-center text-center mb-6">
           <div className="flex items-center gap-2.5 mb-4">
-            <Logo size={40} />
-            <span className="font-display font-semibold text-2xl" style={{ color: 'var(--ink)' }}>
+            <Logo size={38} />
+            <span className="font-display font-extrabold text-2xl tracking-tight" style={{ color: 'var(--ink)' }}>
               MoneyFam
             </span>
           </div>
-          <h1 className="font-display font-semibold text-xl" style={{ color: 'var(--ink)' }}>
+          <h1 className="font-display font-extrabold text-[32px] leading-none tracking-tight" style={{ color: 'var(--ink)' }}>
             Masuk
           </h1>
           <p className="text-sm mt-1" style={{ color: 'var(--ink-3)' }}>
@@ -80,7 +80,7 @@ export default function Login() {
           />
           <div className="flex flex-col gap-1">
             <div className="flex items-center justify-between">
-              <label className="text-sm font-medium" style={{ color: 'var(--ink-2)' }}>
+              <label className="text-[15px] font-semibold" style={{ color: 'var(--ink)' }}>
                 Password <span style={{ color: 'var(--bad)' }}>*</span>
               </label>
               <Link
@@ -98,7 +98,7 @@ export default function Login() {
                 value={form.password}
                 onChange={(e) => { const value = e.target.value; setForm((f) => ({ ...f, password: value })) }}
                 autoComplete="current-password"
-                className="w-full border pr-10 px-3 py-2 text-sm placeholder:opacity-50 focus:outline-none focus:ring-2"
+                className="w-full border-[1.5px] pr-11 px-3.5 min-h-[50px] text-base placeholder:opacity-60 focus:outline-none focus:border-[var(--ink)]"
                 style={{
                   borderRadius: 'var(--r-sm)',
                   background: 'var(--surface)',

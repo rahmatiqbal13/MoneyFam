@@ -1,6 +1,5 @@
 import { useLocation, useNavigate } from 'react-router-dom';
 import { NAV } from './navItems';
-import { Icon } from '@/components/ui/Icon';
 
 function NavBtn({ item, active }) {
   const navigate = useNavigate();
@@ -8,22 +7,16 @@ function NavBtn({ item, active }) {
   return (
     <button
       onClick={() => navigate(item.to)}
+      aria-current={active ? 'page' : undefined}
       style={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        gap: 3,
-        border: 'none',
-        background: 'transparent',
-        padding: '6px 4px',
-        borderRadius: 12,
-        color: active ? 'var(--accent-ink)' : 'var(--ink-3)',
-        cursor: 'pointer',
-        fontWeight: active ? 600 : 500,
+        minHeight: 52, border: 'none', background: 'transparent', cursor: 'pointer',
+        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4,
+        fontSize: 12, fontWeight: active ? 700 : 500,
+        color: active ? 'var(--ink)' : 'var(--ink-3)',
       }}
     >
-      <Icon name={item.icon} size={22} stroke={active ? 2.2 : 1.7} />
-      <span style={{ fontSize: 10.5 }}>{item.short}</span>
+      <span style={{ width: 22, height: 4, borderRadius: 2, background: active ? 'var(--ink)' : 'transparent', transition: 'background-color .15s ease' }} />
+      {item.short}
     </button>
   );
 }
@@ -31,68 +24,37 @@ function NavBtn({ item, active }) {
 export function BottomNav({ onAddTransaction }) {
   const location = useLocation();
   const primary = NAV.filter(n => n.primary);
-
-  // Determine active item based on pathname
-  const isActive = (item) => {
-    if (item.to === '/') {
-      return location.pathname === '/';
-    }
-    return location.pathname === item.to;
-  };
+  const isActive = (item) => location.pathname === item.to;
 
   return (
     <nav
+      aria-label="Menu utama"
       style={{
-        position: 'fixed',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        zIndex: 100,
-        background: 'var(--surface)',
-        borderTop: '1px solid var(--line)',
-        padding: '8px 8px max(8px, env(safe-area-inset-bottom)) 8px',
-        display: 'grid',
-        gridTemplateColumns: 'repeat(5, 1fr)',
-        gap: 4,
-        boxShadow: '0 -8px 24px -8px rgba(0,0,0,.06)',
+        position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 100,
+        background: 'var(--surface)', borderTop: '1px solid var(--line)',
+        padding: '6px 8px max(14px, env(safe-area-inset-bottom))',
+        display: 'grid', gridTemplateColumns: '1fr 1fr 76px 1fr 1fr', alignItems: 'center',
       }}
     >
       {primary.slice(0, 2).map(item => (
         <NavBtn key={item.id} item={item} active={isActive(item)} />
       ))}
 
-      {/* Center FAB */}
-      <div
+      <button
+        onClick={onAddTransaction}
+        aria-label="Catat pengeluaran"
+        className="press"
         style={{
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          position: 'relative',
+          justifySelf: 'center', width: 60, height: 60, marginTop: -26, borderRadius: '50%',
+          border: '4px solid var(--bg)', background: 'var(--accent)', color: 'var(--on-accent)',
+          cursor: 'pointer', display: 'grid', placeItems: 'center',
+          boxShadow: '0 10px 20px -8px rgba(29,27,23,.6)',
         }}
       >
-        <button
-          onClick={onAddTransaction}
-          style={{
-            width: 56,
-            height: 56,
-            borderRadius: 20,
-            background: 'var(--accent)',
-            color: '#fff',
-            border: '4px solid var(--bg)',
-            position: 'absolute',
-            top: -22,
-            left: '50%',
-            transform: 'translateX(-50%)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            cursor: 'pointer',
-            boxShadow: '0 8px 20px -6px rgba(0,0,0,.25), 0 0 0 1px var(--accent-ink) inset',
-          }}
-        >
-          <Icon name="plus" size={26} stroke={2.4} />
-        </button>
-      </div>
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
+          <path d="M12 5v14M5 12h14" />
+        </svg>
+      </button>
 
       {primary.slice(2, 4).map(item => (
         <NavBtn key={item.id} item={item} active={isActive(item)} />

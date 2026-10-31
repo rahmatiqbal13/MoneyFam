@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { motion, useReducedMotion } from 'framer-motion'
 import { RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
+import { PageHeader } from '@/components/ui/PageHeader'
 import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
 import { Card } from '@/components/ui/Card'
@@ -46,11 +47,11 @@ const TYPE_LABEL = {
 
 // type → fixed colour map (always guard: TYPE_COLOR[t] || '#6b7280')
 const TYPE_COLOR = {
-  saham: '#F472B6',
-  reksadana: '#0EA5A4',
-  emas: '#F59E0B',
-  kripto: '#8B5CF6',
-  deposito: '#16A34A',
+  saham: '#6A5C93',
+  reksadana: '#3F7A70',
+  emas: '#C49A3A',
+  kripto: '#A85F4E',
+  deposito: '#46658F',
   obligasi: '#6366F1',
 }
 
@@ -403,7 +404,7 @@ function PortfolioHero({ investments }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
           <Pill
             tone={up ? 'good' : 'bad'}
-            style={{ background: 'rgba(255,255,255,.18)', color: '#fff' }}
+            style={{ background: 'color-mix(in srgb, var(--on-accent) 18%, transparent)', color: 'inherit' }}
             icon={<Icon name="trending" size={12} stroke={2.4} />}
           >
             {up ? '+' : ''}{plPct.toFixed(1)}%
@@ -622,31 +623,20 @@ export default function Investments() {
   }
 
   return (
-    <div className="space-y-5 max-w-5xl mx-auto">
-      {/* Header */}
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <h1 className="font-display font-semibold text-xl" style={{ color: 'var(--ink)' }}>Investasi</h1>
-          <p className="text-sm" style={{ color: 'var(--ink-3)' }}>Portofolio &amp; tracking aset</p>
-        </div>
-        <div className="flex gap-2 flex-shrink-0">
-          {hasCrypto && (
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={handleRefreshCrypto}
-              loading={refreshMutation.isPending}
-            >
+    <div className="space-y-6">
+      <PageHeader
+        title="Investasi"
+        eyebrow="Portofolio keluarga"
+        actions={[
+          <Button key="add" onClick={() => setModal({ open: true, investment: null })}>Tambah aset</Button>,
+          hasCrypto && (
+            <Button key="refresh" variant="secondary" onClick={handleRefreshCrypto} loading={refreshMutation.isPending}>
               <RefreshCw className="w-4 h-4" />
-              Refresh Kripto
+              Perbarui harga
             </Button>
-          )}
-          <Button size="sm" variant="soft" onClick={() => setModal({ open: true, investment: null })}>
-            <Icon name="plus" size={14} stroke={2.2} />
-            Tambah
-          </Button>
-        </div>
-      </div>
+          ),
+        ].filter(Boolean)}
+      />
 
       {/* Portfolio hero + allocation */}
       {all.length > 0 && (

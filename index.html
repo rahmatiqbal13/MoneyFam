@@ -7,7 +7,7 @@
     <meta name="description" content="Lacak keuangan keluarga bersama-sama" />
 
     <!-- PWA -->
-    <meta name="theme-color" content="#0EA5A4" />
+    <meta name="theme-color" content="#F2EDE3" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
@@ -21,24 +21,18 @@
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=JetBrains+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@500;600;700&display=swap" rel="stylesheet" />
   </head>
   <body>
     <script>
       (function () {
         try {
-          var t = JSON.parse(localStorage.getItem('mf_theme_v2') || '{}')
-          var r = document.documentElement
-          r.setAttribute('data-variant', t.variant || 'hangat')
-          var dark = t.dark
-          if (dark === undefined) {
-            dark = !!(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)
+          var t = JSON.parse(localStorage.getItem('mf_theme_v3') || '{}')
+          var mode = t.mode
+          if (!mode) {
+            mode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'malam' : 'kertas'
           }
-          r.setAttribute('data-dark', dark ? 'true' : 'false')
-          if (t.accent) {
-            r.style.setProperty('--accent', t.accent)
-            r.style.setProperty('--accent-soft', t.accent + '22')
-          }
+          document.documentElement.setAttribute('data-theme', mode)
         } catch (e) {}
       })()
     </script>

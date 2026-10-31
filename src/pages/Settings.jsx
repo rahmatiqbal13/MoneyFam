@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Card } from '@/components/ui/Card'
+import { PageHeader } from '@/components/ui/PageHeader'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Pill } from '@/components/ui/Pill'
@@ -10,15 +11,15 @@ import { Modal, ModalBody, ConfirmModal } from '@/components/ui/Modal'
 import { useToast } from '@/components/ui/Toast'
 import { useAuthStore } from '@/stores/authStore'
 import { useThemeStore } from '@/stores/themeStore'
-import { THEME_VARIANTS, ACCENT_OPTIONS } from '@/lib/theme'
+import { THEME_MODES, MEMBER_COLORS } from '@/lib/theme'
 import { supabase } from '@/lib/supabase'
 import { useFamilyMembers, useRemoveMember, useGenerateInviteCode, useJoinFamily, useCreateFamily } from '@/hooks/useFamily'
 import { useNotificationSettings, useUpdateNotificationSettings } from '@/hooks/useNotifications'
 import { ImportExportSection } from '@/components/settings/ImportExportSection'
 import { DangerZoneSection } from '@/components/settings/DangerZoneSection'
 
-// 10-color identity palette (mirrors the memberColor fallback palette).
-const IDENTITY_COLORS = [...ACCENT_OPTIONS, '#EF4444', '#10B981', '#F97316']
+// Identity palette (mirrors the memberColor fallback palette).
+const IDENTITY_COLORS = [...MEMBER_COLORS, '#5E7A35', '#8A5A2B']
 
 function ToggleSwitch({ checked, onChange, disabled }) {
   return (
@@ -37,7 +38,7 @@ function ToggleSwitch({ checked, onChange, disabled }) {
       <span
         style={{
           position: 'absolute', top: 3, left: checked ? 21 : 3, width: 20, height: 20,
-          borderRadius: '50%', background: '#fff', transition: 'left .2s',
+          borderRadius: '50%', background: checked ? 'var(--on-accent)' : '#fff', transition: 'left .2s',
           boxShadow: '0 1px 3px rgba(0,0,0,.2)',
         }}
       />
@@ -156,7 +157,7 @@ export default function Settings() {
   const { user, profile, family, fetchProfile, logout } = useAuthStore()
   const isOwner = profile?.role === 'owner'
 
-  const { variant, dark, accent, setVariant, setDark, setAccent } = useThemeStore()
+  const { mode, setMode } = useThemeStore()
 
   const { data: members, isLoading: membersLoading } = useFamilyMembers()
   const removeMutation = useRemoveMember()
@@ -336,7 +337,8 @@ export default function Settings() {
   const roleLabel = (role) => (role === 'owner' ? 'Pemilik' : 'Anggota')
 
   return (
-    <div className="flex flex-col gap-4 mx-auto" style={{ maxWidth: 720 }}>
+    <div className="flex flex-col gap-5" style={{ maxWidth: 880 }}>
+      <PageHeader title="Pengaturan" eyebrow={family?.name || 'Akun & preferensi'} />
       {/* Zombie account warning */}
       {!profile && (
         <div className="rounded-xl p-4 flex items-start gap-3" style={{ background: 'color-mix(in srgb, var(--warn) 12%, var(--surface))', border: '1px solid color-mix(in srgb, var(--warn) 30%, transparent)' }}>
@@ -459,7 +461,7 @@ export default function Settings() {
                 onClick={() => setFamilyTab(key)}
                 className="flex-1 py-2 text-sm font-medium transition-colors"
                 style={familyTab === key
-                  ? { background: 'var(--accent)', color: '#fff' }
+                  ? { background: 'var(--accent)', color: 'var(--on-accent)' }
                   : { color: 'var(--ink-2)' }}
               >
                 {label}
@@ -573,67 +575,32 @@ export default function Settings() {
       {/* Tampilan (NEW) */}
       <Card padding={20}>
         <h3 className="m-0 mb-1.5 text-base font-bold" style={{ color: 'var(--ink)' }}>Tampilan</h3>
-
-        <div className="flex items-center gap-3.5 py-3.5 px-1">
-          <div className="flex items-center justify-center flex-shrink-0" style={{ width: 40, height: 40, borderRadius: 12, background: '#8B5CF622', color: '#8B5CF6' }}>
-            <Icon name="moon" size={20} />
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>Mode gelap</div>
-            <div className="text-xs" style={{ color: 'var(--ink-3)' }}>Sesuaikan dengan suasana malam</div>
-          </div>
-          <ToggleSwitch checked={dark} onChange={setDark} />
-        </div>
-
-        <div className="py-3.5 px-1">
-          <div className="flex items-center gap-3.5 mb-3">
-            <div className="flex items-center justify-center flex-shrink-0" style={{ width: 40, height: 40, borderRadius: 12, background: 'var(--accent-soft)', color: 'var(--accent-ink)' }}>
-              <Icon name="sparkles" size={20} />
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>Tema</div>
-              <div className="text-xs" style={{ color: 'var(--ink-3)' }}>Pilih gaya tampilan</div>
-            </div>
-          </div>
-          <div className="flex gap-2">
-            {THEME_VARIANTS.map((v) => (
+        <p className="text-xs mb-4" style={{ color: 'var(--ink-3)' }}>Tersimpan di akun kamu dan ikut ke perangkat lain.</p>
+        <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))' }}>
+          {THEME_MODES.map((t) => {
+            const on = mode === t.id
+            return (
               <button
-                key={v.id}
+                key={t.id}
                 type="button"
-                onClick={() => setVariant(v.id)}
+                aria-pressed={on}
+                onClick={() => setMode(t.id)}
+                className="press"
                 style={{
-                  flex: 1, padding: 12, borderRadius: 14, cursor: 'pointer',
-                  background: v.bg,
-                  border: variant === v.id ? `2px solid ${v.accent}` : '1px solid var(--line)',
+                  border: 'none', borderRadius: 14, padding: 12, cursor: 'pointer', textAlign: 'left',
+                  display: 'flex', flexDirection: 'column', gap: 10, background: 'var(--surface)', color: 'var(--ink)',
+                  boxShadow: on ? '0 0 0 2px var(--ink)' : '0 0 0 1px var(--line)',
                 }}
               >
-                <div className="flex gap-1 mb-2 justify-center">
-                  <span style={{ width: 16, height: 16, borderRadius: 5, background: v.accent }} />
-                  <span style={{ width: 16, height: 16, borderRadius: 5, background: '#fff', border: '1px solid rgba(0,0,0,.1)' }} />
-                </div>
-                <div className="text-xs font-semibold text-center" style={{ color: '#2A2418' }}>{v.label}</div>
+                <span style={{ height: 70, borderRadius: 10, background: t.bg, display: 'flex', alignItems: 'flex-end', padding: 10, gap: 6, boxShadow: 'inset 0 0 0 1px rgba(0,0,0,.08)' }}>
+                  <span style={{ width: 30, height: 22, borderRadius: 4, background: '#E6D2AA' }} />
+                  <span style={{ width: 30, height: 22, borderRadius: 4, background: '#C3D6D2' }} />
+                  <span style={{ marginLeft: 'auto', width: 44, height: 8, borderRadius: 4, background: t.fg }} />
+                </span>
+                <span style={{ fontWeight: 600, fontSize: 15 }}>{t.label}</span>
               </button>
-            ))}
-          </div>
-
-          <div className="mt-4">
-            <div className="text-xs font-semibold mb-2" style={{ color: 'var(--ink-3)' }}>Warna aksen</div>
-            <div className="flex gap-2.5 flex-wrap">
-              {ACCENT_OPTIONS.map((c) => (
-                <button
-                  key={c}
-                  type="button"
-                  aria-label={`Warna aksen ${c}`}
-                  onClick={() => setAccent(c)}
-                  style={{
-                    width: 34, height: 34, borderRadius: '50%', background: c, cursor: 'pointer',
-                    border: accent === c ? '3px solid var(--ink)' : '3px solid transparent',
-                    boxShadow: 'inset 0 -2px 0 rgba(0,0,0,.15)',
-                  }}
-                />
-              ))}
-            </div>
-          </div>
+            )
+          })}
         </div>
       </Card>
 
@@ -696,7 +663,7 @@ export default function Settings() {
         <h3 className="m-0 mb-1.5 text-base font-bold" style={{ color: 'var(--ink)' }}>Data &amp; Preferensi</h3>
 
         <div className="flex items-center gap-3.5 py-3 px-1" style={{ borderBottom: '1px solid var(--line)' }}>
-          <div className="flex items-center justify-center flex-shrink-0" style={{ width: 40, height: 40, borderRadius: 12, background: '#16A34A22', color: '#16A34A' }}>
+          <div className="flex items-center justify-center flex-shrink-0" style={{ width: 40, height: 40, borderRadius: 12, background: 'var(--good-soft)', color: 'var(--good)' }}>
             <Icon name="coin" size={20} />
           </div>
           <div className="flex-1 min-w-0">
@@ -708,7 +675,7 @@ export default function Settings() {
 
         <div className="pt-4">
           <div className="flex items-center gap-2 mb-3">
-            <Icon name="bell" size={16} style={{ color: '#F472B6' }} />
+            <Icon name="bell" size={16} style={{ color: 'var(--ink-2)' }} />
             <span className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>Notifikasi</span>
           </div>
           <div className="space-y-3.5">

@@ -10,12 +10,12 @@ import {
   Tooltip, Legend,
 } from 'recharts'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card'
+import { PageHeader } from '@/components/ui/PageHeader'
 import { Button } from '@/components/ui/Button'
 import { SegmentedControl } from '@/components/ui/SegmentedControl'
 import { StatTile } from '@/components/ui/StatTile'
 import { Progress } from '@/components/ui/Progress'
 import { Avatar } from '@/components/ui/Avatar'
-import { Icon } from '@/components/ui/Icon'
 import { useToast } from '@/components/ui/Toast'
 import { formatCurrency, formatDate, getBudgetStatus, idrShort, toDateStr } from '@/lib/utils'
 import { memberColor } from '@/lib/memberColor'
@@ -42,9 +42,9 @@ function tok(name, fallback) {
   return (v || '').trim() || fallback
 }
 
-// rgba built from the live --accent token so the heatmap tints follow the theme
+// Heatmap tints use the envelope tan so they read in every theme mode.
 function accentAlpha(a) {
-  const hex = tok('--accent', '#0EA5A4').trim()
+  const hex = '#A3711C'
   const m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex)
   if (!m) return hex
   const [r, g, b] = [1, 2, 3].map((i) => parseInt(m[i], 16))
@@ -113,8 +113,8 @@ function ChartTooltip({ active, payload, label }) {
 }
 
 function CashFlowChart({ data, barSize = 18 }) {
-  const incomeColor = tok('--accent', '#0EA5A4')   // income → accent
-  const expenseColor = tok('--ink-3', '#918878')   // expense → muted ink
+  const incomeColor = '#3F7A70'   // Masuk → teal, Keluar → envelope tan (Amplop design)
+  const expenseColor = '#CDB384'
   const axis = tok('--ink-3', '#918878')
   const grid = tok('--line', '#ECE2CB')
   const cursor = tok('--surface-2', '#F7F1E4')
@@ -154,7 +154,7 @@ function SummaryCards({ stats, isLoading }) {
       <StatTile
         label="Saving Rate"
         value={isLoading ? '…' : `${savingRate}%`}
-        accent={!isLoading && savingRate >= 20}
+        tone={!isLoading && savingRate >= 20 ? 'good' : undefined}
       />
     </div>
   )
@@ -986,14 +986,15 @@ export default function Reports() {
   }
 
   return (
-    <div className="space-y-5 max-w-5xl mx-auto">
-      {/* Period selector + export */}
-      <div className="flex items-center justify-between gap-3 flex-wrap">
-        <SegmentedControl size="sm" value={period} onChange={setPeriod} options={PERIOD_OPTIONS} />
-        <Button variant="ghost" size="sm" onClick={handleExport} loading={exportMutation.isPending}>
-          <Icon name="download" size={14} /> Ekspor
-        </Button>
-      </div>
+    <div className="space-y-6">
+      <PageHeader
+        title="Laporan"
+        eyebrow="Arus kas keluarga"
+        actions={[
+          <Button key="export" variant="secondary" onClick={handleExport} loading={exportMutation.isPending}>Ekspor CSV</Button>,
+        ]}
+      />
+      <SegmentedControl size="md" value={period} onChange={setPeriod} options={PERIOD_OPTIONS} />
 
       {/* Navigation */}
       <div className="flex items-center justify-between">

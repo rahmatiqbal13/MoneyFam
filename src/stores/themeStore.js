@@ -1,12 +1,12 @@
 import { create } from 'zustand'
 import { supabase } from '@/lib/supabase'
-import { applyTheme } from '@/lib/theme'
+import { applyTheme, THEME_MODES } from '@/lib/theme'
 import { useAuthStore } from '@/stores/authStore'
 
-const LS_KEY = 'mf_theme_v2'
+const LS_KEY = 'mf_theme_v3'
 
-// One-time cleanup of the superseded key (it always pinned a teal accent).
-try { localStorage.removeItem('mf_theme') } catch { /* private mode */ }
+// One-time cleanup of superseded keys (hangat/ceria/studio + accent era).
+try { localStorage.removeItem('mf_theme'); localStorage.removeItem('mf_theme_v2') } catch { /* private mode */ }
 
 function readLS() {
   try { return JSON.parse(localStorage.getItem(LS_KEY) || '{}') } catch { return {} }
@@ -19,12 +19,18 @@ function prefersDark() {
   return (typeof window !== 'undefined' && window.matchMedia?.('(prefers-color-scheme: dark)').matches) || false
 }
 
-const stored = readLS()
-const initial = {
-  variant: stored.variant || 'hangat',
-  dark: typeof stored.dark === 'boolean' ? stored.dark : prefersDark(),
-  accent: stored.accent || null,
+const VALID = new Set(THEME_MODES.map((t) => t.id))
+function defaultMode() { return prefersDark() ? 'malam' : 'kertas' }
+
+// Older ui_prefs rows stored { variant, dark, accent }; map them onto the new modes.
+function modeFromPrefs(prefs) {
+  if (VALID.has(prefs?.mode)) return prefs.mode
+  if (typeof prefs?.dark === 'boolean') return prefs.dark ? 'malam' : 'kertas'
+  return null
 }
+
+const stored = readLS()
+const initial = { mode: VALID.has(stored.mode) ? stored.mode : defaultMode() }
 
 let syncTimer
 function syncToProfile(prefs) {
@@ -36,28 +42,23 @@ function syncToProfile(prefs) {
   }, 800)
 }
 
-export const useThemeStore = create((set, get) => ({
+export const useThemeStore = create((set) => ({
   ...initial,
 
-  _commit(patch) {
-    const next = { variant: get().variant, dark: get().dark, accent: get().accent, ...patch }
-    set(patch)
+  setMode(mode) {
+    if (!VALID.has(mode)) return
+    const next = { mode }
+    set(next)
     applyTheme(next)
     writeLS(next)
     syncToProfile(next)
   },
-  setVariant(variant) { get()._commit({ variant, accent: null }) },
-  setDark(dark) { get()._commit({ dark }) },
-  setAccent(accent) { get()._commit({ accent }) },
 
   hydrate(prefs) {
-    if (!prefs || typeof prefs !== 'object') return
+    const mode = modeFromPrefs(prefs)
+    if (!mode) return
     clearTimeout(syncTimer)
-    const next = {
-      variant: prefs.variant || get().variant,
-      dark: typeof prefs.dark === 'boolean' ? prefs.dark : get().dark,
-      accent: (prefs.accent && prefs.accent.toLowerCase() !== '#0ea5a4') ? prefs.accent : null,
-    }
+    const next = { mode }
     set(next)
     applyTheme(next)
     writeLS(next)
@@ -67,7 +68,7 @@ export const useThemeStore = create((set, get) => ({
   // shared browser doesn't leak one person's theme into the next session.
   reset() {
     clearTimeout(syncTimer)
-    const next = { variant: 'hangat', dark: prefersDark(), accent: null }
+    const next = { mode: defaultMode() }
     set(next)
     applyTheme(next)
     try { localStorage.removeItem(LS_KEY) } catch { /* private mode */ }

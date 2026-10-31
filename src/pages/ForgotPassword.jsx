@@ -78,14 +78,14 @@ export default function ForgotPassword() {
         {/* Brand */}
         <div className="flex flex-col items-center text-center mb-6">
           <div className="flex items-center gap-2.5 mb-4">
-            <Logo size={40} />
-            <span className="font-display font-semibold text-2xl" style={{ color: 'var(--ink)' }}>
+            <Logo size={38} />
+            <span className="font-display font-extrabold text-2xl tracking-tight" style={{ color: 'var(--ink)' }}>
               MoneyFam
             </span>
           </div>
           {!sent && (
             <>
-              <h1 className="font-display font-semibold text-xl" style={{ color: 'var(--ink)' }}>
+              <h1 className="font-display font-extrabold text-[32px] leading-none tracking-tight" style={{ color: 'var(--ink)' }}>
                 Lupa Password
               </h1>
               <p className="text-sm mt-1" style={{ color: 'var(--ink-3)' }}>

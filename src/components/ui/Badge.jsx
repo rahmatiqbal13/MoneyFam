@@ -1,14 +1,14 @@
 import { cn } from '@/lib/utils'
 
 const variants = {
-  green:  { background: 'color-mix(in srgb, #16A34A 16%, var(--surface))', color: '#16A34A' },
-  red:    { background: 'color-mix(in srgb, #DC2626 16%, var(--surface))', color: '#DC2626' },
-  blue:   { background: 'color-mix(in srgb, #2563EB 16%, var(--surface))', color: '#2563EB' },
-  yellow: { background: 'color-mix(in srgb, #D97706 18%, var(--surface))', color: '#D97706' },
-  gray:   { background: 'var(--surface-2)', color: 'var(--ink-2)' },
-  purple: { background: 'color-mix(in srgb, #7C3AED 16%, var(--surface))', color: '#7C3AED' },
-  orange: { background: 'color-mix(in srgb, #EA580C 16%, var(--surface))', color: '#EA580C' },
-  accent: { background: 'var(--accent-soft)', color: 'var(--accent-ink)' },
+  green:  { background: 'color-mix(in srgb, var(--good) 16%, var(--surface))', color: 'var(--good)' },
+  red:    { background: 'color-mix(in srgb, var(--bad) 14%, var(--surface))', color: 'var(--bad-ink)' },
+  blue:   { background: 'color-mix(in srgb, #3E6AA8 16%, var(--surface))', color: 'color-mix(in srgb, #3E6AA8 80%, var(--ink))' },
+  yellow: { background: 'color-mix(in srgb, var(--warn) 16%, var(--surface))', color: 'var(--warn)' },
+  gray:   { background: 'var(--bg-sub)', color: 'var(--ink-2)' },
+  purple: { background: 'color-mix(in srgb, #6A57AC 16%, var(--surface))', color: 'color-mix(in srgb, #6A57AC 80%, var(--ink))' },
+  orange: { background: 'color-mix(in srgb, #A3452C 16%, var(--surface))', color: 'color-mix(in srgb, #A3452C 80%, var(--ink))' },
+  accent: { background: 'var(--accent)', color: 'var(--on-accent)' },
 }
 
 export function Badge({ variant = 'gray', className, style, children, ...props }) {

@@ -11,6 +11,7 @@ import {
   Legend,
 } from 'recharts'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
+import { PageHeader } from '@/components/ui/PageHeader'
 import { HeroCard } from '@/components/ui/HeroCard'
 import { StatTile } from '@/components/ui/StatTile'
 import { Pill } from '@/components/ui/Pill'
@@ -117,7 +118,7 @@ function formatYAxis(v) {
   return v
 }
 
-const SCENARIO_COLORS = { 10: '#F59E0B', 15: '#0EA5A4', 20: '#16A34A' }
+const SCENARIO_COLORS = { 10: '#C49A3A', 15: '#3F7A70', 20: '#2B6B3F' }
 const SCENARIO_LABEL = { 10: 'Minimum', 15: 'Ideal', 20: 'Agresif' }
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
@@ -289,22 +290,14 @@ export default function PensionCalculator() {
   const totalIdealContribution = ideal ? ideal.monthly * result.yearsToRetire * 12 : 0
 
   return (
-    <div className="space-y-5 max-w-5xl mx-auto">
-      {/* Header */}
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <h2 className="font-display font-semibold text-xl" style={{ color: 'var(--ink)' }}>
-            Kalkulator Dana Pensiun
-          </h2>
-          <p className="text-sm mt-0.5" style={{ color: 'var(--ink-3)' }}>
-            Rencanakan masa pensiun lebih cerdas
-          </p>
-        </div>
-        <Button size="sm" variant="secondary" onClick={handleSave} loading={saveMutation.isPending}>
-          <Icon name="check" size={14} stroke={2.5} />
-          Simpan
-        </Button>
-      </div>
+    <div className="space-y-6">
+      <PageHeader
+        title="Dana Pensiun"
+        eyebrow="Rencana jangka panjang"
+        actions={[
+          <Button key="save" onClick={handleSave} loading={saveMutation.isPending}>Simpan rencana</Button>,
+        ]}
+      />
 
       {settingsError && (
         <div
@@ -489,8 +482,6 @@ export default function PensionCalculator() {
             <>
               {/* Hero — projected fund vs needs */}
               <HeroCard
-                gradientFrom={onTrack ? '#16A34A' : '#F59E0B'}
-                gradientTo={onTrack ? '#0F7A37' : '#B45309'}
                 label={
                   <span className="inline-flex items-center gap-1.5">
                     <Icon name={onTrack ? 'check' : 'info'} size={15} stroke={2.5} />

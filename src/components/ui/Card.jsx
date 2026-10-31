@@ -12,18 +12,20 @@ function toneStyle(tone) {
     case 'sub':
       return { background: 'var(--surface-2)', border: 'none' }
     case 'accent':
+    case 'ink':
       return {
         background: 'var(--accent)',
-        color: '#fff',
+        color: 'var(--on-accent)',
         border: 'none',
-        boxShadow: 'var(--shadow-md)',
       }
+    case 'plain':
+      return { background: 'transparent', border: 'none' }
     case 'surface':
     default:
       return {
         background: 'var(--surface)',
-        border: '1px solid var(--line)',
-        boxShadow: 'var(--shadow-sm)',
+        border: 'none',
+        boxShadow: '0 0 0 1px var(--line)',
       }
   }
 }
@@ -70,7 +72,7 @@ export function CardHeader({ className, children, style, ...props }) {
 export function CardTitle({ className, children, ...props }) {
   return (
     <h3
-      className={cn('text-base font-semibold', className)}
+      className={cn('font-display text-xl font-bold', className)}
       style={{ color: 'var(--ink)' }}
       {...props}
     >

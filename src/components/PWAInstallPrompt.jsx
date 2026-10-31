@@ -29,7 +29,7 @@ export default function PWAInstallPrompt() {
     <div className="fixed bottom-20 left-4 right-4 z-50 md:left-auto md:right-6 md:w-80">
       <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-4 flex items-start gap-3">
         <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center shrink-0">
-          <Download className="w-5 h-5 text-white" />
+          <Download className="w-5 h-5 text-[var(--on-accent)]" />
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold text-gray-900">Install MoneyFam</p>
@@ -37,7 +37,7 @@ export default function PWAInstallPrompt() {
           <div className="flex gap-2 mt-3">
             <button
               onClick={handleInstall}
-              className="flex-1 bg-primary text-white text-xs font-medium py-1.5 rounded-lg hover:bg-primary-600 transition-colors"
+              className="flex-1 bg-primary text-[var(--on-accent)] text-xs font-medium py-1.5 rounded-full transition-colors"
             >
               Install
             </button>

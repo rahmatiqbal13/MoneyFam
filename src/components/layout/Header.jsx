@@ -1,94 +1,52 @@
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useUnreadNotificationsCount } from '@/hooks/useNotifications'
-import { useAuthStore } from '@/stores/authStore'
-import { formatMonthYear } from '@/lib/utils'
-import { Icon } from '@/components/ui/Icon'
+import { navItemFor } from './navItems'
 
-const pageMeta = {
-  '/':             { title: 'Dashboard',          subtitle: 'Ringkasan keuangan keluarga' },
-  '/transactions': { title: 'Transaksi',          subtitle: 'Riwayat & pencatatan' },
-  '/wallets':      { title: 'Kantong',            subtitle: 'Semua sumber dana' },
-  '/budget':       { title: 'Anggaran',           subtitle: 'Rencanakan pengeluaran' },
-  '/reports':      { title: 'Laporan',            subtitle: 'Analisis keuangan' },
-  '/savings':      { title: 'Tabungan & Hutang',  subtitle: 'Tujuan & kewajiban' },
-  '/investments':  { title: 'Investasi',          subtitle: 'Portofolio keluarga' },
-  '/pension':      { title: 'Dana Pensiun',       subtitle: 'Rencana jangka panjang' },
-  '/categories':   { title: 'Kategori',           subtitle: 'Atur klasifikasi transaksi' },
-  '/notifications':{ title: 'Notifikasi',         subtitle: 'Aktivitas terbaru' },
-  '/settings':     { title: 'Pengaturan',         subtitle: 'Akun & preferensi' },
-}
-
+// Phone top bar: menu button, page title, notification bell.
+// On desktop each page renders its own PageHeader instead.
 export function Header({ onMenuClick }) {
   const location = useLocation()
   const navigate = useNavigate()
-  const { family } = useAuthStore()
   const { data: unreadCount } = useUnreadNotificationsCount()
 
-  const meta = pageMeta[location.pathname] || { title: 'MoneyFam', subtitle: '' }
-  let subtitle = meta.subtitle
-  if (location.pathname === '/') {
-    subtitle = `Halo, ${family?.name || 'Keluarga'} 👋`
-  } else if (location.pathname === '/transactions') {
-    subtitle = formatMonthYear(new Date().toISOString())
-  }
+  const title = navItemFor(location.pathname)?.label || 'MoneyFam'
 
   return (
     <header
-      className="sticky top-0 z-30 flex items-center justify-between gap-4"
-      style={{
-        padding: '18px 24px 12px',
-        background: 'var(--bg)',
-        backdropFilter: 'blur(8px)',
-        WebkitBackdropFilter: 'blur(8px)',
-      }}
+      className="flex items-center gap-2 flex-shrink-0"
+      style={{ padding: 'max(6px, env(safe-area-inset-top)) 14px 8px', background: 'var(--bg)' }}
     >
-      <div className="flex items-center gap-3 min-w-0">
-        <button
-          onClick={onMenuClick}
-          className="lg:hidden p-2 rounded-xl transition-colors flex-shrink-0"
-          style={{ color: 'var(--ink-2)' }}
-          onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--surface-2)')}
-          onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
-          aria-label="Buka menu"
-        >
-          <Icon name="menu" size={20} />
-        </button>
-        <div className="min-w-0">
-          {subtitle && (
-            <p className="text-xs font-semibold mb-0.5" style={{ color: 'var(--ink-3)' }}>
-              {subtitle}
-            </p>
-          )}
-          <h1
-            className="font-display font-semibold truncate"
-            style={{ fontSize: 26, lineHeight: 1.1, color: 'var(--ink)', margin: 0 }}
+      <button onClick={onMenuClick} aria-label="Buka menu" className="topbar-btn">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+          <path d="M4 7h16M4 12h16M4 17h10" />
+        </svg>
+      </button>
+      <h1
+        className="font-display flex-1 min-w-0 truncate"
+        style={{ margin: 0, fontWeight: 800, fontSize: 22, letterSpacing: '-.03em', color: 'var(--ink)' }}
+      >
+        {title}
+      </h1>
+      <button
+        onClick={() => navigate('/notifications')}
+        aria-label={unreadCount ? `Notifikasi, ${unreadCount} belum dibaca` : 'Notifikasi'}
+        className="topbar-btn relative"
+      >
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z" />
+          <path d="M10 21h4" />
+        </svg>
+        {unreadCount > 0 && (
+          <span
+            style={{
+              position: 'absolute', top: 6, right: 6, minWidth: 18, height: 18, padding: '0 4px', borderRadius: 9,
+              background: '#B3261E', color: '#fff', fontSize: 11, fontWeight: 700, display: 'grid', placeItems: 'center',
+            }}
           >
-            {meta.title}
-          </h1>
-        </div>
-      </div>
-
-      <div className="flex items-center gap-2 flex-shrink-0">
-        <button
-          onClick={() => navigate('/notifications')}
-          className="relative p-2 rounded-xl transition-colors"
-          style={{ color: 'var(--ink-2)' }}
-          onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--surface-2)')}
-          onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
-          aria-label="Notifikasi"
-        >
-          <Icon name="bell" size={20} />
-          {unreadCount > 0 && (
-            <span
-              className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full"
-              style={{
-                background: '#EF4444',
-                border: '1.5px solid var(--bg)',
-              }}
-            />
-          )}
-        </button>
-      </div>
+            {unreadCount > 99 ? '99+' : unreadCount}
+          </span>
+        )}
+      </button>
     </header>
   )
 }

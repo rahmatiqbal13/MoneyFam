@@ -4,7 +4,7 @@ import { X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from './Button'
 
-export function Modal({ isOpen, onClose, title, children, size = 'md', className }) {
+export function Modal({ isOpen, onClose, title, subtitle, children, size = 'md', className }) {
   const overlayRef = useRef(null)
   const modalRef = useRef(null)
   const triggerRef = useRef(null)
@@ -92,7 +92,7 @@ export function Modal({ isOpen, onClose, title, children, size = 'md', className
         <motion.div
           ref={overlayRef}
           className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          style={{ background: 'rgba(42,36,24,.45)', backdropFilter: 'blur(4px)' }}
+          style={{ background: 'rgba(29,27,23,.45)' }}
           onClick={handleOverlayClick}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -107,10 +107,9 @@ export function Modal({ isOpen, onClose, title, children, size = 'md', className
             tabIndex={-1}
             className={cn('w-full overflow-hidden outline-none', sizes[size], className)}
             style={{
-              background: 'var(--surface)',
+              background: 'var(--bg)',
               borderRadius: 'var(--r-xl)',
               boxShadow: 'var(--shadow-lg)',
-              border: '1px solid var(--line)',
             }}
             onClick={(e) => e.stopPropagation()}
             initial={reduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.95, y: 8 }}
@@ -118,32 +117,24 @@ export function Modal({ isOpen, onClose, title, children, size = 'md', className
             exit={reduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.95, y: 8 }}
             transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
           >
-            <div
-              className="flex items-center justify-between px-5 py-4"
-              style={{ borderBottom: '1px solid var(--line)' }}
-            >
-              <h2
-                id={titleId.current}
-                className="text-base font-semibold"
-                style={{ color: 'var(--ink)' }}
-              >
-                {title}
-              </h2>
+            <div className="flex items-start justify-between gap-4 px-6 pt-6 pb-1">
+              <div className="flex flex-col gap-1 min-w-0">
+                <h2
+                  id={titleId.current}
+                  className="font-display font-extrabold"
+                  style={{ color: 'var(--ink)', fontSize: 26, letterSpacing: '-.03em', lineHeight: 1.1, margin: 0 }}
+                >
+                  {title}
+                </h2>
+                {subtitle && <p style={{ fontSize: 15, color: 'var(--ink-2)', margin: 0 }}>{subtitle}</p>}
+              </div>
               <button
                 onClick={onClose}
-                aria-label="Tutup modal"
-                className="p-1.5 rounded-xl transition-colors active:scale-90"
-                style={{ color: 'var(--ink-3)' }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'var(--surface-2)'
-                  e.currentTarget.style.color = 'var(--ink)'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'transparent'
-                  e.currentTarget.style.color = 'var(--ink-3)'
-                }}
+                aria-label="Tutup"
+                className="press flex-shrink-0 grid place-items-center rounded-full"
+                style={{ width: 44, height: 44, background: 'var(--bg-sub)', color: 'var(--ink)', border: 'none' }}
               >
-                <X className="w-4 h-4" />
+                <X className="w-[18px] h-[18px]" strokeWidth={2.2} />
               </button>
             </div>
             <div className="overflow-y-auto max-h-[80vh]">{children}</div>
@@ -155,14 +146,14 @@ export function Modal({ isOpen, onClose, title, children, size = 'md', className
 }
 
 export function ModalBody({ className, children }) {
-  return <div className={cn('px-5 py-4', className)}>{children}</div>
+  return <div className={cn('px-6 py-4', className)}>{children}</div>
 }
 
 export function ModalFooter({ className, children }) {
   return (
     <div
-      className={cn('px-5 py-4 flex gap-2 justify-end', className)}
-      style={{ borderTop: '1px solid var(--line)', background: 'var(--surface-2)' }}
+      className={cn('px-6 pt-4 pb-6 flex gap-3 justify-end', className)}
+      style={{ borderTop: '1px solid var(--line)', background: 'var(--bg)' }}
     >
       {children}
     </div>
@@ -173,7 +164,7 @@ export function ConfirmModal({ isOpen, onClose, onConfirm, title, message, confi
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={title} size="sm">
       <ModalBody>
-        <p className="text-sm" style={{ color: 'var(--ink-2)' }}>{message}</p>
+        <p style={{ fontSize: 15, lineHeight: 1.5, color: 'var(--ink-2)', margin: 0 }}>{message}</p>
       </ModalBody>
       <ModalFooter>
         <Button variant="secondary" onClick={onClose} disabled={loading}>

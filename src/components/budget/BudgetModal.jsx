@@ -61,10 +61,10 @@ export function BudgetModal({ isOpen, onClose, budget = null, yearMonth }) {
     try {
       if (isEdit) {
         await updateMutation.mutateAsync({ id: budget.id, amount: payload.amount })
-        toast.success('Anggaran berhasil diperbarui')
+        toast.success('Isi amplop diperbarui')
       } else {
         await createMutation.mutateAsync(payload)
-        toast.success('Anggaran berhasil ditambahkan')
+        toast.success('Amplop dibuat')
       }
       onClose()
     } catch (err) {
@@ -76,13 +76,14 @@ export function BudgetModal({ isOpen, onClose, budget = null, yearMonth }) {
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={isEdit ? 'Edit Anggaran' : 'Tambah Anggaran'}
-      size="sm"
+      title={isEdit ? 'Ubah isi amplop' : 'Amplop baru'}
+      subtitle="Satu amplop per kategori pengeluaran, diisi setiap bulan"
+      size="md"
     >
       <form onSubmit={handleSubmit}>
         <ModalBody className="space-y-4">
           <Select
-            label="Kategori Pengeluaran"
+            label="Kategori"
             value={form.category_id}
             onChange={(e) => { const value = e.target.value; setForm((f) => ({ ...f, category_id: value })) }}
             error={errors.category_id}
@@ -98,7 +99,7 @@ export function BudgetModal({ isOpen, onClose, budget = null, yearMonth }) {
           </Select>
 
           <Input
-            label="Batas Anggaran (Rp)"
+            label="Isi per bulan (Rp)"
             type="number"
             placeholder="0"
             value={form.amount}
@@ -109,11 +110,11 @@ export function BudgetModal({ isOpen, onClose, budget = null, yearMonth }) {
           />
         </ModalBody>
         <ModalFooter>
-          <Button variant="ghost" type="button" onClick={onClose} disabled={loading}>
+          <Button variant="secondary" type="button" onClick={onClose} disabled={loading}>
             Batal
           </Button>
           <Button type="submit" loading={loading}>
-            {isEdit ? 'Simpan' : 'Tambah'}
+            {isEdit ? 'Simpan' : 'Buat amplop'}
           </Button>
         </ModalFooter>
       </form>

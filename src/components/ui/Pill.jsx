@@ -1,13 +1,14 @@
 const TONES = {
-  neutral: { background: 'var(--surface-2)', color: 'var(--ink-2)' },
-  accent:  { background: 'var(--accent-soft)', color: 'var(--accent-ink)' },
+  neutral: { background: 'var(--bg-sub)', color: 'var(--ink-2)' },
+  accent:  { background: 'var(--accent)', color: 'var(--on-accent)' },
+  ink:     { background: 'var(--accent)', color: 'var(--on-accent)' },
   good:    { background: 'color-mix(in srgb, var(--good) 16%, var(--surface))', color: 'var(--good)' },
-  bad:     { background: 'color-mix(in srgb, var(--bad) 16%, var(--surface))', color: 'var(--bad)' },
-  warn:    { background: 'color-mix(in srgb, var(--warn) 18%, var(--surface))', color: 'var(--warn)' },
+  bad:     { background: 'color-mix(in srgb, var(--bad) 14%, var(--surface))', color: 'var(--bad-ink)' },
+  warn:    { background: 'color-mix(in srgb, var(--warn) 16%, var(--surface))', color: 'var(--warn)' },
 }
 
 export function Pill({ tone = 'neutral', size = 'md', icon, children, className, style }) {
-  const s = size === 'sm' ? { fontSize: 11, padding: '3px 8px' } : { fontSize: 12, padding: '4px 10px' }
+  const s = size === 'sm' ? { fontSize: 12, padding: '2px 8px' } : { fontSize: 13, padding: '3px 10px' }
   return (
     <span
       className={className}

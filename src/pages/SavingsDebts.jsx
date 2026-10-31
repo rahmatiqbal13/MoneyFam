@@ -5,6 +5,7 @@ import {
   Minus, History, Wallet
 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
+import { PageHeader } from '@/components/ui/PageHeader'
 import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
 import { Card } from '@/components/ui/Card'
@@ -43,6 +44,7 @@ import {
 } from '@/hooks/useDebts'
 import { useWallets } from '@/hooks/useWallets'
 import { useCategories } from '@/hooks/useCategories'
+import { INK_COLORS } from '@/lib/theme'
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -58,10 +60,7 @@ function progressPct(current, target) {
 }
 
 const GOAL_ICONS = ['🎯', '🏠', '🚗', '✈️', '📱', '💍', '🎓', '💻', '🏋️', '🌴', '💰', '🏖️']
-const GOAL_COLORS = [
-  '#10b981', '#3b82f6', '#8b5cf6', '#f59e0b',
-  '#ec4899', '#06b6d4', '#ef4444', '#84cc16',
-]
+const GOAL_COLORS = INK_COLORS.slice(0, 8)
 
 // ── Savings Goal Modal ────────────────────────────────────────────────────────
 
@@ -77,7 +76,7 @@ function SavingsGoalModal({ isOpen, onClose, goal }) {
     current_amount: 0,
     target_date: '',
     icon: '🎯',
-    color: '#10b981',
+    color: INK_COLORS[2],
   })
   const [errors, setErrors] = useState({})
 
@@ -90,7 +89,7 @@ function SavingsGoalModal({ isOpen, onClose, goal }) {
         current_amount: goal?.current_amount || 0,
         target_date: goal?.target_date || '',
         icon: goal?.icon || '🎯',
-        color: goal?.color || '#10b981',
+        color: goal?.color || INK_COLORS[2],
       })
       setErrors({})
     }
@@ -311,7 +310,7 @@ function AddFundModal({ isOpen, onClose, goal }) {
               type="button"
               onClick={() => setMode(key)}
               className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-sm font-medium transition-colors ${
-                mode === key ? 'bg-primary text-white' : 'text-ink-2 hover:bg-surface-2'
+                mode === key ? 'bg-primary text-[var(--on-accent)]' : 'text-ink-2 hover:bg-surface-2'
               }`}
             >
               <Icon className="w-4 h-4" />
@@ -1238,8 +1237,6 @@ function SavingsGoalsTab() {
       <HeroCard
         label="Total Terkumpul"
         value={formatCurrency(totalSaved)}
-        gradientFrom="#0EA5A4"
-        gradientTo="#0A6B6A"
       >
         <div className="mt-3" style={{ maxWidth: 360 }}>
           <Progress value={totalSaved} max={totalTarget || 1} color="#fff" track="rgba(255,255,255,.2)" height={8} />
@@ -1446,7 +1443,7 @@ function MarkPaidModal({ isOpen, onClose, debt, onConfirm, loading }) {
               Batal
             </Button>
             <Button
-              className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white"
+              className="flex-1"
               onClick={() => onConfirm(walletId, categoryId, paymentDate, paymentTime, note)}
               loading={loading}
             >
@@ -1631,14 +1628,15 @@ export default function SavingsDebts() {
   const [activeTab, setActiveTab] = useState('savings')
 
   return (
-    <div className="space-y-5 max-w-5xl mx-auto">
+    <div className="space-y-6">
+      <PageHeader title="Tabungan & Hutang" eyebrow="Tujuan & kewajiban keluarga" />
       <SegmentedControl
         size="md"
         value={activeTab}
         onChange={setActiveTab}
         options={[
-          { id: 'savings', label: 'Tabungan & Tujuan', icon: 'target' },
-          { id: 'debts', label: 'Hutang & Cicilan', icon: 'coin' },
+          { id: 'savings', label: 'Tabungan' },
+          { id: 'debts', label: 'Hutang' },
         ]}
       />
 
