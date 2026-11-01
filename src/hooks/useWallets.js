@@ -68,7 +68,7 @@ export function useUpdateWallet() {
 
   return useMutation({
     mutationFn: async ({ id, ...data }) => {
-      const allowedFields = ['name', 'icon', 'type', 'balance', 'is_active']
+      const allowedFields = ['name', 'icon', 'type', 'color', 'description', 'balance', 'is_active']
       const updateData = {}
       for (const key of allowedFields) {
         if (key in data) updateData[key] = data[key]

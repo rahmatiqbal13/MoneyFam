@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
 import { useToast } from '@/components/ui/Toast'
 import { useCreateWallet, useUpdateWallet } from '@/hooks/useWallets'
-import { INK_COLORS } from '@/lib/theme'
+import { INK_COLORS, envelopeTones } from '@/lib/theme'
 
 const WALLET_TYPES = [
   { value: 'cash', label: 'Tunai' },
@@ -169,13 +169,14 @@ export function WalletModal({ isOpen, onClose, wallet = null }) {
                 <button
                   key={color}
                   type="button"
+                  aria-label={`Warna kartu ${color}`}
+                  aria-pressed={form.color === color}
                   onClick={() => setForm((f) => ({ ...f, color }))}
-                  className={`w-8 h-8 rounded-full border-2 transition-transform ${
-                    form.color === color ? 'scale-110' : ''
-                  }`}
+                  className="press"
                   style={{
-                    backgroundColor: color,
-                    borderColor: form.color === color ? 'var(--ink)' : 'transparent',
+                    width: 40, height: 30, borderRadius: 6, border: 'none', padding: 0, cursor: 'pointer',
+                    background: envelopeTones(color).face,
+                    boxShadow: form.color === color ? '0 0 0 2px var(--ink)' : 'inset 0 0 0 1px rgba(0,0,0,.08)',
                   }}
                 />
               ))}

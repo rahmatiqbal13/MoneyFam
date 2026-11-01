@@ -380,9 +380,12 @@ export default function PensionCalculator() {
                 variant="secondary"
                 size="sm"
                 onClick={handleSyncFromData}
-                className="w-full"
+                className="w-full flex-col gap-0 whitespace-normal py-2 text-center leading-tight"
               >
-                Sinkronkan dari data saya ({formatCurrency(totalExistingFund)})
+                <span>Sinkronkan dari data saya</span>
+                <span className="font-mono text-[13px] font-medium" style={{ color: 'var(--ink-2)' }}>
+                  {formatCurrency(totalExistingFund)}
+                </span>
               </Button>
             </div>
           </div>
